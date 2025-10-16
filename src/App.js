@@ -1,24 +1,30 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import MapView from "./router/MapView";
+import List from "./router/List";
+import Booking from "./router/Booking";
+import Profile from "./router/Profile";
+import CenterDetail from "./router/CenterDetail";
+import Login from "./components/Login";
+import Register from "./components/Register";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Navigate to="/map" replace />} />
+          <Route path="/map" element={<MapView />} />
+          <Route path="/list" element={<List />} />
+          <Route path="/center/:id" element={<CenterDetail />} />
+          <Route path="/booking" element={<Booking />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

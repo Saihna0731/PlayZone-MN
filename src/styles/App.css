@@ -1,0 +1,154 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.center-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.center-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(15, 15, 15, 0.04);
+  box-shadow: 0 6px 18px rgba(12, 24, 40, 0.04);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.center-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(12, 24, 40, 0.08);
+}
+
+.center-card-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #5b8def 0%, #7be3ff 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  flex: 0 0 52px;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.meta .name {
+  font-weight: 700;
+  font-size: 16px;
+  color: #0b2236;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta .sub {
+  color: #6b7785;
+  font-size: 13px;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.center-card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: #1976d2;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn.ghost {
+  background: transparent;
+  color: #1976d2;
+  border: 1px solid rgba(25, 118, 210, 0.12);
+}
+
+.btn.danger {
+  background: #ff4d4f;
+  color: white;
+}
+
+.center-card-body {
+  margin-top: 10px;
+  color: #222;
+  font-size: 14px;
+}
+
+/* responsive tweaks */
+@media (max-width: 640px) {
+  .center-card {
+    padding: 10px;
+  }
+  .avatar {
+    width: 44px;
+    height: 44px;
+  }
+}

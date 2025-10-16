@@ -1,0 +1,29 @@
+/* Map container */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Search bar style & top center alignment */
+.leaflet-control-geosearch {
+  top: 15px !important;         /* Map-ийн дээдээс зай */
+  left: 50% !important;         /* Map-ийн төв */
+  transform: translateX(-50%);  /* Төв alignment */
+  z-index: 1500;                /* Map overlay-ээс дээш */
+}
+
+.leaflet-control-geosearch form input {
+  border-radius: 20px;          /* илүү дугуй болголоо */
+  padding: 10px 14px;
+  font-size: 14px;
+  width: 260px;
+  background: #fff;
+  border: none;
+  outline: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  transition: all 0.2s ease;
+}
+
+.leaflet-control-geosearch form input:focus {
+  box-shadow: 0 4px 14px rgba(25, 118, 210, 0.4);
+}
