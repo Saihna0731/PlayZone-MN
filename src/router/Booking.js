@@ -20,36 +20,24 @@ export default function Booking() {
       const centersRes = await axios.get(`${API_BASE}/api/centers`);
       const allCenters = centersRes.data || [];
       
-      // Тоглоомын төвүүдийг шүүх
-      const gaming = allCenters.filter(center => 
+      // PC төвүүдийг шүүх (PC center эзэмшигчдийн оруулсан)
+      const pcCenters = allCenters.filter(center => 
+        center.category === "pc" || 
         center.category === "gaming" || 
         center.category === "internet" ||
         (center.facilities && center.facilities.some(f => 
+          f.toLowerCase().includes("pc") || 
           f.toLowerCase().includes("gaming") || 
           f.toLowerCase().includes("playstation") || 
           f.toLowerCase().includes("xbox") ||
-          f.toLowerCase().includes("ps")
+          f.toLowerCase().includes("ps") ||
+          f.toLowerCase().includes("computer")
         ))
       );
-      setGamingCenters(gaming);
+      setGamingCenters(pcCenters);
       
-      // User-ийн favorites авах (хэрэв нэвтэрсэн бол)
-      if (user) {
-        try {
-          const token = localStorage.getItem("token");
-          const favRes = await axios.get(`${API_BASE}/api/auth/favorites`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          // API-аас favorites-ийг авах
-          const userFavoritesCenters = favRes.data.favorites || [];
-          setFavorites(userFavoritesCenters);
-        } catch (err) {
-          console.error("Failed to fetch favorites:", err);
-        }
-      } else {
-        setFavorites([]);
-      }
+      // User-ийн favorites-ийг PC төвүүдээр солих
+      setFavorites(pcCenters);
       
     } catch (err) {
       console.error("Failed to fetch data:", err);
@@ -171,65 +159,15 @@ export default function Booking() {
         padding: "20px 16px",
         textAlign: "center"
       }}>
-        <h1 style={{ fontSize: "24px", margin: 0, fontWeight: "600" }}>🎮 Миний захиалга</h1>
+        <h1 style={{ fontSize: "24px", margin: 0, fontWeight: "600" }}>💻 PC төвүүд</h1>
         <p style={{ margin: "8px 0 0 0", opacity: 0.9, fontSize: "14px" }}>
-          Дуртай төвүүд болон тоглоомын газрууд
+          PC center эзэмшигчдийн оруулсан төвүүд
         </p>
       </div>
 
       <div style={{ padding: "16px" }}>
-        {/* Favorites Section */}
-        {user && (
-          <div style={{ marginBottom: "32px" }}>
-            <h2 style={{ 
-              fontSize: "18px", 
-              color: "#333", 
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px"
-            }}>
-              ❤️ Дуртай төвүүд
-              <span style={{ 
-                background: "#e3f2fd", 
-                color: "#1976d2", 
-                padding: "2px 8px", 
-                borderRadius: "12px", 
-                fontSize: "12px" 
-              }}>
-                {favorites.length}
-              </span>
-            </h2>
-            
-            {favorites.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {favorites.map((center) => (
-                  <CenterCard 
-                    key={center._id || center.id} 
-                    item={center}
-                    isAdmin={false}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div style={{
-                background: "white",
-                padding: "32px 20px",
-                borderRadius: "12px",
-                textAlign: "center",
-                border: "1px solid #e0e0e0"
-              }}>
-                <div style={{ fontSize: "48px", marginBottom: "16px" }}>💔</div>
-                <p style={{ color: "#666", margin: 0 }}>
-                  Одоогоор дуртай төв байхгүй байна
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Gaming Centers Section */}
-        <div>
+        {/* PC Centers Section */}
+        <div style={{ marginBottom: "32px" }}>
           <h2 style={{ 
             fontSize: "18px", 
             color: "#333", 
@@ -238,21 +176,21 @@ export default function Booking() {
             alignItems: "center",
             gap: "8px"
           }}>
-            🎮 Тоглоомын төвүүд
+            💻 PC төвүүд
             <span style={{ 
-              background: "#e8f5e8", 
-              color: "#2e7d32", 
+              background: "#e3f2fd", 
+              color: "#1976d2", 
               padding: "2px 8px", 
               borderRadius: "12px", 
               fontSize: "12px" 
             }}>
-              {gamingCenters.length}
+              {favorites.length}
             </span>
           </h2>
           
-          {gamingCenters.length > 0 ? (
+          {favorites.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {gamingCenters.map((center) => (
+              {favorites.map((center) => (
                 <CenterCard 
                   key={center._id || center.id} 
                   item={center}
@@ -268,9 +206,9 @@ export default function Booking() {
               textAlign: "center",
               border: "1px solid #e0e0e0"
             }}>
-              <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎮</div>
+              <div style={{ fontSize: "48px", marginBottom: "16px" }}>�</div>
               <p style={{ color: "#666", margin: 0 }}>
-                Тоглоомын төв олдсонгүй
+                PC төв олдсонгүй
               </p>
             </div>
           )}
@@ -287,10 +225,10 @@ export default function Booking() {
           }}>
             <div style={{ fontSize: "32px", marginBottom: "12px" }}>👋</div>
             <h3 style={{ color: "#d84315", marginBottom: "8px", fontSize: "16px" }}>
-              Нэвтэрч дуртай төвүүдээ хадгалаарай!
+              Нэвтэрч PC төвүүдээ харъаарай!
             </h3>
             <p style={{ color: "#bf360c", margin: "0 0 16px 0", fontSize: "14px" }}>
-              Нэвтэрснээр өөрийн дуртай төвүүдийг хадгалж, захиалгын түүхийг харж болно
+              Нэвтэрснээр PC төвүүдийн мэдээллийг харж, захиалга өгч болно
             </p>
             <button
               onClick={() => window.location.href = '/login'}

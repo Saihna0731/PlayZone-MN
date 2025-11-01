@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const Center = require("../models/Center");
+const { auth } = require("../middleware/auth");
 
-// GET all
+// GET all (public)
 router.get("/", async (req, res) => {
   try {
     const centers = await Center.find().sort({ createdAt: -1 });
@@ -12,8 +13,22 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST create
-router.post("/", async (req, res) => {
+// GET single center by ID (public)
+router.get("/:id", async (req, res) => {
+  try {
+    const center = await Center.findById(req.params.id);
+    if (!center) {
+      return res.status(404).json({ error: "Center not found" });
+    }
+    res.json(center);
+  } catch (err) {
+    console.error("Error fetching center:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST create (protected)
+router.post("/", auth, async (req, res) => {
   console.log("POST /api/centers received");
   console.log("Headers:", req.headers);
   console.log("Body raw:", req.body);
@@ -38,8 +53,37 @@ router.post("/", async (req, res) => {
   }
 });
 
-// DELETE
-router.delete("/:id", async (req, res) => {
+// PUT update center (protected)
+router.put("/:id", auth, async (req, res) => {
+  try {
+    const data = {
+      ...req.body,
+      lat: req.body.lat ? Number(req.body.lat) : undefined,
+      lng: req.body.lng ? Number(req.body.lng) : undefined
+    };
+    
+    if (typeof data.lat === "number" && typeof data.lng === "number") {
+      data.location = { type: "Point", coordinates: [data.lng, data.lat] };
+    }
+
+    const center = await Center.findByIdAndUpdate(req.params.id, data, { 
+      new: true, 
+      runValidators: true 
+    });
+    
+    if (!center) {
+      return res.status(404).json({ error: "Center not found" });
+    }
+    
+    res.json(center);
+  } catch (err) {
+    console.error("Error updating center:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE (protected)
+router.delete("/:id", auth, async (req, res) => {
   try {
     await Center.findByIdAndDelete(req.params.id);
     res.json({ success: true });

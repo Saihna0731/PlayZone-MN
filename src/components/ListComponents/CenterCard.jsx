@@ -50,11 +50,27 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
   // Get images and videos from the correct database field and fallbacks
   const adminImages = item.images && Array.isArray(item.images) ? item.images : [];
   
-  // Handle videos from both array and string formats
+  // Process images - use thumbnail for card view, high quality available for detail
+  const processedImages = adminImages.map(img => {
+    if (typeof img === 'object' && img.thumbnail) {
+      // New format: use thumbnail for card view (faster loading)
+      return { type: 'image', url: enhanceImageUrl(img.thumbnail), highQuality: img.highQuality };
+    } else {
+      // Old format or URL image
+      return { type: 'image', url: enhanceImageUrl(img) };
+    }
+  });
+  
+  // Handle videos from both array and string formats - object болон string дэмжих
   let adminVideos = [];
   if (item.videos) {
     if (Array.isArray(item.videos)) {
-      adminVideos = item.videos.filter(video => video && video.trim());
+      adminVideos = item.videos.filter(video => {
+        if (typeof video === 'object' && video.data) {
+          return true; // Video object format
+        }
+        return video && video.trim(); // String URL format
+      });
     } else if (typeof item.videos === 'string' && item.videos.trim()) {
       adminVideos = item.videos.split('\n').filter(url => url && url.trim()).map(url => url.trim());
     }
@@ -69,13 +85,19 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
   }
   
   const fallbackImages = [item.image, item.img, item.photo].filter(Boolean);
-  const allImages = [...adminImages, ...fallbackImages].slice(0, 6);
+  const fallbackImageItems = fallbackImages.map(url => ({ type: 'image', url: enhanceImageUrl(url) }));
+  const allImages = [...processedImages, ...fallbackImageItems].slice(0, 6);
   
   // Create media array for carousel (ONLY IMAGES)
-  const imageItems = allImages.map(url => ({ type: 'image', url: enhanceImageUrl(url) }));
+  const imageItems = allImages;
   
-  // Separate videos for display below description (not in carousel)
-  const videoItems = adminVideos.map(url => ({ type: 'video', url }));
+  // Separate videos for display below description (not in carousel) - object format дэмжих
+  const videoItems = adminVideos.map(video => {
+    if (typeof video === 'object' && video.data) {
+      return { type: 'video', url: video.data, name: video.name, size: video.size };
+    }
+    return { type: 'video', url: video };
+  });
   const embedVideoItems = adminEmbedVideos.map(embed => ({ type: 'embed', content: embed }));
   
   // Function to enhance image quality

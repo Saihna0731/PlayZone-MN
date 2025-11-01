@@ -17,10 +17,10 @@ const emptyForm = {
   pricing: {
     standard: "",
     vip: "",
-    stage: ""
+    stage: "",
+    overnight: ""
   },
   rating: "",
-  description: "", 
   logo: "",
   images: "",
   videos: "",
@@ -49,13 +49,13 @@ const emptyForm = {
         website: editingItem.website || "",
         opening: editingItem.opening || "",
         price: editingItem.price || "",
-        pricing: editingItem.pricing || {
-          standard: "",
-          vip: "",
-          stage: ""
+        pricing: {
+          standard: editingItem.pricing?.standard || "",
+          vip: editingItem.pricing?.vip || "",
+          stage: editingItem.pricing?.stage || "",
+          overnight: editingItem.pricing?.overnight || ""
         },
         rating: editingItem.rating || "",
-        description: (editingItem.description || "") + (editingItem.longDescription ? (editingItem.description ? "\n\n" : "") + editingItem.longDescription : ""),
         logo: editingItem.logo || "",
         images: editingItem.images ? editingItem.images.join('\n') : "",
         videos: editingItem.videos ? editingItem.videos.join('\n') : "",
@@ -97,38 +97,78 @@ const emptyForm = {
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
-          // Зургийн хэмжээг багасгах
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
+          // 2 төрлийн зураг үүсгэх: thumbnail болон high quality
           
-          // Max хэмжээ тогтоох (илүү жижиг болгох)
-          const maxWidth = 1000;  // Илүү том хэмжээ - сайн чанар
-          const maxHeight = 700;
+          // 1. Thumbnail (жагсаалт, карт зэрэгт ашиглах) - хурдан ачаалагдана
+          const thumbnailCanvas = document.createElement('canvas');
+          const thumbnailCtx = thumbnailCanvas.getContext('2d');
           
-          let { width, height } = img;
+          const thumbnailMaxWidth = 400;
+          const thumbnailMaxHeight = 300;
+          let thumbWidth = img.width;
+          let thumbHeight = img.height;
           
-          // Хэмжээ тооцоолох
-          if (width > height) {
-            if (width > maxWidth) {
-              height = (height * maxWidth) / width;
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = (width * maxHeight) / height;
-              height = maxHeight;
-            }
+          const thumbnailRatio = Math.min(thumbnailMaxWidth / thumbWidth, thumbnailMaxHeight / thumbHeight);
+          if (thumbnailRatio < 1) {
+            thumbWidth = Math.round(thumbWidth * thumbnailRatio);
+            thumbHeight = Math.round(thumbHeight * thumbnailRatio);
           }
           
-          canvas.width = width;
-          canvas.height = height;
+          thumbnailCanvas.width = thumbWidth;
+          thumbnailCanvas.height = thumbHeight;
+          thumbnailCtx.imageSmoothingEnabled = true;
+          thumbnailCtx.imageSmoothingQuality = 'high';
+          thumbnailCtx.drawImage(img, 0, 0, thumbWidth, thumbHeight);
+          const thumbnailImage = thumbnailCanvas.toDataURL('image/jpeg', 0.8);
           
-          // Зургийг canvas дээр зурах
-          ctx.drawImage(img, 0, 0, width, height);
+          // 2. High Quality (дэлгэрэнгүй харуулах үед) - сайн чанартай
+          const highQualityCanvas = document.createElement('canvas');
+          const highQualityCtx = highQualityCanvas.getContext('2d');
           
-          // Compressed base64 авах (илүү сайн чанар)
-          const compressedImage = canvas.toDataURL('image/jpeg', 0.85); // 85% чанар - илүү сайн чанар
-          setUploadedImages(prev => [...prev, compressedImage]);
+          const maxWidth = 1920;  // Full HD хэмжээ - веб дээр маш сайн харагдана
+          const maxHeight = 1080;
+          let { width, height } = img;
+          
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          if (ratio < 1) {
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          
+          highQualityCanvas.width = width;
+          highQualityCanvas.height = height;
+          highQualityCtx.imageSmoothingEnabled = true;
+          highQualityCtx.imageSmoothingQuality = 'high';
+          highQualityCtx.drawImage(img, 0, 0, width, height);
+          
+          // High quality-г progressive compression хийх
+          let quality = 0.9; // 90% чанараас эхлэх - маш сайн чанар
+          let highQualityImage = highQualityCanvas.toDataURL('image/jpeg', quality);
+          
+          // Зөвхөн хэт том бол чанарыг бага зэрэг бууруулна (1MB max)
+          const maxSizeBytes = 1024 * 1024; // 1MB max - өндөр чанар хадгалах
+          let attempts = 0;
+          while (highQualityImage.length > maxSizeBytes && quality > 0.7 && attempts < 3) {
+            quality -= 0.05; // Бага зэрэг бууруулна
+            highQualityImage = highQualityCanvas.toDataURL('image/jpeg', quality);
+            attempts++;
+          }
+          
+          // Хэмжээ мэдээллийг консолд хэвлэх
+          const thumbnailSizeKB = Math.round(thumbnailImage.length / 1024);
+          const highQualitySizeKB = Math.round(highQualityImage.length / 1024);
+          console.log(`Image processed:
+            Thumbnail: ${thumbWidth}x${thumbHeight}, ${thumbnailSizeKB}KB
+            High Quality: ${width}x${height}, ${highQualitySizeKB}KB, quality: ${(quality * 100).toFixed(0)}%`);
+          
+          // Хоёр зургийг object болгон хадгалах
+          const imageData = {
+            thumbnail: thumbnailImage,
+            highQuality: highQualityImage,
+            originalName: file.name
+          };
+          
+          setUploadedImages(prev => [...prev, imageData]);
         };
         img.src = event.target.result;
       };
@@ -144,7 +184,7 @@ const emptyForm = {
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Video функцууд
+  // Video функцууд - сайжруулсан compression
   const handleVideoUpload = (e) => {
     const files = Array.from(e.target.files);
     const videoFiles = files.filter(file => file.type.startsWith('video/'));
@@ -155,14 +195,24 @@ const emptyForm = {
     }
 
     videoFiles.forEach(file => {
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        alert(`${file.name} файл хэтэрхий том байна! (50MB-аас бага байх ёстой)`);
-        return;
-      }
-
+      // Video file хэмжээг шалгах - ямар ч хэмжээ хүлээж авна
+      console.log(`Processing video: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      
       const reader = new FileReader();
       reader.onload = (event) => {
-        setUploadedVideos(prev => [...prev, event.target.result]);
+        // Video мэдээлэл object болгон хадгалах
+        const videoData = {
+          data: event.target.result,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        };
+        
+        // TODO: Video compression энд нэмж болно (FFmpeg.js ашиглан)
+        // Одоохондоо шууд хадгална
+        setUploadedVideos(prev => [...prev, videoData]);
+        
+        console.log(`Video processed: ${file.name}, stored size: ${(event.target.result.length / 1024 / 1024).toFixed(2)}MB`);
       };
       reader.readAsDataURL(file);
     });
@@ -233,9 +283,17 @@ const emptyForm = {
         // Edit режимд: existingImages болон шинэ uploadedImages-г нэгтгэх
         finalImages = [...existingImages];
         
-        // Шинээр upload хийсэн зургуудыг нэмэх
+        // Шинээр upload хийсэн зургуудыг нэмэх (thumbnail + high quality format)
         if (uploadedImages.length > 0) {
-          finalImages = [...finalImages, ...uploadedImages];
+          uploadedImages.forEach(imageData => {
+            if (typeof imageData === 'object' && imageData.thumbnail && imageData.highQuality) {
+              // Шинэ format: object with thumbnail & high quality
+              finalImages.push(imageData);
+            } else {
+              // Хуучин format: зөвхөн string
+              finalImages.push(imageData);
+            }
+          });
         }
         
         // URL-аар оруулсан зургийг нэмэх
@@ -243,22 +301,25 @@ const emptyForm = {
           const urlImages = form.images.split('\n').filter(url => url.trim());
           // Давхардаагүй зургийг л нэмэх
           urlImages.forEach(url => {
-            if (!finalImages.includes(url)) {
-              finalImages.push(url);
+            if (!finalImages.find(img => 
+              (typeof img === 'string' && img === url) || 
+              (typeof img === 'object' && img.highQuality === url)
+            )) {
+              finalImages.push(url); // URL зураг - string байдлаар хадгална
             }
           });
         }
       } else {
         // Шинэ item режимд: uploadedImages болон URL зургуудыг нэмэх
-        finalImages = [...uploadedImages];
+        finalImages = [...uploadedImages]; // Энэ нь thumbnail + high quality objects байна
         
         if (form.images && form.images.trim()) {
           const urlImages = form.images.split('\n').filter(url => url.trim());
-          finalImages = [...finalImages, ...urlImages];
+          finalImages = [...finalImages, ...urlImages]; // URL зургууд - string байдлаар нэмэгдэнэ
         }
       }
 
-      // Video array бэлтгэх
+      // Video array бэлтгэх - object болон string format дэмжих
       let finalVideos = [];
       
       if (editingItem) {
@@ -267,7 +328,15 @@ const emptyForm = {
         
         // Шинээр upload хийсэн видеонуудыг нэмэх
         if (uploadedVideos.length > 0) {
-          finalVideos = [...finalVideos, ...uploadedVideos];
+          uploadedVideos.forEach(videoData => {
+            if (typeof videoData === 'object' && videoData.data) {
+              // Шинэ format: video object
+              finalVideos.push(videoData);
+            } else {
+              // Хуучин format: зөвхөн string
+              finalVideos.push(videoData);
+            }
+          });
         }
         
         // URL-аар оруулсан видеог нэмэх
@@ -275,18 +344,21 @@ const emptyForm = {
           const urlVideos = form.videos.split('\n').filter(url => url.trim());
           // Давхардаагүй видеог л нэмэх
           urlVideos.forEach(url => {
-            if (!finalVideos.includes(url)) {
-              finalVideos.push(url);
+            if (!finalVideos.find(video => 
+              (typeof video === 'string' && video === url) || 
+              (typeof video === 'object' && video.data === url)
+            )) {
+              finalVideos.push(url); // URL видео - string байдлаар хадгална
             }
           });
         }
       } else {
         // Шинэ item режимд: uploadedVideos болон URL видеонуудыг нэмэх
-        finalVideos = [...uploadedVideos];
+        finalVideos = [...uploadedVideos]; // Энэ нь video objects байна
         
         if (form.videos && form.videos.trim()) {
           const urlVideos = form.videos.split('\n').filter(url => url.trim());
-          finalVideos = [...finalVideos, ...urlVideos];
+          finalVideos = [...finalVideos, ...urlVideos]; // URL видеонууд - string байдлаар нэмэгдэнэ
         }
       }
 
@@ -310,10 +382,13 @@ const emptyForm = {
       
       // Payload хэмжээг шалгах
       const payloadSize = JSON.stringify(payload).length;
-      console.log(`Payload size: ${(payloadSize / 1024 / 1024).toFixed(2)} MB`);
+      const payloadSizeMB = (payloadSize / 1024 / 1024).toFixed(2);
+      console.log(`Payload size: ${payloadSizeMB} MB`);
+      console.log(`Images count: ${finalImages.length} (with thumbnail + high quality)`);
       
-      if (payloadSize > 45 * 1024 * 1024) { // 45MB-ээс их бол
-        alert("Зургийн хэмжээ хэт том байна. Цөөн зураг сонгоно уу.");
+      // Аюулгүй хэмжээ: 20MB (high quality + thumbnail зургуудад хангалттай)
+      if (payloadSize > 20 * 1024 * 1024) { 
+        alert(`Нийт мэдээлэл хэт том байна (${payloadSizeMB}MB). Цөөн зураг оруулна уу эсвэл зургуудыг багцлан нэмнэ үү.`);
         return;
       }
       let res;
@@ -621,6 +696,38 @@ const emptyForm = {
                     {form.pricing.stage && (
                       <div style={{ fontSize: "12px", color: "#9c27b0", marginTop: "4px", fontWeight: "500" }}>
                         {parseInt(form.pricing.stage || 0).toLocaleString()}₮/цаг
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#333", fontSize: "14px" }}>
+                      🌙 Хоног (₮/хоног)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="15000"
+                      value={form.pricing.overnight}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setForm(s => ({ ...s, pricing: { ...s.pricing, overnight: value } }));
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        border: "2px solid #e0e0e0",
+                        borderRadius: "6px",
+                        fontSize: "14px",
+                        outline: "none",
+                        transition: "border-color 0.2s",
+                        boxSizing: "border-box"
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = "#3f51b5"}
+                      onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                    />
+                    {form.pricing.overnight && (
+                      <div style={{ fontSize: "12px", color: "#3f51b5", marginTop: "4px", fontWeight: "500" }}>
+                        {parseInt(form.pricing.overnight || 0).toLocaleString()}₮/хоног
                       </div>
                     )}
                   </div>
@@ -1120,8 +1227,8 @@ const emptyForm = {
                           {uploadedImages.map((img, index) => (
                             <div key={`new-${index}`} style={{ position: "relative" }}>
                               <img
-                                src={img}
-                                alt={`Upload ${index + 1}`}
+                                src={typeof img === 'object' ? img.thumbnail : img}
+                                alt={typeof img === 'object' ? img.originalName : `Upload ${index + 1}`}
                                 style={{
                                   width: "100%",
                                   height: "100px",
@@ -1129,6 +1236,7 @@ const emptyForm = {
                                   borderRadius: "8px",
                                   border: "2px solid #4CAF50"
                                 }}
+                                title={typeof img === 'object' ? `${img.originalName} (High Quality зураг бэлэн)` : ''}
                               />
                               <button
                                 type="button"
@@ -1304,7 +1412,7 @@ const emptyForm = {
                           {uploadedVideos.map((video, index) => (
                             <div key={`new-video-${index}`} style={{ position: "relative" }}>
                               <video
-                                src={video}
+                                src={typeof video === 'object' ? video.data : video}
                                 controls
                                 style={{
                                   width: "100%",
@@ -1313,6 +1421,7 @@ const emptyForm = {
                                   borderRadius: "8px",
                                   border: "2px solid #4CAF50"
                                 }}
+                                title={typeof video === 'object' ? `${video.name} (${(video.size / 1024 / 1024).toFixed(2)}MB)` : ''}
                               />
                               <button
                                 type="button"
@@ -1426,49 +1535,6 @@ const emptyForm = {
                   onFocus={(e) => e.target.style.borderColor = "#1976d2"}
                   onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
                 />
-              </div>
-            </div>
-
-            {/* Description */}
-            <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ 
-                margin: "0 0 16px 0", 
-                fontSize: "18px", 
-                fontWeight: "600", 
-                color: "#333",
-                borderBottom: "2px solid #e3f2fd",
-                paddingBottom: "8px"
-              }}>
-                Тайлбар
-              </h3>
-              
-              <div>
-                <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
-                  Төвийн тухай дэлгэрэнгүй тайлбар
-                </label>
-                <textarea
-                  placeholder="Орчин үеийн тоног төхөөрөмжөөр тоноглогдсон тоглоомын газар. Дэлгэрэнгүй мэдээлэл, тоног төхөөрөмж, үйлчилгээний талаар бичнэ үү..."
-                  value={form.description}
-                  onChange={onChange("description")}
-                  rows={6}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    border: "2px solid #e0e0e0",
-                    borderRadius: "8px",
-                    fontSize: "16px",
-                    outline: "none",
-                    transition: "border-color 0.2s",
-                    boxSizing: "border-box",
-                    resize: "vertical",
-                    fontFamily: "inherit"
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = "#1976d2"}
-                  onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
-                />
-                <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#666" }}>
-                  Төвийн тухай бүх мэдээллийг энд оруулна уу (тоног төхөөрөмж, үйлчилгээ, онцлог г.м.)
-                </p>
               </div>
             </div>
 

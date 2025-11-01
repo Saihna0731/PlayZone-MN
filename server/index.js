@@ -6,7 +6,8 @@ require("dotenv").config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // энэ мөр байна гэдгийг баталгаажуул
+app.use(express.json({ limit: '25mb' })); // High quality + thumbnail зургуудад хангалттай
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
 const centersRouter = require("./routes/centers");
 app.use("/api/centers", centersRouter);
