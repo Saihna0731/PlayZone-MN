@@ -2,7 +2,6 @@
   "name": "my-map-app",
   "version": "1.0.0",
   "private": true,
-  "proxy": "http://localhost:8080",
   "scripts": {
     "start": "react-scripts start",
     "server:dev": "nodemon server/index.js"

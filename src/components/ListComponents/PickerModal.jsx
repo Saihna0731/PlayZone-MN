@@ -1,5 +1,5 @@
 import React from "react";
-import MapPicker from "./MapPicker";
+import MapPicker from "./ListComponents/MapPicker";
 
 export default function PickerModal({ onCancel, onConfirm }) {
   return (

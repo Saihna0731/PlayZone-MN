@@ -37,11 +37,6 @@
   }
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 .center-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

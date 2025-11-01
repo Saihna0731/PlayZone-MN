@@ -1,23 +1,84 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaPhone, FaTrash, FaEdit, FaMapMarkerAlt, FaStar, FaArrowRight, FaHeart } from "react-icons/fa";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import axios from "axios";
-import { API_BASE } from "../config";
+import { API_BASE } from "../../config";
 
-export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete, isAdmin }) {
+// Small badge to show owner subscription plan (PRO / STANDARD)
+function PlanBadge({ owner }) {
+  const plan = owner?.subscription?.plan;
+  if (plan === 'business_pro') {
+    return (
+      <span style={{
+        background: 'linear-gradient(45deg, #ff6f61, #e91e63)',
+        color: '#fff',
+        padding: '4px 10px',
+        borderRadius: 14,
+        fontSize: 11,
+        fontWeight: 800,
+        letterSpacing: 0.6,
+        boxShadow: '0 2px 6px rgba(233,30,99,0.25)'
+      }}>PRO</span>
+    );
+  }
+  if (plan === 'business_standard') {
+    return (
+      <span style={{
+        background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+        color: '#fff',
+        padding: '4px 10px',
+        borderRadius: 14,
+        fontSize: 11,
+        fontWeight: 800,
+        letterSpacing: 0.6,
+        boxShadow: '0 2px 6px rgba(25,118,210,0.25)'
+      }}>STANDARD</span>
+    );
+  }
+  return null;
+}
+
+export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete, isAdmin, showToast }) {
   const navigate = useNavigate();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isAdmin: userIsAdmin, isCenterOwner } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
-  // Get images from the correct database field and fallbacks
+  // Get images and videos from the correct database field and fallbacks
   const adminImages = item.images && Array.isArray(item.images) ? item.images : [];
+  
+  // Handle videos from both array and string formats
+  let adminVideos = [];
+  if (item.videos) {
+    if (Array.isArray(item.videos)) {
+      adminVideos = item.videos.filter(video => video && video.trim());
+    } else if (typeof item.videos === 'string' && item.videos.trim()) {
+      adminVideos = item.videos.split('\n').filter(url => url && url.trim()).map(url => url.trim());
+    }
+  }
+
+  // Handle embed videos
+  let adminEmbedVideos = [];
+  if (item.embedVideos) {
+    if (Array.isArray(item.embedVideos)) {
+      adminEmbedVideos = item.embedVideos.filter(embed => embed && embed.trim());
+    }
+  }
+  
   const fallbackImages = [item.image, item.img, item.photo].filter(Boolean);
   const allImages = [...adminImages, ...fallbackImages].slice(0, 6);
   
+  // Create media array for carousel (ONLY IMAGES)
+  const imageItems = allImages.map(url => ({ type: 'image', url: enhanceImageUrl(url) }));
+  
+  // Separate videos for display below description (not in carousel)
+  const videoItems = adminVideos.map(url => ({ type: 'video', url }));
+  const embedVideoItems = adminEmbedVideos.map(embed => ({ type: 'embed', content: embed }));
+  
   // Function to enhance image quality
-  const enhanceImageUrl = (url) => {
+  function enhanceImageUrl(url) {
     if (!url) return url;
     
     // If it's an Unsplash URL, enhance it with better quality parameters
@@ -32,12 +93,16 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
     
     // For other URLs, try to add quality parameters if possible
     return url;
-  };
+  }
 
-  const pictures = allImages.length ? allImages.map(enhanceImageUrl) : [
-    "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=600&fit=crop&q=85&auto=format",
-    "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=1200&h=600&fit=crop&q=85&auto=format"
+  // Fallback if no images
+  const defaultMedia = [
+    { type: 'image', url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=600&fit=crop&q=85&auto=format" },
+    { type: 'image', url: "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=1200&h=600&fit=crop&q=85&auto=format" }
   ];
+  
+  // Use only images for carousel
+  const media = imageItems.length ? imageItems : defaultMedia;
   
   const [index, setIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState({});
@@ -46,11 +111,15 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
     setImageErrors(prev => ({ ...prev, [imageIndex]: true }));
   };
 
-  const getCurrentImage = () => {
-    const currentImg = pictures[index];
-    return imageErrors[index] ? 
-      "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=600&fit=crop&q=85&auto=format" : 
-      currentImg;
+  const getCurrentMedia = () => {
+    const currentItem = media[index];
+    if (!currentItem) return { type: 'image', url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=600&fit=crop&q=85&auto=format" };
+    
+    if (imageErrors[index]) {
+      return { type: 'image', url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=600&fit=crop&q=85&auto=format" };
+    }
+    
+    return currentItem;
   };
 
   useEffect(() => {
@@ -60,16 +129,18 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
 
   const prev = (e) => {
     e.stopPropagation();
-    setIndex((i) => (i - 1 + pictures.length) % pictures.length);
+    setIndex((i) => (i - 1 + media.length) % media.length);
   };
   
   const next = (e) => {
     e.stopPropagation();
-    setIndex((i) => (i + 1) % pictures.length);
+    setIndex((i) => (i + 1) % media.length);
   };
 
   const handleCardClick = () => {
-    navigate(`/center/${item._id || item.id}`);
+    const centerId = item._id || item.id;
+    console.log("🔗 Navigating to center:", centerId, "Item:", item);
+    navigate(`/center/${centerId}`);
   };
 
   const handleActionClick = (e, action) => {
@@ -118,7 +189,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
   const toggleFavorite = async (e) => {
     e.stopPropagation();
     if (!user) {
-      alert("Нэвтэрч орно уу");
+      showToast && showToast("Нэвтэрч орно уу", "warning");
       return;
     }
 
@@ -133,19 +204,21 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
           headers: { Authorization: `Bearer ${token}` }
         });
         setIsFavorite(false);
+        showToast && showToast("Дуртай жагсаалтаас хасагдлаа", "info");
       } else {
         // Add to favorites
         await axios.post(`${API_BASE}/api/auth/favorites/${centerId}`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setIsFavorite(true);
+        showToast && showToast("Дуртай жагсаалтад нэмэгдлээ", "success");
       }
       
       // AuthContext дээрх user мэдээллийг шинэчлэх
       await refreshUser();
     } catch (error) {
       console.error("Toggle favorite error:", error);
-      alert("Дуртай жагсаалт шинэчлэхэд алдаа гарлаа");
+      showToast && showToast("Дуртай жагсаалт шинэчлэхэд алдаа гарлаа", "error");
     } finally {
       setFavoriteLoading(false);
     }
@@ -174,19 +247,28 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
       }}
     >
-      {/* Image carousel */}
+      {/* Image carousel (Images only) */}
       <div style={{ position: "relative", height: 200, background: "#f5f5f5" }}>
         <img
-          src={getCurrentImage()}
+          src={getCurrentMedia().url}
           alt={item.name || "center"}
           onError={() => handleImageError(index)}
+          onLoad={() => setImageLoaded(true)}
+          loading="lazy"
+          decoding="async"
+          fetchpriority="low"
           style={{ 
             width: "100%", 
             height: "100%", 
             objectFit: "cover",
             objectPosition: "center",
             display: "block",
-            backgroundColor: "#f5f5f5"
+            backgroundColor: "#f5f5f5",
+            opacity: imageLoaded ? 1 : 0.8,
+            transition: "opacity 0.15s ease-out",
+            willChange: "opacity",
+            transform: "translateZ(0)", // GPU acceleration
+            backfaceVisibility: "hidden"
           }}
         />
 
@@ -279,7 +361,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         </div>
 
         {/* Navigation arrows */}
-        {pictures.length > 1 && (
+        {media.length > 1 && (
           <>
             <button
               onClick={prev}
@@ -334,7 +416,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
               display: "flex", 
               gap: 6 
             }}>
-              {pictures.map((_, i) => (
+              {media.map((mediaItem, i) => (
                 <div
                   key={i}
                   onClick={(e) => { e.stopPropagation(); setIndex(i); }}
@@ -345,8 +427,45 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
                     background: i === index ? "#fff" : "rgba(255,255,255,0.5)",
                     cursor: "pointer",
                     transition: "all 0.3s ease",
+                    position: "relative"
                   }}
-                />
+                >
+                  {/* Show video icon for video items */}
+                  {mediaItem.type === 'video' && i === index && (
+                    <div style={{
+                      position: "absolute",
+                      top: "-20px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      color: "#fff",
+                      fontSize: "10px",
+                      background: "rgba(0,0,0,0.8)",
+                      padding: "2px 4px",
+                      borderRadius: "3px",
+                      whiteSpace: "nowrap"
+                    }}>
+                      🎬 Video
+                    </div>
+                  )}
+                  
+                  {/* Show embed icon for embed video items */}
+                  {mediaItem.type === 'embed' && i === index && (
+                    <div style={{
+                      position: "absolute",
+                      top: "-20px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      color: "#fff",
+                      fontSize: "10px",
+                      background: "rgba(0,0,0,0.8)",
+                      padding: "2px 4px",
+                      borderRadius: "3px",
+                      whiteSpace: "nowrap"
+                    }}>
+                      📺 Embed
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </>
@@ -398,70 +517,68 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
             )}
           </div>
 
-          {/* Admin actions */}
-          {isAdmin && (
-            <div style={{ 
-              display: "flex", 
-              gap: 8, 
-              marginLeft: 12,
-              alignItems: "flex-start" 
-            }}>
-              <button
-                onClick={(e) => handleActionClick(e, onEdit)}
-                style={{
-                  background: "#e3f2fd",
-                  border: "1px solid #bbdefb",
-                  color: "#1976d2",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  transition: "all 0.2s ease"
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "#1976d2";
-                  e.target.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "#e3f2fd";
-                  e.target.style.color = "#1976d2";
-                }}
-              >
-                <FaEdit size={12} />
-              </button>
-              <button
-                onClick={(e) => handleActionClick(e, () => onDelete && onDelete(item._id ?? item.id))}
-                style={{
-                  background: "#ffebee",
-                  border: "1px solid #ffcdd2",
-                  color: "#d32f2f",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  transition: "all 0.2s ease"
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "#d32f2f";
-                  e.target.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "#ffebee";
-                  e.target.style.color = "#d32f2f";
-                }}
-              >
-                <FaTrash size={12} />
-              </button>
-            </div>
-          )}
+          {/* Right rail: Plan badge + (optional) admin actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 12 }}>
+            <PlanBadge owner={typeof item.owner === 'object' ? item.owner : undefined} />
+            {(isAdmin || userIsAdmin || (isCenterOwner && String((typeof item.owner === 'object' ? (item.owner?._id || item.owner?.id) : item.owner)) === String(user?._id))) && (
+              <>
+                <button
+                  onClick={(e) => handleActionClick(e, onEdit)}
+                  style={{
+                    background: "#e3f2fd",
+                    border: "1px solid #bbdefb",
+                    color: "#1976d2",
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "#1976d2";
+                    e.target.style.color = "#fff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "#e3f2fd";
+                    e.target.style.color = "#1976d2";
+                  }}
+                >
+                  <FaEdit size={12} />
+                </button>
+                <button
+                  onClick={(e) => handleActionClick(e, () => onDelete && onDelete(item._id ?? item.id))}
+                  style={{
+                    background: "#ffebee",
+                    border: "1px solid #ffcdd2",
+                    color: "#d32f2f",
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "#d32f2f";
+                    e.target.style.color = "#fff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "#ffebee";
+                    e.target.style.color = "#d32f2f";
+                  }}
+                >
+                  <FaTrash size={12} />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Description preview */}
@@ -477,6 +594,37 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         }}>
           {item.description || item.note || "Тайлбар байхгүй байна."}
         </div>
+
+        {/* Videos section (below description) */}
+        {(videoItems.length > 0 || embedVideoItems.length > 0) && (
+          <div style={{ 
+            marginBottom: 16,
+            padding: "12px",
+            background: "#f8f9fa",
+            borderRadius: "8px",
+            border: "1px solid #e9ecef"
+          }}>
+            <div style={{ 
+              fontSize: "13px", 
+              fontWeight: "600", 
+              color: "#495057",
+              marginBottom: "8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}>
+              🎬 Видео ({videoItems.length + embedVideoItems.length})
+            </div>
+            
+            <div style={{ 
+              fontSize: "12px", 
+              color: "#6c757d",
+              fontStyle: "italic"
+            }}>
+              Дэлгэрэнгүй хуудсанд үзэх боломжтой
+            </div>
+          </div>
+        )}
 
         {/* Phone number */}
         {item.phone && (

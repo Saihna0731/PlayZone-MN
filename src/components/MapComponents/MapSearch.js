@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FaSearch } from "react-icons/fa";
 
-function MapSearch({ onSearch, placeholder = "PC Center хайх..." }) {
+function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('сул суудал')..." }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e) => {
@@ -33,7 +33,7 @@ function MapSearch({ onSearch, placeholder = "PC Center хайх..." }) {
         type="text"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="PC Center хайх..."
+        placeholder={placeholder}
         style={{
           flex: 1,
           border: "none",

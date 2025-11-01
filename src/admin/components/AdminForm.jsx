@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { API_BASE } from "../config";
+import { API_BASE } from "../../config";
 import { FaTimes, FaMapMarkerAlt, FaSave, FaGamepad, FaUpload, FaTrash } from "react-icons/fa";
 import PickerModal from "./PickerModal";
+import { useAuth } from "../../contexts/AuthContext";
 
-const emptyForm = { 
-  name: "", 
-  category: "gaming", 
-  address: "", 
-  phone: "", 
+const emptyForm = {
+  name: "",
+  category: "gaming",
+  address: "",
+  phone: "",
   email: "",
   website: "",
   opening: "",
@@ -20,20 +21,22 @@ const emptyForm = {
   },
   rating: "",
   description: "", 
-  longDescription: "", 
   logo: "",
   images: "",
+  videos: "",
+  embedVideos: "",
   facilities: "",
   lat: "", 
   lng: "" 
-};
-
-export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpen = false }) {
+};export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpen = false }) {
+  const { token } = useAuth();
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]); // Хуучин зургууд
+  const [uploadedVideos, setUploadedVideos] = useState([]);
+  const [existingVideos, setExistingVideos] = useState([]); // Хуучин видеонууд
 
   useEffect(() => {
     if (editingItem) {
@@ -52,22 +55,27 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
           stage: ""
         },
         rating: editingItem.rating || "",
-        description: editingItem.description || "",
-        longDescription: editingItem.longDescription || "",
+        description: (editingItem.description || "") + (editingItem.longDescription ? (editingItem.description ? "\n\n" : "") + editingItem.longDescription : ""),
         logo: editingItem.logo || "",
         images: editingItem.images ? editingItem.images.join('\n') : "",
+        videos: editingItem.videos ? editingItem.videos.join('\n') : "",
+        embedVideos: editingItem.embedVideos ? editingItem.embedVideos.join('\n') : "",
         facilities: editingItem.facilities ? editingItem.facilities.join('\n') : "",
         lat: editingItem.lat ?? "",
         lng: editingItem.lng ?? ""
       });
       // Edit үед uploadedImages-г хоосон байлгах (хуучин зургууд давтагдахаас сэргийлэх)
       setUploadedImages([]);
-      // Хуучин зургийг тусдаа state-д хадгалах
+      setUploadedVideos([]);
+      // Хуучин зураг, видеог тусдаа state-д хадгалах
       setExistingImages(editingItem.images || []);
+      setExistingVideos(editingItem.videos || []);
     } else {
       setForm(emptyForm);
       setUploadedImages([]);
+      setUploadedVideos([]);
       setExistingImages([]);
+      setExistingVideos([]);
     }
     const handler = (e) => {
       const { lat, lng } = e.detail || {};
@@ -134,6 +142,38 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
 
   const removeExistingImage = (index) => {
     setExistingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Video функцууд
+  const handleVideoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const videoFiles = files.filter(file => file.type.startsWith('video/'));
+    
+    if (videoFiles.length === 0) {
+      alert("Зөвхөн video файл upload хийж болно!");
+      return;
+    }
+
+    videoFiles.forEach(file => {
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        alert(`${file.name} файл хэтэрхий том байна! (50MB-аас бага байх ёстой)`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedVideos(prev => [...prev, event.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeVideo = (index) => {
+    setUploadedVideos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingVideo = (index) => {
+    setExistingVideos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleLogoUpload = (e) => {
@@ -218,6 +258,44 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
         }
       }
 
+      // Video array бэлтгэх
+      let finalVideos = [];
+      
+      if (editingItem) {
+        // Edit режимд: existingVideos болон шинэ uploadedVideos-г нэгтгэх
+        finalVideos = [...existingVideos];
+        
+        // Шинээр upload хийсэн видеонуудыг нэмэх
+        if (uploadedVideos.length > 0) {
+          finalVideos = [...finalVideos, ...uploadedVideos];
+        }
+        
+        // URL-аар оруулсан видеог нэмэх
+        if (form.videos && form.videos.trim()) {
+          const urlVideos = form.videos.split('\n').filter(url => url.trim());
+          // Давхардаагүй видеог л нэмэх
+          urlVideos.forEach(url => {
+            if (!finalVideos.includes(url)) {
+              finalVideos.push(url);
+            }
+          });
+        }
+      } else {
+        // Шинэ item режимд: uploadedVideos болон URL видеонуудыг нэмэх
+        finalVideos = [...uploadedVideos];
+        
+        if (form.videos && form.videos.trim()) {
+          const urlVideos = form.videos.split('\n').filter(url => url.trim());
+          finalVideos = [...finalVideos, ...urlVideos];
+        }
+      }
+
+      // Embed Videos array бэлтгэх
+      let finalEmbedVideos = [];
+      if (form.embedVideos && form.embedVideos.trim()) {
+        finalEmbedVideos = form.embedVideos.split('\n').filter(embed => embed.trim());
+      }
+
       const payload = { 
         ...form, 
         lat: form.lat === "" ? undefined : Number(form.lat), 
@@ -225,6 +303,8 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
         rating: form.rating === "" ? undefined : Number(form.rating),
         logo: form.logo || undefined,
         images: finalImages,
+        videos: finalVideos,
+        embedVideos: finalEmbedVideos,
         facilities: form.facilities ? form.facilities.split('\n').filter(f => f.trim()) : []
       };
       
@@ -237,10 +317,17 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
         return;
       }
       let res;
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+      
       if (editingItem && (editingItem._id || editingItem.id)) {
-        res = await axios.put(`${API_BASE}/api/centers/${editingItem._id ?? editingItem.id}`, payload);
+        res = await axios.put(`${API_BASE}/api/centers/${editingItem._id ?? editingItem.id}`, payload, config);
       } else {
-        res = await axios.post(`${API_BASE}/api/centers`, payload);
+        res = await axios.post(`${API_BASE}/api/centers`, payload, config);
       }
       window.dispatchEvent(new CustomEvent("centers:updated", { detail: res.data }));
       onSaved && onSaved(res.data);
@@ -1101,12 +1188,226 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
                 />
               </div>
 
+              {/* Video Upload Section */}
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{ display: "block", marginBottom: "16px", fontWeight: "600", color: "#333", fontSize: "18px" }}>
+                  🎬 Видео оруулах
+                </label>
+
+                {/* Video File Upload */}
+                <div style={{ 
+                  border: "2px dashed #e0e0e0", 
+                  borderRadius: "8px", 
+                  padding: "20px",
+                  textAlign: "center",
+                  background: "#fafafa",
+                  marginBottom: "16px"
+                }}>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    onChange={handleVideoUpload}
+                    style={{ display: "none" }}
+                    id="video-upload"
+                  />
+                  <label
+                    htmlFor="video-upload"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "12px 24px",
+                      background: "linear-gradient(135deg, #667eea, #764ba2)",
+                      color: "#fff",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      fontWeight: "500",
+                      border: "none",
+                      fontSize: "14px"
+                    }}
+                  >
+                    🎥 Видео сонгох
+                  </label>
+                  <p style={{ margin: "12px 0 0 0", fontSize: "12px", color: "#666" }}>
+                    MP4, AVI, MOV файл сонгоно уу (олон видео сонгож болно, 50MB хүртэл)
+                  </p>
+                </div>
+
+                {/* Video Preview */}
+                {(existingVideos.length > 0 || uploadedVideos.length > 0) && (
+                  <div style={{ marginBottom: "16px" }}>
+                    {/* Existing Videos */}
+                    {existingVideos.length > 0 && (
+                      <div style={{ marginBottom: "16px" }}>
+                        <p style={{ marginBottom: "12px", fontWeight: "500", color: "#333" }}>
+                          Одоо байгаа видеонууд ({existingVideos.length})
+                        </p>
+                        <div style={{ 
+                          display: "grid", 
+                          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
+                          gap: "12px" 
+                        }}>
+                          {existingVideos.map((video, index) => (
+                            <div key={`existing-video-${index}`} style={{ position: "relative" }}>
+                              <video
+                                src={video}
+                                controls
+                                style={{
+                                  width: "100%",
+                                  height: "120px",
+                                  objectFit: "cover",
+                                  borderRadius: "8px",
+                                  border: "2px solid #2196F3"
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeExistingVideo(index)}
+                                style={{
+                                  position: "absolute",
+                                  top: "4px",
+                                  right: "4px",
+                                  background: "#f44336",
+                                  color: "#fff",
+                                  border: "none",
+                                  borderRadius: "50%",
+                                  width: "24px",
+                                  height: "24px",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "12px"
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Newly Uploaded Videos */}
+                    {uploadedVideos.length > 0 && (
+                      <div>
+                        <p style={{ marginBottom: "12px", fontWeight: "500", color: "#333" }}>
+                          Шинээр оруулсан видеонууд ({uploadedVideos.length})
+                        </p>
+                        <div style={{ 
+                          display: "grid", 
+                          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
+                          gap: "12px" 
+                        }}>
+                          {uploadedVideos.map((video, index) => (
+                            <div key={`new-video-${index}`} style={{ position: "relative" }}>
+                              <video
+                                src={video}
+                                controls
+                                style={{
+                                  width: "100%",
+                                  height: "120px",
+                                  objectFit: "cover",
+                                  borderRadius: "8px",
+                                  border: "2px solid #4CAF50"
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeVideo(index)}
+                                style={{
+                                  position: "absolute",
+                                  top: "4px",
+                                  right: "4px",
+                                  background: "#f44336",
+                                  color: "#fff",
+                                  border: "none",
+                                  borderRadius: "50%",
+                                  width: "24px",
+                                  height: "24px",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "12px"
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Video URL Input */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
+                    Видеоны холбоос оруулах (шинэ мөрөөр тусгаарла)
+                  </label>
+                  <textarea
+                    placeholder="https://example.com/video1.mp4&#10;https://example.com/video2.mp4"
+                    value={form.videos}
+                    onChange={onChange("videos")}
+                    rows={3}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      outline: "none",
+                      transition: "border-color 0.2s",
+                      boxSizing: "border-box",
+                      resize: "vertical",
+                      fontFamily: "inherit"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#1976d2"}
+                    onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                  />
+                </div>
+
+                {/* Embed Video Input */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
+                    Embed видео (YouTube, Vimeo, etc) - iframe эсвэл холбоос
+                  </label>
+                  <textarea
+                    placeholder="YouTube: https://www.youtube.com/watch?v=VIDEO_ID&#10;Facebook: https://www.facebook.com/reel/1149883142838636/&#10;Instagram: https://www.instagram.com/p/POST_ID/&#10;Vimeo: https://vimeo.com/VIDEO_ID&#10;Эсвэл бүрэн iframe embed code оруулна уу"
+                    value={form.embedVideos || ""}
+                    onChange={onChange("embedVideos")}
+                    rows={5}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      outline: "none",
+                      transition: "border-color 0.2s",
+                      boxSizing: "border-box",
+                      resize: "vertical",
+                      fontFamily: "inherit"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#1976d2"}
+                    onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                  />
+                  <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#666" }}>
+                    YouTube, Facebook, Instagram, Vimeo холбоос эсвэл бүрэн iframe embed code оруулж болно
+                  </p>
+                </div>
+              </div>
+
               <div>
                 <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
-                  Дэд бүтэц/тоног төхөөрөмж (шинэ мөрөөр тусгаарла)
+                  Дэд бүтэц буюу боломжууд/тоног төхөөрөмж (шинэ мөрөөр тусгаарла)
                 </label>
                 <textarea
-                  placeholder="Gaming PC (RTX 4080)&#10;PlayStation 5&#10;Xbox Series X&#10;VR Gaming&#10;Турнирын заал&#10;Wi-Fi&#10;Ундаа, хоол"
+                  placeholder="Gaming PC (RTX 4080)&#10;PlayStation 5&#10;Xbox Series X&#10;VR Gaming&#10;Wi-Fi&#10;Ундаа, хоол"
                   value={form.facilities}
                   onChange={onChange("facilities")}
                   rows={6}
@@ -1141,41 +1442,15 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
                 Тайлбар
               </h3>
               
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
-                  Товч тайлбар
-                </label>
-                <textarea
-                  placeholder="Орчин үеийн тоног төхөөрөмжөөр тоноглогдсон тоглоомын газар..."
-                  value={form.description}
-                  onChange={onChange("description")}
-                  rows={3}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    border: "2px solid #e0e0e0",
-                    borderRadius: "8px",
-                    fontSize: "16px",
-                    outline: "none",
-                    transition: "border-color 0.2s",
-                    boxSizing: "border-box",
-                    resize: "vertical",
-                    fontFamily: "inherit"
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = "#1976d2"}
-                  onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
-                />
-              </div>
-
               <div>
                 <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
-                  Дэлгэрэнгүй тайлбар
+                  Төвийн тухай дэлгэрэнгүй тайлбар
                 </label>
                 <textarea
-                  placeholder="Дэлгэрэнгүй мэдээлэл, тоног төхөөрөмж, үйлчилгээний талаар..."
-                  value={form.longDescription}
-                  onChange={onChange("longDescription")}
-                  rows={4}
+                  placeholder="Орчин үеийн тоног төхөөрөмжөөр тоноглогдсон тоглоомын газар. Дэлгэрэнгүй мэдээлэл, тоног төхөөрөмж, үйлчилгээний талаар бичнэ үү..."
+                  value={form.description}
+                  onChange={onChange("description")}
+                  rows={6}
                   style={{
                     width: "100%",
                     padding: "12px 16px",
@@ -1191,6 +1466,9 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
                   onFocus={(e) => e.target.style.borderColor = "#1976d2"}
                   onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
                 />
+                <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#666" }}>
+                  Төвийн тухай бүх мэдээллийг энд оруулна уу (тоног төхөөрөмж, үйлчилгээ, онцлог г.м.)
+                </p>
               </div>
             </div>
 
@@ -1239,8 +1517,24 @@ export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpe
                   gap: "8px"
                 }}
               >
-                <FaSave />
-                {saving ? "Хадгалж байна..." : (editingItem ? "Өөрчлөлт хадгалах" : "PC Center нэмэх")}
+                {saving ? (
+                  <>
+                    <div style={{
+                      width: "16px",
+                      height: "16px",
+                      border: "2px solid transparent",
+                      borderTop: "2px solid #fff",
+                      borderRadius: "50%",
+                      animation: "spin 1s linear infinite"
+                    }}></div>
+                    Хадгалж байна...
+                  </>
+                ) : (
+                  <>
+                    <FaSave />
+                    {editingItem ? "Өөрчлөлт хадгалах" : "PC Center нэмэх"}
+                  </>
+                )}
               </button>
             </div>
           </form>

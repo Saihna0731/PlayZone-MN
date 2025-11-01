@@ -5,23 +5,11 @@ const path = require('path');
 require("dotenv").config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
-
-// CORS configuration
-app.use(cors({
-  origin: ["http://localhost:3000", "http://localhost:3001"],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
-app.use(express.json({ limit: '50mb' })); // зургийн upload-д зориулж limit нэмэгдүүллээ
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(cors());
+app.use(express.json()); // энэ мөр байна гэдгийг баталгаажуул
 
 const centersRouter = require("./routes/centers");
-const authRouter = require("./routes/auth");
-
 app.use("/api/centers", centersRouter);
-app.use("/api/auth", authRouter);
 
 const PORT = process.env.PORT || 8000;
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
