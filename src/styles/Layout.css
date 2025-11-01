@@ -1,0 +1,62 @@
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 56px;
+}
+
+@media (min-width: 640px) {
+  :root { --nav-height: 60px; }
+}
+@media (min-width: 1024px) {
+  :root { --nav-height: 64px; }
+}
+
+/* Floating search over map, respects safe area and navbar height */
+.floating-search {
+  position: fixed;
+  top: calc(var(--nav-height) + 65px + var(--safe-top));
+  left: 20px;
+  right: 20px;
+  z-index: 1100;
+  pointer-events: auto;
+}
+.floating-search .search-inner {
+  max-width:280px;
+  margin: 0 auto;
+}
+
+/* Responsive adjustments for larger screens */
+@media (min-width: 640px) {
+  .floating-search {
+    top: calc(var(--nav-height) + 70px + var(--safe-top));
+    left: 24px;
+    right: 24px;
+  }
+  .floating-search .search-inner {
+    max-width: 450px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .floating-search .search-inner {
+    max-width: 520px;
+  }
+}
+
+/* Bottom right stacked map controls (refresh, layer toggle) */
+.bottom-controls {
+  position: fixed;
+  right: 20px;
+  bottom: calc(100px + var(--safe-bottom));
+  z-index: 1100;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+/* Give list pages extra bottom space so content doesn't hide behind nav */
+.page-with-bottom-space {
+  padding-bottom: calc(92px + var(--safe-bottom));
+}

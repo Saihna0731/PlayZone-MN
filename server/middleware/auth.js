@@ -12,12 +12,14 @@ const auth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret_key");
     const user = await User.findById(decoded.userId);
 
-    if (!user || !user.isActive) {
+    // Хэрэв isActive талбар байхгүй бол (хуучин өгөгдөл) идэвхтэй гэж үзнэ
+    if (!user || user.isActive === false) {
       return res.status(401).json({ message: "Хэрэглэгч олдсонгүй эсвэл идэвхгүй байна" });
     }
 
     req.userId = decoded.userId;
-    req.userRole = decoded.role;
+    // role-г токенээс унших (хуучин токенууд accountType-ыг хадгалдаг)
+    req.userRole = decoded.role || decoded.accountType;
     next();
   } catch (error) {
     console.error("Auth middleware error:", error);

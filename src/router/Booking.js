@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import { API_BASE } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import BottomNav from "../components/BottomNav";
-import CenterCard from "../components/CenterCard";
+import BottomNav from "../components/MainNavbars/BottomNav";
+import CenterCard from "../components/ListComponents/CenterCard";
 
 export default function Booking() {
+  const { user, isAuthenticated } = useAuth();
   const [favorites, setFavorites] = useState([]);
   const [gamingCenters, setGamingCenters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
     try {
@@ -60,6 +61,84 @@ export default function Booking() {
   useEffect(() => {
     fetchData();
   }, [fetchData]); // fetchData өөрчлөгдөх үед дахин татах
+
+  // Auth шалгалт - бүх hooks-ийн дараа
+  if (!isAuthenticated) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        padding: "20px"
+      }}>
+        <div style={{
+          maxWidth: "400px",
+          width: "100%",
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(20px)",
+          borderRadius: "24px",
+          padding: "40px 32px",
+          textAlign: "center",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+        }}>
+          <div style={{ fontSize: "64px", marginBottom: "20px" }}>🔒</div>
+          <h2 style={{ margin: "0 0 12px 0", fontSize: "24px", color: "#333" }}>
+            Нэвтрэх шаардлагатай
+          </h2>
+          <p style={{ margin: "0 0 24px 0", color: "#666", fontSize: "15px", lineHeight: "1.6" }}>
+            Захиалга болон дуртай төвүүдийг харахын тулд эхлээд нэвтэрнэ үү
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <Link
+              to="/login"
+              style={{
+                display: "block",
+                padding: "14px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                textDecoration: "none",
+                borderRadius: "12px",
+                fontWeight: "700",
+                fontSize: "15px",
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
+              }}
+            >
+              🚀 Нэвтрэх
+            </Link>
+            <Link
+              to="/register"
+              style={{
+                display: "block",
+                padding: "14px",
+                background: "linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)",
+                color: "#667eea",
+                textDecoration: "none",
+                borderRadius: "12px",
+                fontWeight: "700",
+                fontSize: "15px"
+              }}
+            >
+              🎉 Бүртгүүлэх
+            </Link>
+            <Link
+              to="/map"
+              style={{
+                display: "block",
+                padding: "10px",
+                color: "#666",
+                textDecoration: "none",
+                fontSize: "14px"
+              }}
+            >
+              ← Нүүр хуудас руу буцах
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

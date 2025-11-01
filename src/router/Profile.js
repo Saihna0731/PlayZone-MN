@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import BottomNav from "../components/BottomNav";
+import BottomNav from "../components/MainNavbars/BottomNav";
 import '../styles/Profile.css';
 
 export default function Profile() {

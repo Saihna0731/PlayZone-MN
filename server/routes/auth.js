@@ -8,12 +8,33 @@ const router = express.Router();
 // Бүртгүүлэх
 router.post("/register", async (req, res) => {
   try {
-    const { username, email, password, fullName, phone } = req.body;
+    const { username, email, password, fullName, phone, accountType, centerName } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Имэйл болон нууц үг шаардлагатай"
+      });
+    }
+
+    if (accountType === 'user' && (!username || !fullName)) {
+      return res.status(400).json({
+        message: "Хэрэглэгчийн нэр болон бүтэн нэр шаардлагатай"
+      });
+    }
+
+    if (accountType === 'centerOwner' && !centerName) {
+      return res.status(400).json({
+        message: "PC Center-ийн нэр шаардлагатай"
+      });
+    }
 
     // Хэрэглэгч байгаа эсэхийг шалгах
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
+    const query = accountType === 'user' 
+      ? { $or: [{ email }, { username }] }
+      : { email };
+    
+    const existingUser = await User.findOne(query);
 
     if (existingUser) {
       return res.status(400).json({
@@ -24,25 +45,37 @@ router.post("/register", async (req, res) => {
     }
 
     // Шинэ хэрэглэгч үүсгэх
-    const user = new User({
-      username,
+    const userData = {
       email,
       password,
-      fullName,
-      phone: phone || ""
-    });
+      phone: phone || "",
+      accountType: accountType || 'user',
+      role: 'user'
+    };
 
+    if (accountType === 'user') {
+      userData.username = username;
+      userData.fullName = fullName;
+    } else if (accountType === 'centerOwner') {
+      userData.centerName = centerName;
+      userData.isApproved = false; // Админаар баталгаажуулах
+      userData.role = 'centerOwner';
+    }
+
+    const user = new User(userData);
     await user.save();
 
     // JWT token үүсгэх
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, accountType: user.accountType, role: user.role },
       process.env.JWT_SECRET || "fallback_secret_key",
       { expiresIn: "7d" }
     );
 
     res.status(201).json({
-      message: "Амжилттай бүртгүүллээ",
+      message: accountType === 'centerOwner' 
+        ? "Амжилттай бүртгүүллээ. Админаар баталгаажуулагдсаны дараа нэвтрэх боломжтой болно."
+        : "Амжилттай бүртгүүллээ",
       token,
       user
     });
@@ -82,16 +115,16 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Хэрэглэгч идэвхтэй эсэхийг шалгах
-    if (!user.isActive) {
-      return res.status(400).json({
-        message: "Таны эрх хязгаарлагдсан байна"
+    // Эзэмшигч баталгаажсан эсэхийг шалгах
+    if (user.accountType === 'centerOwner' && !user.isApproved) {
+      return res.status(403).json({
+        message: "Таны бүртгэл хараахан админаар баталгаажаагүй байна. Та удахгүй эрх авах болно."
       });
     }
 
     // JWT token үүсгэх
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, accountType: user.accountType, role: user.role },
       process.env.JWT_SECRET || "fallback_secret_key",
       { expiresIn: "7d" }
     );
@@ -113,7 +146,7 @@ router.post("/login", async (req, res) => {
 // Хэрэглэгчийн мэдээлэл авах
 router.get("/profile", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).populate('favoritesCenters');
+    const user = await User.findById(req.userId).populate('favorites');
     if (!user) {
       return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
     }
@@ -157,6 +190,27 @@ router.put("/profile", auth, async (req, res) => {
   }
 });
 
+// Дуртай төвүүдийг авах (GET)
+router.get("/favorites", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).populate('favorites');
+    
+    if (!user) {
+      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
+    }
+
+    res.json({
+      favorites: user.favorites || []
+    });
+  } catch (error) {
+    console.error("Get favorites error:", error);
+    res.status(500).json({ 
+      message: "Дуртай жагсаалт авахад алдаа гарлаа",
+      error: error.message 
+    });
+  }
+});
+
 // Дуртай төвөд нэмэх/хасах
 router.post("/favorites/:centerId", auth, async (req, res) => {
   try {
@@ -167,14 +221,14 @@ router.post("/favorites/:centerId", auth, async (req, res) => {
       return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
     }
 
-    const isFavorite = user.favoritesCenters.includes(centerId);
+    const isFavorite = user.favorites.includes(centerId);
     
     if (isFavorite) {
-      user.favoritesCenters = user.favoritesCenters.filter(
+      user.favorites = user.favorites.filter(
         id => id.toString() !== centerId
       );
     } else {
-      user.favoritesCenters.push(centerId);
+      user.favorites.push(centerId);
     }
 
     await user.save();
@@ -207,70 +261,6 @@ router.get("/all", auth, async (req, res) => {
     res.status(500).json({ 
       message: "Хэрэглэгчдийн жагсаалт авахад алдаа гарлаа" 
     });
-  }
-});
-
-// Add to favorites
-router.post("/favorites/:centerId", auth, async (req, res) => {
-  try {
-    const { centerId } = req.params;
-    const userId = req.userId; // req.user.userId-аас req.userId болгох
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
-    }
-
-    // Аль хэдийн favorite-д байгаа эсэхийг шалгах
-    if (user.favoritesCenters.includes(centerId)) {
-      return res.status(400).json({ message: "Энэ төв аль хэдийн дуртай жагсаалтад байна" });
-    }
-
-    user.favoritesCenters.push(centerId);
-    await user.save();
-
-    res.json({ message: "Дуртай жагсаалтад нэмэгдлээ", favorites: user.favoritesCenters });
-  } catch (error) {
-    console.error("Add to favorites error:", error);
-    res.status(500).json({ message: "Дуртай жагсаалтад нэмэхэд алдаа гарлаа" });
-  }
-});
-
-// Remove from favorites
-router.delete("/favorites/:centerId", auth, async (req, res) => {
-  try {
-    const { centerId } = req.params;
-    const userId = req.userId; // req.user.userId-аас req.userId болгох
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
-    }
-
-    user.favoritesCenters = user.favoritesCenters.filter(id => id.toString() !== centerId);
-    await user.save();
-
-    res.json({ message: "Дуртай жагсаалтаас хасагдлаа", favorites: user.favoritesCenters });
-  } catch (error) {
-    console.error("Remove from favorites error:", error);
-    res.status(500).json({ message: "Дуртай жагсаалтаас хасахад алдаа гарлаа" });
-  }
-});
-
-// Get user favorites
-router.get("/favorites", auth, async (req, res) => {
-  try {
-    const userId = req.userId; // req.user.userId-аас req.userId болгох
-
-    const user = await User.findById(userId).populate('favoritesCenters');
-    if (!user) {
-      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
-    }
-
-    res.json({ favorites: user.favoritesCenters });
-  } catch (error) {
-    console.error("Get favorites error:", error);
-    res.status(500).json({ message: "Дуртай жагсаалт авахад алдаа гарлаа" });
   }
 });
 

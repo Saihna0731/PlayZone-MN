@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE } from "../../config";
 import { FaTimes, FaMapMarkerAlt, FaSave, FaGamepad, FaUpload, FaTrash } from "react-icons/fa";
-import PickerModal from "./PickerModal";
+import PickerModal from "../../components/ListComponents/PickerModal";
 import { useAuth } from "../../contexts/AuthContext";
 
 const emptyForm = {

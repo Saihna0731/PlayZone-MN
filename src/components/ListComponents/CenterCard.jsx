@@ -4,6 +4,7 @@ import { FaChevronLeft, FaChevronRight, FaPhone, FaTrash, FaEdit, FaMapMarkerAlt
 import { useAuth } from "../../contexts/AuthContext";
 import axios from "axios";
 import { API_BASE } from "../../config";
+import "../../styles/List.css";
 
 // Small badge to show owner subscription plan (PRO / STANDARD)
 function PlanBadge({ owner }) {
@@ -523,58 +524,20 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
             {(isAdmin || userIsAdmin || (isCenterOwner && String((typeof item.owner === 'object' ? (item.owner?._id || item.owner?.id) : item.owner)) === String(user?._id))) && (
               <>
                 <button
+                  className="card-action-btn card-action-btn-edit"
                   onClick={(e) => handleActionClick(e, onEdit)}
-                  style={{
-                    background: "#e3f2fd",
-                    border: "1px solid #bbdefb",
-                    color: "#1976d2",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    transition: "all 0.2s ease"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = "#1976d2";
-                    e.target.style.color = "#fff";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "#e3f2fd";
-                    e.target.style.color = "#1976d2";
-                  }}
+                  title="Засах"
                 >
-                  <FaEdit size={12} />
+                  <FaEdit />
+                  <span style={{ display: window.innerWidth > 640 ? 'inline' : 'none' }}>Засах</span>
                 </button>
                 <button
+                  className="card-action-btn card-action-btn-delete"
                   onClick={(e) => handleActionClick(e, () => onDelete && onDelete(item._id ?? item.id))}
-                  style={{
-                    background: "#ffebee",
-                    border: "1px solid #ffcdd2",
-                    color: "#d32f2f",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    transition: "all 0.2s ease"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = "#d32f2f";
-                    e.target.style.color = "#fff";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "#ffebee";
-                    e.target.style.color = "#d32f2f";
-                  }}
+                  title="Устгах"
                 >
-                  <FaTrash size={12} />
+                  <FaTrash />
+                  <span style={{ display: window.innerWidth > 640 ? 'inline' : 'none' }}>Устгах</span>
                 </button>
               </>
             )}

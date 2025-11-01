@@ -69,7 +69,7 @@ function Navbar(props) {
         ) : (
           <>
             <Link 
-              to="/login" 
+              to="/auth" 
               style={{ 
                 color: "white", 
                 textDecoration: "none",
@@ -83,7 +83,7 @@ function Navbar(props) {
               🚀 Нэвтрэх
             </Link>
             <Link 
-              to="/register" 
+              to="/auth?mode=register" 
               style={{ 
                 color: "white", 
                 textDecoration: "none",

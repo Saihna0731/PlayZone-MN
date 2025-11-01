@@ -1,0 +1,246 @@
+/* List Page - Modern Button & Controls Styling */
+
+.list-page-container {
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+/* First row: Search + Add button */
+.list-controls-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.list-controls-row > *:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Second row: Category select */
+.list-controls-category {
+  margin-bottom: 20px;
+}
+
+.category-select {
+  width: 100%;
+  padding: 10px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.category-select:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.category-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Modern Action Buttons */
+.btn-modern {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.btn-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-modern:hover::before {
+  opacity: 1;
+}
+
+.btn-modern:active {
+  transform: translateY(1px);
+}
+
+/* Primary Button - Gradient Purple/Blue */
+.btn-primary-modern {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+}
+
+.btn-primary-modern:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+/* Secondary Button - Outline with gradient border effect */
+.btn-secondary-modern {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.btn-secondary-modern:hover {
+  background: linear-gradient(135deg, #f0f4ff 0%, #f5f3ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+}
+
+.btn-secondary-modern:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+/* Icon styling within buttons */
+.btn-modern .btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .list-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-modern {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-modern {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Loading state */
+.btn-modern.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.btn-modern.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hover animation for buttons */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+}
+
+.btn-primary-modern:hover {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Glass morphism effect for secondary button */
+.btn-secondary-modern {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* Card Action Buttons (Edit/Delete) */
+.card-action-btn {
+  background: white;
+  border: 2px solid;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-action-btn-edit {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.card-action-btn-edit:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.card-action-btn-delete {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.card-action-btn-delete:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.card-action-btn svg {
+  font-size: 13px;
+}

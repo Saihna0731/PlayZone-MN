@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/Auth.css';
 
 const Register = () => {
+  const [params] = useSearchParams();
+  const initialType = params.get('type') === 'owner' ? 'centerOwner' : 'user';
+  const accountType = initialType;
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
     fullName: '',
-    phone: ''
+    phone: '',
+    centerName: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,17 +33,29 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    if (!formData.username || !formData.email || !formData.password || 
-        !formData.confirmPassword || !formData.fullName) {
+    // Нийтлэг validation
+    if (!formData.email || !formData.password || !formData.confirmPassword) {
       return 'Бүх шаардлагатай талбарыг бөглөнө үү';
     }
 
-    if (formData.username.length < 3) {
-      return 'Хэрэглэгчийн нэр 3-аас дээш тэмдэгт байх ёстой';
+    // Хэрэглэгчийн validation
+    if (accountType === 'user') {
+      if (!formData.fullName || !formData.username) {
+        return 'Бүх шаардлагатай талбарыг бөглөнө үү';
+      }
+      
+      if (formData.username.length < 3) {
+        return 'Хэрэглэгчийн нэр 3-аас дээш тэмдэгт байх ёстой';
+      }
+
+      if (formData.username.length > 30) {
+        return 'Хэрэглэгчийн нэр 30-аас бага тэмдэгт байх ёстой';
+      }
     }
 
-    if (formData.username.length > 30) {
-      return 'Хэрэглэгчийн нэр 30-аас бага тэмдэгт байх ёстой';
+    // Эзэмшигчийн validation
+    if (accountType === 'centerOwner' && !formData.centerName) {
+      return 'PC Center-ийн нэрийг оруулна уу';
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -70,8 +86,9 @@ const Register = () => {
       return;
     }
 
-    const { confirmPassword, ...registrationData } = formData;
-    const result = await register(registrationData);
+  const { confirmPassword, ...registrationData } = formData;
+  const payload = { ...registrationData, accountType };
+  const result = await register(payload);
     
     if (result.success) {
       navigate('/map');
@@ -88,7 +105,7 @@ const Register = () => {
         <div className="auth-card register-card">
           <div className="auth-header">
             <h1>🎮 PC Center</h1>
-            <h2>Бүртгүүлэх</h2>
+            <h2>{accountType === 'centerOwner' ? '🏢 Эзэмшигч бүртгэл' : '👤 Хэрэглэгч бүртгэл'}</h2>
             <p>Шинэ данс үүсгэн орно уу</p>
           </div>
 
@@ -99,39 +116,56 @@ const Register = () => {
               </div>
             )}
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="fullName">
-                  👤 Бүтэн нэр *
-                </label>
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  placeholder="Жишээ: Батбаяр"
-                  required
-                />
-              </div>
+            {accountType === 'user' ? (
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="fullName">
+                    👤 Бүтэн нэр *
+                  </label>
+                  <input
+                    type="text"
+                    id="fullName"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    placeholder="Жишээ: Батбаяр"
+                    required={accountType === 'user'}
+                  />
+                </div>
 
+                <div className="form-group">
+                  <label htmlFor="username">
+                    🏷️ Хэрэглэгчийн нэр *
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    placeholder="username123"
+                    minLength="3"
+                    maxLength="30"
+                    required={accountType === 'user'}
+                  />
+                </div>
+              </div>
+            ) : (
               <div className="form-group">
-                <label htmlFor="username">
-                  🏷️ Хэрэглэгчийн нэр *
+                <label htmlFor="centerName">
+                  🏢 PC Center-ийн нэр *
                 </label>
                 <input
                   type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
+                  id="centerName"
+                  name="centerName"
+                  value={formData.centerName}
                   onChange={handleChange}
-                  placeholder="username123"
-                  minLength="3"
-                  maxLength="30"
-                  required
+                  placeholder="Жишээ: Elite Gaming Center"
+                  required={accountType === 'centerOwner'}
                 />
               </div>
-            </div>
+            )}
 
             <div className="form-group">
               <label htmlFor="email">
@@ -213,6 +247,21 @@ const Register = () => {
               </div>
             </div>
 
+            {accountType === 'centerOwner' && (
+              <div style={{ 
+                padding: '12px 16px', 
+                background: 'rgba(255, 152, 0, 0.1)', 
+                borderRadius: '12px', 
+                color: '#e65100', 
+                fontSize: '13px', 
+                lineHeight: '1.5',
+                borderLeft: '3px solid #ff9800',
+                marginBottom: '12px'
+              }}>
+                <strong>📌 Анхаар:</strong> PC Center эзэмшигчийн бүртгэл админаар баталгаажуулагдсаны дараа идэвхжинэ. Бүх мэдээллээ үнэн зөв оруулна уу.
+              </div>
+            )}
+
             <button
               type="submit"
               className={`auth-btn ${loading ? 'loading' : ''}`}
@@ -225,13 +274,18 @@ const Register = () => {
           <div className="auth-links">
             <p>
               Аль хэдийн данстай юу?{' '}
-              <Link to="/login" className="auth-link">
+              <Link to={`/login?type=${accountType==='centerOwner'?'owner':'user'}`} className="auth-link">
                 Нэвтрэх
               </Link>
             </p>
-            <Link to="/map" className="back-link">
-              ← Буцах
-            </Link>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <Link to="/auth?mode=login" className="back-link">
+                ← Сонголт руу буцах
+              </Link>
+              <Link to="/map" className="back-link">
+                🏠 Нүүр хуудас
+              </Link>
+            </div>
           </div>
         </div>
       </div>
