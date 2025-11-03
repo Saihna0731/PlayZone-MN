@@ -5,6 +5,12 @@ import { FaArrowLeft, FaPhone, FaMapMarkerAlt, FaClock, FaGlobe, FaEnvelope, FaS
 import axios from "axios";
 import { API_BASE } from "../config";
 
+// Текстийг товчлох helper
+const snippet = (s, max = 140) => {
+  if (!s || typeof s !== 'string') return '';
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+};
+
 export default function CenterDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -311,6 +317,46 @@ export default function CenterDetail() {
 
       {/* Content */}
       <div style={{ padding: "20px", paddingBottom: "80px" }}>
+        {/* Bonus section - if any */}
+        {centerData.bonus && centerData.bonus.length > 0 && (
+          <div style={{
+            background: "#fff8e1",
+            borderRadius: "12px",
+            padding: "16px",
+            marginBottom: "20px",
+            border: "1px solid #ffe0b2",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+          }}>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#e65100", marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>🎁 Шинэ бонус</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(() => {
+                const now = Date.now();
+                const active = centerData.bonus.filter(b => !b?.expiresAt || new Date(b.expiresAt).getTime() > now);
+                const toShow = (active.length ? active : centerData.bonus).slice(0, 3);
+                return toShow.map((b, idx) => (
+                  <div key={b._id || idx} style={{
+                    background: '#fff', border: '1px solid #ffe0b2', borderRadius: 10, padding: 12
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#5d4037' }}>{b.title || 'Бонус'}</div>
+                    {(b.standardFree || b.vipFree || b.stageFree) && (
+                      <div style={{ marginTop: 4, color: '#6d4c41' }}>
+                        {b.standardFree ? `Энгийн: ${b.standardFree} суудал сул` : ''}
+                        {b.vipFree ? `${b.standardFree ? ' • ' : ''}VIP: ${b.vipFree} суудал сул` : ''}
+                        {b.stageFree ? `${(b.standardFree || b.vipFree) ? ' • ' : ''}Stage: ${b.stageFree} суудал сул` : ''}
+                      </div>
+                    )}
+                    {b.text && (
+                      <div style={{ marginTop: 4, color: '#6d4c41' }}>{snippet(b.text, 180)}</div>
+                    )}
+                    {b.expiresAt && (
+                      <div style={{ marginTop: 4, fontSize: 12, color: '#8d6e63' }}>Дуусах хугацаа: {new Date(b.expiresAt).toLocaleString()}</div>
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        )}
         {/* Title and rating */}
         <div style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>

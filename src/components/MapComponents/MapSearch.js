@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 
 function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('сул суудал')..." }) {
@@ -10,6 +10,14 @@ function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('с�
       onSearch(searchQuery);
     }
   };
+
+  // Бичих болгонд шүүж (debounce 300ms)
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (onSearch) onSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [searchQuery, onSearch]);
 
   return (
     <form onSubmit={handleSearch} style={{

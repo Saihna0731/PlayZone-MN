@@ -3,14 +3,279 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { API_BASE } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+import { useSubscription } from "../hooks/useSubscription";
+import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import BottomNav from "../components/MainNavbars/BottomNav";
 import CenterCard from "../components/ListComponents/CenterCard";
+import AdminForm from "../admin/components/AdminForm";
+
+// Ачаалал шинэчлэх Modal компонент
+function OccupancyModal({ center, isOpen, onClose, onUpdate }) {
+  const [localOccupancy, setLocalOccupancy] = useState({
+    standard: center?.occupancy?.standard || 0,
+    vip: center?.occupancy?.vip || 0,
+    stage: center?.occupancy?.stage || 0
+  });
+  const [updating, setUpdating] = useState(false);
+
+  // Өнгийн функц
+  const getOccupancyColor = (percentage) => {
+    if (percentage <= 50) return "#4caf50"; // Ногоон
+    if (percentage <= 85) return "#ffc107"; // Шар
+    return "#f44336"; // Улаан
+  };
+
+  const handleUpdate = async () => {
+    if (!onUpdate) return;
+    
+    setUpdating(true);
+    try {
+      await onUpdate(center._id, localOccupancy);
+      onClose();
+    } catch (error) {
+      console.error("Failed to update occupancy:", error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (!isOpen || !center) return null;
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: "rgba(0,0,0,0.5)",
+      zIndex: 1000,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px"
+    }}>
+      <div style={{
+        background: "white",
+        borderRadius: "16px",
+        width: "100%",
+        maxWidth: "400px",
+        padding: "24px",
+        position: "relative",
+        boxShadow: "0 10px 40px rgba(0,0,0,0.2)"
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            background: "none",
+            border: "none",
+            fontSize: "20px",
+            cursor: "pointer",
+            color: "#666",
+            padding: "4px"
+          }}
+        >
+          ✕
+        </button>
+
+        <h3 style={{ 
+          margin: "0 0 20px 0", 
+          fontSize: "18px", 
+          fontWeight: "600",
+          color: "#2e7d32",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px"
+        }}>
+          📊 {center.name} - Ачаалал шинэчлэх
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Энгийн */}
+          <div>
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "6px"
+            }}>
+              <label style={{ fontSize: "14px", color: "#333", fontWeight: "500" }}>
+                💻 Энгийн компьютер
+              </label>
+              <span style={{
+                fontSize: "14px",
+                fontWeight: "600",
+                color: getOccupancyColor(localOccupancy.standard),
+                minWidth: "40px",
+                textAlign: "right"
+              }}>
+                {localOccupancy.standard}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={localOccupancy.standard}
+              onChange={(e) => setLocalOccupancy(prev => ({
+                ...prev,
+                standard: parseInt(e.target.value)
+              }))}
+              style={{
+                width: "100%",
+                height: "8px",
+                borderRadius: "4px",
+                background: `linear-gradient(to right, ${getOccupancyColor(localOccupancy.standard)} 0%, ${getOccupancyColor(localOccupancy.standard)} ${localOccupancy.standard}%, #ddd ${localOccupancy.standard}%, #ddd 100%)`,
+                outline: "none",
+                appearance: "none",
+                cursor: "pointer"
+              }}
+            />
+          </div>
+
+          {/* VIP */}
+          <div>
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "6px"
+            }}>
+              <label style={{ fontSize: "14px", color: "#333", fontWeight: "500" }}>
+                👑 VIP компьютер
+              </label>
+              <span style={{
+                fontSize: "14px",
+                fontWeight: "600",
+                color: getOccupancyColor(localOccupancy.vip),
+                minWidth: "40px",
+                textAlign: "right"
+              }}>
+                {localOccupancy.vip}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={localOccupancy.vip}
+              onChange={(e) => setLocalOccupancy(prev => ({
+                ...prev,
+                vip: parseInt(e.target.value)
+              }))}
+              style={{
+                width: "100%",
+                height: "8px",
+                borderRadius: "4px",
+                background: `linear-gradient(to right, ${getOccupancyColor(localOccupancy.vip)} 0%, ${getOccupancyColor(localOccupancy.vip)} ${localOccupancy.vip}%, #ddd ${localOccupancy.vip}%, #ddd 100%)`,
+                outline: "none",
+                appearance: "none",
+                cursor: "pointer"
+              }}
+            />
+          </div>
+
+          {/* Stage */}
+          <div>
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "6px"
+            }}>
+              <label style={{ fontSize: "14px", color: "#333", fontWeight: "500" }}>
+                🎮 Stage компьютер
+              </label>
+              <span style={{
+                fontSize: "14px",
+                fontWeight: "600",
+                color: getOccupancyColor(localOccupancy.stage),
+                minWidth: "40px",
+                textAlign: "right"
+              }}>
+                {localOccupancy.stage}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={localOccupancy.stage}
+              onChange={(e) => setLocalOccupancy(prev => ({
+                ...prev,
+                stage: parseInt(e.target.value)
+              }))}
+              style={{
+                width: "100%",
+                height: "8px",
+                borderRadius: "4px",
+                background: `linear-gradient(to right, ${getOccupancyColor(localOccupancy.stage)} 0%, ${getOccupancyColor(localOccupancy.stage)} ${localOccupancy.stage}%, #ddd ${localOccupancy.stage}%, #ddd 100%)`,
+                outline: "none",
+                appearance: "none",
+                cursor: "pointer"
+              }}
+            />
+          </div>
+
+          <div style={{ 
+            display: "flex", 
+            gap: "12px", 
+            marginTop: "8px" 
+          }}>
+            <button
+              onClick={handleUpdate}
+              disabled={updating}
+              style={{
+                flex: 1,
+                padding: "12px",
+                background: updating ? "#ccc" : "linear-gradient(45deg, #4caf50, #66bb6a)",
+                color: "white",
+                border: "none",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: updating ? "not-allowed" : "pointer",
+                boxShadow: updating ? "none" : "0 4px 12px rgba(76, 175, 80, 0.3)",
+                transition: "all 0.2s ease"
+              }}
+            >
+              {updating ? "🔄 Шинэчилж байна..." : "✅ Хадгалах"}
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                padding: "12px 20px",
+                background: "#f5f5f5",
+                color: "#666",
+                border: "1px solid #ddd",
+                borderRadius: "10px",
+                fontSize: "14px",
+                cursor: "pointer"
+              }}
+            >
+              Болих
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Booking() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isCenterOwner } = useAuth();
+  const { subscription, isPremiumUser } = useSubscription();
   const [favorites, setFavorites] = useState([]);
-  const [gamingCenters, setGamingCenters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingCenter, setEditingCenter] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [occupancyModalCenter, setOccupancyModalCenter] = useState(null);
+  const [occupancyModalOpen, setOccupancyModalOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -34,20 +299,135 @@ export default function Booking() {
           f.toLowerCase().includes("computer")
         ))
       );
-      setGamingCenters(pcCenters);
       
-      // User-ийн favorites-ийг PC төвүүдээр солих
-      setFavorites(pcCenters);
+      // Эзэмшигч бол зөвхөн өөрийн төвүүдийг харуулна, эс бөгөөс бүх PC төвүүд
+      const visible = (isCenterOwner && user?._id)
+        ? pcCenters.filter(c => String(c.owner) === String(user._id))
+        : pcCenters;
+
+      // Харагдах жагсаалт болгон байршуулна
+      setFavorites(visible);
       
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [isCenterOwner, user]);
+
+  // Ачаалал шинэчлэх функц
+  const updateOccupancy = async (centerId, occupancyData) => {
+    try {
+      await axios.put(
+        `${API_BASE}/api/centers/${centerId}/occupancy`, 
+        { occupancy: occupancyData },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Local state шинэчлэх
+      setFavorites(prev => 
+        prev.map(center => 
+          center._id === centerId 
+            ? { ...center, occupancy: occupancyData } 
+            : center
+        )
+      );
+
+      // Map-д мэдээлэл дамжуулах
+      window.dispatchEvent(new CustomEvent("occupancy:updated", { 
+        detail: { centerId, occupancy: occupancyData } 
+      }));
+
+      console.log("Occupancy updated:", centerId, occupancyData);
+      
+    } catch (err) {
+      console.error("Failed to update occupancy:", err);
+      alert("Ачаалал шинэчлэхэд алдаа гарлаа");
+    }
+  };
+
+  // Ачаалал шинэчлэх modal нээх
+  const handleOccupancyUpdate = (center) => {
+    setOccupancyModalCenter(center);
+    setOccupancyModalOpen(true);
+  };
+
+  // Ачаалал шинэчлэх modal хаах
+  const handleOccupancyModalClose = () => {
+    setOccupancyModalCenter(null);
+    setOccupancyModalOpen(false);
+  };
+
+  // Center засах handler
+  const handleEdit = (center) => {
+    setEditingCenter(center);
+    setFormOpen(true);
+    // Match List page behavior: scroll to top when opening the edit form
+    if (typeof window !== 'undefined' && window.scrollTo) {
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        window.scrollTo(0, 0);
+      }
+    }
+  };
+
+  // Center устгах handler
+  const handleDelete = async (centerId) => {
+    if (!window.confirm("PC төвийг устгах уу?")) return;
+    
+    try {
+      await axios.delete(`${API_BASE}/api/centers/${centerId}`);
+      
+      // Local state-ээс устгах
+      setFavorites(prev => prev.filter(center => center._id !== centerId));
+      
+      // Map дээр шинэчлэх
+      window.dispatchEvent(new CustomEvent("centers:updated"));
+      
+    } catch (err) {
+      console.error("Failed to delete center:", err);
+      alert("PC төв устгахад алдаа гарлаа");
+    }
+  };
+
+  // Center хадгалах handler
+  const handleSaved = (savedCenter) => {
+    // Local state шинэчлэх
+    setFavorites(prev => {
+      const exists = prev.find(c => c._id === savedCenter._id);
+      if (exists) {
+        return prev.map(c => c._id === savedCenter._id ? savedCenter : c);
+      } else {
+        return [...prev, savedCenter];
+      }
+    });
+    
+    // Form хаах
+    setEditingCenter(null);
+    setFormOpen(false);
+    
+    // Map дээр шинэчлэх
+    window.dispatchEvent(new CustomEvent("centers:updated"));
+  };
 
   useEffect(() => {
     fetchData();
+    // centers:updated event-с ирвэл локал state-г шинэчилнэ
+    const onCentersUpdated = (e) => {
+      const updated = e.detail;
+      if (updated && updated._id) {
+        setFavorites(prev => prev.map(c => (c._id === updated._id ? updated : c)));
+      } else {
+        fetchData();
+      }
+    };
+    window.addEventListener("centers:updated", onCentersUpdated);
+    return () => window.removeEventListener("centers:updated", onCentersUpdated);
   }, [fetchData]); // fetchData өөрчлөгдөх үед дахин татах
 
   // Auth шалгалт - бүх hooks-ийн дараа
@@ -128,6 +508,101 @@ export default function Booking() {
     );
   }
 
+  // Free user/owner хязгаарлалт
+  const canAccessBooking = (isCenterOwner && subscription?.plan !== 'free') || isPremiumUser;
+  
+  if (isAuthenticated && !canAccessBooking) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        padding: "20px",
+        paddingBottom: "calc(60px + env(safe-area-inset-bottom))"
+      }}>
+        <div style={{
+          maxWidth: "420px",
+          width: "100%",
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(20px)",
+          borderRadius: "24px",
+          padding: "40px 32px",
+          textAlign: "center",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+        }}>
+          <div style={{ fontSize: "64px", marginBottom: "20px" }}>🔒</div>
+          <h2 style={{ margin: "0 0 12px 0", fontSize: "24px", color: "#333" }}>
+            Энгийн план шаардлагатай
+          </h2>
+          <p style={{ margin: "0 0 24px 0", color: "#666", fontSize: "15px", lineHeight: "1.6" }}>
+            PC төвүүдийг захиалахын тулд төлбөртэй план авах хэрэгтэй.
+          </p>
+          
+          <div style={{ 
+            background: "rgba(102, 126, 234, 0.1)", 
+            borderRadius: "12px", 
+            padding: "20px",
+            marginBottom: "24px",
+            textAlign: "left"
+          }}>
+            <div style={{ fontSize: "14px", color: "#333", marginBottom: "12px" }}>
+              <strong>Энгийн планд багтсан:</strong>
+            </div>
+            <div style={{ fontSize: "14px", color: "#666", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div>✅ Бүх төв харах</div>
+              <div>✅ Дэлгэрэнгүй мэдээлэл</div>
+              <div>✅ Ачаалал шалгах</div>
+              <div>✅ Дуртай төв нэмэх</div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              fontWeight: "700",
+              fontSize: "15px",
+              cursor: "pointer",
+              boxShadow: "0 4px 15px rgba(240, 147, 251, 0.4)",
+              marginBottom: "12px"
+            }}
+          >
+            🚀 Планаа шинэчлэх
+          </button>
+          
+          <Link
+            to="/map"
+            style={{
+              display: "block",
+              padding: "10px",
+              color: "#666",
+              textDecoration: "none",
+              fontSize: "14px"
+            }}
+          >
+            ← Map руу буцах
+          </Link>
+        </div>
+        
+        {showUpgradeModal && (
+          <SubscriptionPlans
+            showModal={showUpgradeModal}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+        
+        <BottomNav />
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div style={{ 
@@ -165,36 +640,91 @@ export default function Booking() {
         </p>
       </div>
 
+      {/* AdminForm - NOTE: AdminForm өөрөө modal-тай тул гаднаас overlay хийх хэрэггүй. 
+          formOpen=true үед л харагдана; editingCenter-г editingItem хэлбэрээр дамжуулна. */}
+      <AdminForm
+        editingItem={editingCenter}
+        isOpen={formOpen}
+        onSaved={handleSaved}
+        onCancel={() => {
+          setFormOpen(false);
+          setEditingCenter(null);
+        }}
+      />
+
+      {/* OccupancyModal */}
+      <OccupancyModal
+        center={occupancyModalCenter}
+        isOpen={occupancyModalOpen}
+        onClose={handleOccupancyModalClose}
+        onUpdate={updateOccupancy}
+      />
+
       <div style={{ padding: "16px" }}>
         {/* PC Centers Section */}
         <div style={{ marginBottom: "32px" }}>
-          <h2 style={{ 
-            fontSize: "18px", 
-            color: "#333", 
-            marginBottom: "16px",
-            display: "flex",
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
             alignItems: "center",
-            gap: "8px"
+            marginBottom: "16px" 
           }}>
-            💻 PC төвүүд
-            <span style={{ 
-              background: "#e3f2fd", 
-              color: "#1976d2", 
-              padding: "2px 8px", 
-              borderRadius: "12px", 
-              fontSize: "12px" 
+            <h2 style={{ 
+              fontSize: "18px", 
+              color: "#333", 
+              margin: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
             }}>
-              {favorites.length}
-            </span>
-          </h2>
+              💻 PC төвүүд
+              <span style={{ 
+                background: "#e3f2fd", 
+                color: "#1976d2", 
+                padding: "2px 8px", 
+                borderRadius: "12px", 
+                fontSize: "12px" 
+              }}>
+                {favorites.length}
+              </span>
+            </h2>
+            
+            {(isCenterOwner && subscription?.plan !== 'free') && (
+              <button
+                onClick={() => {
+                  setEditingCenter(null);
+                  setFormOpen(true);
+                }}
+                style={{
+                  background: "linear-gradient(45deg, #4caf50, #66bb6a)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(76, 175, 80, 0.3)"
+                }}
+              >
+                + Шинэ төв нэмэх
+              </button>
+            )}
+          </div>
           
           {favorites.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {favorites.map((center) => (
+              {favorites.map((center, index) => (
                 <CenterCard 
                   key={center._id || center.id} 
                   item={center}
-                  isAdmin={false}
+                  expanded={expandedIndex === index}
+                  onToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                  onEdit={() => handleEdit(center)}
+                  onDelete={() => handleDelete(center._id)}
+                  canEdit={isCenterOwner && center.owner && String(center.owner) === String(user?._id)}
+                  isBookingMode={true}
+                  onOccupancyUpdate={handleOccupancyUpdate}
                 />
               ))}
             </div>

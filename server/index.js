@@ -16,7 +16,11 @@ app.use("/api/centers", centersRouter);
 const authRouter = require("./routes/auth");
 app.use("/api/auth", authRouter);
 
-const PORT = process.env.PORT || 8000;
+// Mount subscription routes
+const subscriptionRouter = require("./routes/subscription");
+app.use("/api/subscription", subscriptionRouter);
+
+const PORT = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/my-map-app';
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {

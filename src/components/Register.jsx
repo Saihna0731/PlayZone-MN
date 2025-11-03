@@ -247,21 +247,6 @@ const Register = () => {
               </div>
             </div>
 
-            {accountType === 'centerOwner' && (
-              <div style={{ 
-                padding: '12px 16px', 
-                background: 'rgba(255, 152, 0, 0.1)', 
-                borderRadius: '12px', 
-                color: '#e65100', 
-                fontSize: '13px', 
-                lineHeight: '1.5',
-                borderLeft: '3px solid #ff9800',
-                marginBottom: '12px'
-              }}>
-                <strong>📌 Анхаар:</strong> PC Center эзэмшигчийн бүртгэл админаар баталгаажуулагдсаны дараа идэвхжинэ. Бүх мэдээллээ үнэн зөв оруулна уу.
-              </div>
-            )}
-
             <button
               type="submit"
               className={`auth-btn ${loading ? 'loading' : ''}`}

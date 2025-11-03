@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import "../../styles/CustomMarker.css";
 import { cacheUtils } from "../../utils/cache";
 import { useSubscription } from "../../hooks/useSubscription";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Ачаалалын өнгө авах функц (subscription эрхтэй хэрэглэгчдэд зориулсан)
 const getOccupancyColor = (percentage) => {
@@ -17,18 +18,8 @@ const getOccupancyColor = (percentage) => {
 };
 
 // Custom marker icon with center's logo - subscription шалгалттай
-const isRecent = (dateStrOrDate, days = 3) => {
-  try {
-    const d = new Date(dateStrOrDate);
-    return Date.now() - d.getTime() <= days * 24 * 60 * 60 * 1000;
-  } catch { return false; }
-};
-
-const hasRecentActivity = (center) => {
-  // Зөвхөн bonus-ийг авч үзнэ
-  if (!Array.isArray(center.bonus)) return false;
-  return center.bonus.some(it => it && isRecent(it.createdAt || it.expiresAt));
-};
+// Bonus байгаа эсэхийг шалгана (одоогоор хугацаагаар хязгаарлахгүй)
+const hasRecentActivity = (center) => Array.isArray(center?.bonus) && center.bonus.length > 0;
 
 // Тухайн төвийн хамгийн сүүлийн (шинэ) бонусыг авах helper
 const getLatestBonus = (center) => {
@@ -53,9 +44,21 @@ const snippet = (s, max = 120) => {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 };
 
-const createCustomIcon = (center, canViewDetails) => {
-  // Center-ийн logo эсвэл default logo ашиглах
-  const logoSrc = center?.logo || "/logo192.png";
+const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) => {
+  // Center-ийн logo эсвэл default logo ашиглах - thumbnail хэсгийг эхлээд шалгах
+  let logoSrc = "/logo192.png";
+  
+  if (center?.logo) {
+    logoSrc = center.logo;
+  } else if (center?.images && center.images.length > 0) {
+    // Эхний зургийн thumbnail-г logo болгон ашиглах
+    const firstImage = center.images[0];
+    if (typeof firstImage === 'object' && firstImage.thumbnail) {
+      logoSrc = firstImage.thumbnail;
+    } else if (typeof firstImage === 'string') {
+      logoSrc = firstImage;
+    }
+  }
   
   // Төлбөртэй хэрэглэгчдэд ачаалалын өнгө, бусдад серийн өнгө
   const borderColor = canViewDetails && center.occupancy 
@@ -65,9 +68,9 @@ const createCustomIcon = (center, canViewDetails) => {
   const recent = hasRecentActivity(center);
 
   return L.divIcon({
-    className: canViewDetails ? 'custom-marker interactive' : 'custom-marker disabled leaflet-interactive-disabled',
+    className: canInteract ? 'custom-marker interactive' : 'custom-marker disabled leaflet-interactive-disabled',
     html: `
-      <div class="marker-body ${canViewDetails ? 'interactive' : 'disabled'}" style="
+      <div class="marker-body ${canInteract ? 'interactive' : 'disabled'}" style="
         width: 56px;
         height: 56px;
         background: white;
@@ -78,14 +81,14 @@ const createCustomIcon = (center, canViewDetails) => {
         justify-content: center;
         box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 0 2px ${borderColor}40;
         position: relative;
-        cursor: ${canViewDetails ? 'pointer' : 'default'};
-        transition: ${canViewDetails ? 'all 0.2s ease' : 'none'};
-        pointer-events: ${canViewDetails ? 'auto' : 'none'};
+        cursor: ${canInteract ? 'pointer' : 'default'};
+        transition: ${canInteract ? 'all 0.2s ease' : 'none'};
+        pointer-events: ${canInteract ? 'auto' : 'none'};
         user-select: none;
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
-      " ${canViewDetails ? '' : 'onclick="event.preventDefault(); event.stopPropagation(); return false;" onmousedown="event.preventDefault(); event.stopPropagation(); return false;" ondblclick="event.preventDefault(); event.stopPropagation(); return false;" oncontextmenu="event.preventDefault(); event.stopPropagation(); return false;"'}>
+      " ${canInteract ? '' : 'onclick="event.preventDefault(); event.stopPropagation(); return false;" onmousedown="event.preventDefault(); event.stopPropagation(); return false;" ondblclick="event.preventDefault(); event.stopPropagation(); return false;" oncontextmenu="event.preventDefault(); event.stopPropagation(); return false;"'}>
         <div style="
           width: 44px;
           height: 44px;
@@ -97,15 +100,15 @@ const createCustomIcon = (center, canViewDetails) => {
           padding: 2px;
           box-sizing: border-box;
           overflow: hidden;
-          pointer-events: ${canViewDetails ? 'auto' : 'none'};
+          pointer-events: ${canInteract ? 'auto' : 'none'};
         ">
           <img src="${logoSrc}" alt="Logo" style="
             width: 100%;
             height: 100%;
             object-fit: cover;
             border-radius: 50%;
-            pointer-events: ${canViewDetails ? 'auto' : 'none'};
-          " onerror="this.src='/logo192.png'" />
+            pointer-events: ${canInteract ? 'auto' : 'none'};
+          " onerror="this.onerror=null; this.src='/logo192.png';" onload="this.style.opacity='1';" style="opacity:0.5;" />
         </div>
         ${recent ? `
         <div style="
@@ -119,6 +122,7 @@ const createCustomIcon = (center, canViewDetails) => {
           border-radius: 50%;
           box-shadow: 0 0 0 0 rgba(229,57,53,0.6);
           animation: pulse 1.5s infinite;
+          z-index: 3;
         "></div>
         ` : ''}
         <div style="
@@ -136,7 +140,7 @@ const createCustomIcon = (center, canViewDetails) => {
           font-size: 10px;
           color: white;
           font-weight: bold;
-          pointer-events: ${canViewDetails ? 'auto' : 'none'};
+          pointer-events: ${canInteract ? 'auto' : 'none'};
         ">${canViewDetails && center.occupancy ? 
           Math.round(center.occupancy.standard || center.occupancy.vip || center.occupancy.stage || 0) + '%' 
           : '?'}</div>
@@ -151,7 +155,7 @@ const createCustomIcon = (center, canViewDetails) => {
           border-right: 12px solid transparent;
           border-top: 14px solid ${borderColor};
           filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-          pointer-events: ${canViewDetails ? 'auto' : 'none'};
+          pointer-events: ${canInteract ? 'auto' : 'none'};
         "></div>
       </div>
       <style>
@@ -182,8 +186,8 @@ function MapClickBlocker({ canViewDetails, showToast, getSubscriptionMessage }) 
   
   useEffect(() => {
     const handleMarkerClick = (e) => {
-      // Зөвхөн эрхгүй хэрэглэгчдэд block хийх
-      if (!canViewDetails) {
+  // Зөвхөн төлбөргүй (эсвэл нэвтрээгүй) хэрэглэгчдэд block хийх
+  if (!canViewDetails) {
         const clickedElement = e.originalEvent?.target;
         
         // Marker element шалгах
@@ -226,9 +230,11 @@ export default function MapCenters({ query = "", mapStyle = "osm", showToast }) 
   const [centers, setCenters] = useState([]);
   const [focus, setFocus] = useState(null);
   const { canViewDetails, subscription } = useSubscription();
+  const { isAuthenticated } = useAuth();
   
   // Subscription мэдээлэл notification-д ашиглах
   const getSubscriptionMessage = () => {
+    if (!isAuthenticated) return "Нэвтэрч байж үзнэ үү";
     if (!subscription || subscription.plan === 'free') {
       return "Дэлгэрэнгүй мэдээлэл харахын тулд планаа шинэчлэх шаардлагатай";
     }
@@ -395,14 +401,14 @@ export default function MapCenters({ query = "", mapStyle = "osm", showToast }) 
 
   // Double click handler for marker
   const handleMarkerDoubleClick = (center) => {
-    // Subscription шалгах
+    // Зөвхөн төлбөртэй хэрэглэгчид marker dblclick → дэлгэрэнгүй рүү
     if (!canViewDetails) {
       if (showToast) {
-        showToast("Дэлгэрэнгүй мэдээлэл харахын тулд планаа шинэчлэх шаардлагатай", "warning");
+        showToast(getSubscriptionMessage(), "warning");
       }
       return;
     }
-    // CenterDetail хуудас руу шилжих
+    // CenterDetail хуудас руу шилжих (popup-гүй ч нэвтрэхийг зөвшөөрнө)
     window.location.href = `/center/${center._id || center.id}`;
   };
 
@@ -463,14 +469,15 @@ export default function MapCenters({ query = "", mapStyle = "osm", showToast }) 
           
 
           
+          const canInteract = Boolean(canViewDetails);
           const markerProps = {
             position: [Number(c.lat), Number(c.lng)],
-            icon: createCustomIcon(c, canViewDetails),
-            interactive: canViewDetails, // Subscription эрхтэй болвол interactive
-            riseOnHover: canViewDetails,
-            riseOffset: canViewDetails ? 250 : 0,
-            bubblingMouseEvents: canViewDetails,
-            keyboard: canViewDetails,
+            icon: createCustomIcon(c, canViewDetails, canInteract),
+            interactive: canInteract, // Зөвхөн төлбөртэй хэрэглэгч бол interactive
+            riseOnHover: canInteract,
+            riseOffset: canInteract ? 250 : 0,
+            bubblingMouseEvents: canInteract,
+            keyboard: canInteract,
             opacity: 1
           };
 
@@ -502,9 +509,21 @@ export default function MapCenters({ query = "", mapStyle = "osm", showToast }) 
                         }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: '#e65100', marginBottom: 4 }}>🎁 News</div>
                           <div style={{ fontSize: 13, color: '#5d4037' }}>{latest.title || 'Бонус'}</div>
+                          {(latest.standardFree || latest.vipFree || latest.stageFree) && (
+                            <div style={{ fontSize: 12, color: '#6d4c41', marginTop: 2 }}>
+                              {latest.standardFree ? `Энгийн: ${latest.standardFree} суудал сул` : ''}
+                              {latest.vipFree ? `${latest.standardFree ? ' • ' : ''}VIP: ${latest.vipFree} суудал сул` : ''}
+                              {latest.stageFree ? `${(latest.standardFree || latest.vipFree) ? ' • ' : ''}Stage: ${latest.stageFree} суудал сул` : ''}
+                            </div>
+                          )}
                           {(latest.text || latest.description) && (
                             <div style={{ fontSize: 12, color: '#6d4c41', marginTop: 4 }}>
                               {snippet(latest.text || latest.description)}
+                            </div>
+                          )}
+                          {latest.expiresAt && (
+                            <div style={{ fontSize: 11, color: '#8d6e63', marginTop: 2 }}>
+                              Дуусах хугацаа: {new Date(latest.expiresAt).toLocaleString()}
                             </div>
                           )}
                         </div>

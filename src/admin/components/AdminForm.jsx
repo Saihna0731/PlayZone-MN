@@ -1172,43 +1172,64 @@ const emptyForm = {
                           gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", 
                           gap: "12px" 
                         }}>
-                          {existingImages.map((img, index) => (
-                            <div key={`existing-${index}`} style={{ position: "relative" }}>
-                              <img
-                                src={img}
-                                alt={`Existing ${index + 1}`}
-                                style={{
-                                  width: "100%",
-                                  height: "100px",
-                                  objectFit: "cover",
-                                  borderRadius: "8px",
-                                  border: "2px solid #e0e0e0"
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeExistingImage(index)}
-                                style={{
-                                  position: "absolute",
-                                  top: "4px",
-                                  right: "4px",
-                                  background: "#ff4444",
-                                  color: "white",
-                                  border: "none",
-                                  borderRadius: "50%",
-                                  width: "24px",
-                                  height: "24px",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: "12px"
-                                }}
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          ))}
+                          {existingImages.map((img, index) => {
+                            const src = typeof img === 'object' ? (img.thumbnail || img.highQuality) : img;
+                            const title = typeof img === 'object' ? (img.originalName || 'Existing image') : `Existing ${index + 1}`;
+                            return (
+                              <div key={`existing-${index}`} style={{ position: "relative" }}>
+                                <img
+                                  src={src}
+                                  alt={title}
+                                  title={title}
+                                  style={{
+                                    width: "100%",
+                                    height: "100px",
+                                    objectFit: "cover",
+                                    borderRadius: "8px",
+                                    border: "2px solid #e0e0e0",
+                                    background: "#f5f5f5"
+                                  }}
+                                />
+                                {typeof img === 'object' && img.highQuality && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    bottom: 4,
+                                    left: 4,
+                                    padding: '2px 6px',
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: '#fff',
+                                    background: 'rgba(0,0,0,0.55)',
+                                    borderRadius: 6
+                                  }}>
+                                    HQ
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeExistingImage(index)}
+                                  style={{
+                                    position: "absolute",
+                                    top: "4px",
+                                    right: "4px",
+                                    background: "#ff4444",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "50%",
+                                    width: "24px",
+                                    height: "24px",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "12px"
+                                  }}
+                                >
+                                  <FaTrash />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

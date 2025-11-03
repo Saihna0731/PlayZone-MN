@@ -1,6 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+// CenterOwner model-ийг ашиглахгүй болсон (owner мэдээлэл Users/Center дээр хадгалагдана)
 const { auth } = require("../middleware/auth");
 
 const router = express.Router();
@@ -57,13 +58,18 @@ router.post("/register", async (req, res) => {
       userData.username = username;
       userData.fullName = fullName;
     } else if (accountType === 'centerOwner') {
+      // centerOwner-д username оруулахгүй (undefined) - null биш
       userData.centerName = centerName;
-      userData.isApproved = false; // Админаар баталгаажуулах
+      userData.fullName = centerName; // centerName-ийг fullName болгоно
+      userData.isApproved = true; // Шууд идэвхжүүлэх
       userData.role = 'centerOwner';
+      // username талбарыг огт оруулахгүй байх
     }
 
     const user = new User(userData);
     await user.save();
+
+    // CenterOwner collection-д автоматаар бичлэг үүсгэдэг хэсгийг устгалаа
 
     // JWT token үүсгэх
     const token = jwt.sign(
@@ -73,9 +79,7 @@ router.post("/register", async (req, res) => {
     );
 
     res.status(201).json({
-      message: accountType === 'centerOwner' 
-        ? "Амжилттай бүртгүүллээ. Админаар баталгаажуулагдсаны дараа нэвтрэх боломжтой болно."
-        : "Амжилттай бүртгүүллээ",
+      message: "Амжилттай бүртгүүллээ",
       token,
       user
     });
@@ -112,13 +116,6 @@ router.post("/login", async (req, res) => {
     if (!isPasswordValid) {
       return res.status(400).json({
         message: "Имэйл/хэрэглэгчийн нэр эсвэл нууц үг буруу байна"
-      });
-    }
-
-    // Эзэмшигч баталгаажсан эсэхийг шалгах
-    if (user.accountType === 'centerOwner' && !user.isApproved) {
-      return res.status(403).json({
-        message: "Таны бүртгэл хараахан админаар баталгаажаагүй байна. Та удахгүй эрх авах болно."
       });
     }
 
@@ -254,7 +251,9 @@ router.get("/all", auth, async (req, res) => {
       return res.status(403).json({ message: "Энэ үйлдэлд хандах эрх байхгүй" });
     }
 
-    const users = await User.find({}).sort({ createdAt: -1 });
+  // Зөвхөн энгийн хэрэглэгчдийг (accountType='user') буцаана; centerOwner-ууд Users цуглуулгад хадгалагддаг ч
+  // админ жагсаалтад тусад нь харагдах ёстой тул эндээс шүүнэ.
+  const users = await User.find({ accountType: 'user' }).sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
     console.error("Get all users error:", error);

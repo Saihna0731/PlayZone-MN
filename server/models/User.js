@@ -68,6 +68,50 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Center'
   }],
+  // Subscription/Төлбөрийн мэдээлэл
+  subscription: {
+    plan: {
+      type: String,
+      enum: ['free', 'normal', 'business_standard', 'business_pro'],
+      default: 'free'
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    startDate: {
+      type: Date,
+      default: null
+    },
+    endDate: {
+      type: Date,
+      default: null
+    },
+    autoRenew: {
+      type: Boolean,
+      default: true
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['qpay', 'mostmoney', 'card', 'mock', 'admin'],
+      default: null
+    }
+  },
+  // Free trial tracking (эхний 5 хоног)
+  freeTrial: {
+    used: {
+      type: Boolean,
+      default: false
+    },
+    startDate: {
+      type: Date,
+      default: null
+    },
+    endDate: {
+      type: Date,
+      default: null
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

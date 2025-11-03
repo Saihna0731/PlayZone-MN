@@ -1,14 +1,18 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useSubscription } from "../hooks/useSubscription";
+import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import BottomNav from "../components/MainNavbars/BottomNav";
 import '../styles/Profile.css';
 
 export default function Profile() {
   const { user, isAuthenticated, logout, updateProfile, isAdmin } = useAuth();
+  const { subscription } = useSubscription();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     phone: user?.phone || '',
@@ -119,6 +123,45 @@ export default function Profile() {
 
           {!editing ? (
             <div className="profile-info">
+              {/* Subscription мэдээлэл */}
+              <div className="subscription-section">
+                <h3>💎 Миний план</h3>
+                <div className="subscription-info">
+                  <div className="plan-badge">
+                    {subscription?.plan === 'free' && '🆓 Үнэгүй'}
+                    {subscription?.plan === 'normal' && '⭐ Энгийн'}
+                    {subscription?.plan === 'business_standard' && '🏢 Бизнес Стандарт'}
+                    {subscription?.plan === 'business_pro' && '👑 Бизнес Про'}
+                  </div>
+                  
+                  {subscription?.plan !== 'free' && subscription?.endDate && (
+                    <div className="plan-expiry">
+                      📅 Дуусах огноо: {new Date(subscription.endDate).toLocaleDateString('mn-MN')}
+                    </div>
+                  )}
+                  
+                  {/* User-д зориулсан upgrade */}
+                  {user?.accountType === 'user' && subscription?.plan === 'free' && (
+                    <button 
+                      onClick={() => setShowUpgradeModal(true)} 
+                      className="btn btn-upgrade"
+                    >
+                      🚀 Upgrade хийх
+                    </button>
+                  )}
+                  
+                  {/* Center Owner-т зориулсан upgrade */}
+                  {user?.accountType === 'centerOwner' && (subscription?.plan === 'free' || subscription?.plan === 'business_standard') && (
+                    <button 
+                      onClick={() => setShowUpgradeModal(true)} 
+                      className="btn btn-upgrade"
+                    >
+                      ⚡ Plan шинэчлэх
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="info-item">
                 <label>👤 Бүтэн нэр</label>
                 <span>{user.fullName || 'Тодорхойгүй'}</span>
@@ -217,6 +260,16 @@ export default function Profile() {
           )}
         </div>
       </div>
+      
+      {/* Subscription Upgrade Modal */}
+      {showUpgradeModal && (
+        <SubscriptionPlans
+          showModal={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          upgradeType={user?.accountType === 'centerOwner' ? 'center' : 'subscription'}
+        />
+      )}
+      
       <BottomNav />
     </div>
   );

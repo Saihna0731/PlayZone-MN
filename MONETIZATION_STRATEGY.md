@@ -52,6 +52,7 @@
 - ❌ Vedio input
 - ❌ Premium analytics
 - ❌ Marketing boost
+- ❌ Bonus
 
 ### ⭐ **PREMIUM TIER**
 
@@ -62,7 +63,7 @@
 ```
 
 **Боломжууд:**
-- ✅ **3 PC center хүртэл**(pc нэмхээр бол нэмэлт төлөлт хийж байж 4pc-center нэмэх эрхтэй болно.Ерөнхийдөө бол pc-center нэмнэ гэдэг нь шинээр pc-center account үүсж байгаагаас ялгаагүй учраас заавал мөнгө төлөх хэрэгтэй.(1pc-center 19900))
+- ✅ **2 PC center хүртэл**(pc нэмхээр бол нэмэлт төлөлт хийж байж 3pc-center нэмэх эрхтэй болно.Ерөнхийдөө бол pc-center нэмнэ гэдэг нь шинээр pc-center account үүсж байгаагаас ялгаагүй учраас заавал мөнгө төлөх хэрэгтэй.(1pc-center 19900))
 - ✅ **Advanced analytics & reporting** - Дэвшилтэт тайлан
 - ✅ **Marketing boost** - Map дээр байгаа marker дээр дархад үнийн мэдээллийн дээр байршилийн мэдээлэл биш news байна.
 - ✅ **Custom branding** - Өөрийн брэнд харуулах

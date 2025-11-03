@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+import { useSubscription } from "../hooks/useSubscription";
+import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import ListSearch from "../components/ListComponents/ListSearch";
 import MapHeader from "../components/MapComponents/MapHeader";
 import AdminForm from "../admin/components/AdminForm";
@@ -10,7 +12,8 @@ import CenterCard from "../components/ListComponents/CenterCard";
 import "../styles/List.css";
 
 export default function List() {
-  const { isAuthenticated, isAdmin, isCenterOwner } = useAuth();
+  const { isAuthenticated, isAdmin, isCenterOwner, user } = useAuth();
+  const { subscription, isPremiumUser } = useSubscription();
   const [items, setItems] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [query, setQuery] = useState("");
@@ -19,6 +22,7 @@ export default function List() {
   const [isAdminLocal, setIsAdminLocal] = useState(localStorage.getItem("admin") === "true");
   const [editingItem, setEditingItem] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const fetchCenters = useCallback(async () => {
     try {
@@ -147,6 +151,55 @@ export default function List() {
     );
   }
 
+  // Free user/owner хязгаарлалт шалгах
+  const isOwnerPaid = isCenterOwner && subscription?.plan !== 'free';
+  const canAccessList = isAdmin || isPremiumUser || isOwnerPaid;
+
+  // Free user-д upgrade мэдээлэл харуулах
+  if (isAuthenticated && !canAccessList) {
+    return (
+      <div className="page-with-bottom-space">
+        <MapHeader />
+        <div className="upgrade-required-container">
+          <div className="upgrade-card">
+            <div className="upgrade-icon">🔒</div>
+            <h2>{isCenterOwner ? 'Бизнес план шаардлагатай' : 'Энгийн план шаардлагатай'}</h2>
+            <p>
+              {isCenterOwner
+                ? 'PC төвүүдийн дэлгэрэнгүй мэдээллийг харахын тулд Business төлөвлөгөө сонгоно уу.'
+                : 'Төвүүдийн жагсаалтыг харахын тулд Энгийн төлөвлөгөө авах хэрэгтэй.'}
+            </p>
+            
+            <div className="upgrade-features">
+              <div className="feature-item">✅ Бүх төв харах</div>
+              <div className="feature-item">✅ Дэлгэрэнгүй мэдээлэл</div>
+              <div className="feature-item">✅ Ачаалал шалгах</div>
+              <div className="feature-item">✅ Дуртай төв нэмэх</div>
+            </div>
+
+            <button 
+              className="btn-upgrade-main"
+              onClick={() => setShowUpgradeModal(true)}
+            >
+              🚀 Планаа шинэчлэх
+            </button>
+
+            <Link to="/map" className="back-to-map">
+              ← Map руу буцах
+            </Link>
+          </div>
+        </div>
+
+        {showUpgradeModal && (
+          <SubscriptionPlans
+            showModal={showUpgradeModal}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="page-with-bottom-space">
       <MapHeader />
@@ -154,7 +207,7 @@ export default function List() {
         {/* First row: Search bar + Add button */}
         <div className="list-controls-row">
           <ListSearch value={query} onChange={(v) => setQuery(v)} />
-          {(isAdmin || isCenterOwner || isAdminLocal) && (
+          {(isAdmin || isAdminLocal || (isCenterOwner && subscription?.plan !== 'free')) && (
             <button 
               className="btn-modern btn-primary-modern"
               onClick={() => { 
@@ -204,7 +257,7 @@ export default function List() {
                 onToggle={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
                 onEdit={() => { setEditingItem(it); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 onDelete={handleDelete}
-                isAdmin={isAdmin || isCenterOwner || isAdminLocal}
+                canEdit={(isAdmin || isAdminLocal) || (isCenterOwner && it.owner && String(it.owner) === String(user?._id))}
               />
             );
           })}

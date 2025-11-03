@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { useSubscription } from '../../hooks/useSubscription';
-import Toast from '../../components/Toast';
+import { useSubscription } from '../../../hooks/useSubscription';
+import Toast from '../../../components/Toast';
 import './SubscriptionPlans.css';
 
-const SubscriptionPlans = ({ showModal, onClose, upgradeType = 'subscription' }) => {
-  const { subscription, upgradeToplan, refreshSubscription } = useSubscription();
+const SubscriptionPlans = ({ showModal, onClose }) => {
+  const { subscription, upgradeToplan, refreshSubscription, isOwner } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
 
-  // Debug - upgradeType утгыг шалгах
-  console.log('SubscriptionPlans upgradeType:', upgradeType);
+  // Одоогийн хэрэглэгчийн төрлөөс (user vs centerOwner) хамаарч panel-аа автоматаар сонгоно
+  const effectiveType = isOwner || subscription?.accountType === 'centerOwner' ? 'center' : 'subscription';
 
   // PC Center upgrade plans - зөвхөн бизнес планууд
   const centerPlans = [
@@ -64,8 +64,8 @@ const SubscriptionPlans = ({ showModal, onClose, upgradeType = 'subscription' })
     }
   ];
 
-  // Upgrade type-ээс хамааран plans сонгох
-  const plans = upgradeType === 'center' ? centerPlans : subscriptionPlans;
+  // Одоогийн төрлөөс хамааран plans сонгох
+  const plans = effectiveType === 'center' ? centerPlans : subscriptionPlans;
 
   const handleUpgrade = async (planId, paymentMethod = 'mock') => {
     setLoading(true);
@@ -155,11 +155,11 @@ const SubscriptionPlans = ({ showModal, onClose, upgradeType = 'subscription' })
       <div className="subscription-modal-overlay">
         <div className="subscription-modal">
           <div className="modal-header">
-            <h2>{upgradeType === 'center' ? 'PC Center Эзэмшигч болох' : 'Планаа сонгоорой'}</h2>
+            <h2>{effectiveType === 'center' ? 'PC Center Эзэмшигчийн план' : 'Планаа сонгоорой'}</h2>
             <button className="close-btn" onClick={onClose}>×</button>
           </div>
 
-          {upgradeType === 'subscription' && (
+          {effectiveType === 'subscription' && (
             <div className="current-plan">
               <span>Одоогийн план: <strong>{subscription?.plan === 'free' ? 'Үнэгүй' : 
                 subscription?.plan === 'normal' ? 'Энгийн' :
@@ -168,7 +168,7 @@ const SubscriptionPlans = ({ showModal, onClose, upgradeType = 'subscription' })
             </div>
           )}
 
-          {upgradeType === 'center' && (
+          {effectiveType === 'center' && (
             <div className="current-plan">
               <span>🏢 PC Center эзэмшигч болж, өөрийн төвийг удирдаарай!</span>
             </div>
@@ -177,8 +177,8 @@ const SubscriptionPlans = ({ showModal, onClose, upgradeType = 'subscription' })
           <div className="plans-grid">
             {plans.map(plan => {
               // PC Center upgrade үед subscription plan-тай харьцуулахгүй
-              const isCurrent = upgradeType === 'center' ? false : subscription?.plan === plan.id;
-              const isLowerTier = upgradeType === 'center' ? false : 
+              const isCurrent = effectiveType === 'center' ? false : subscription?.plan === plan.id;
+              const isLowerTier = effectiveType === 'center' ? false : 
                 plans.findIndex(p => p.id === subscription?.plan) >= plans.findIndex(p => p.id === plan.id);
               
               return (
