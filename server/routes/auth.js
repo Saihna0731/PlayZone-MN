@@ -263,4 +263,106 @@ router.get("/all", auth, async (req, res) => {
   }
 });
 
+// ============ FOLLOW/UNFOLLOW ENDPOINTS ============
+
+// Center Owner эсвэл Center-ийг дагах (Follow)
+router.post("/follow/:targetId", auth, async (req, res) => {
+  try {
+    const { targetId } = req.params;
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
+    }
+
+    // Өөрийгөө дагахаас сэргийлэх
+    if (req.userId === targetId) {
+      return res.status(400).json({ message: "Өөрийгөө дагах боломжгүй" });
+    }
+
+    // Target user шалгах
+    const targetUser = await User.findById(targetId);
+    if (!targetUser) {
+      return res.status(404).json({ message: "Дагах хэрэглэгч олдсонгүй" });
+    }
+
+    const isFollowing = user.following.includes(targetId);
+    
+    if (isFollowing) {
+      // Unfollow
+      user.following = user.following.filter(
+        id => id.toString() !== targetId
+      );
+      targetUser.followers = targetUser.followers.filter(
+        id => id.toString() !== req.userId
+      );
+    } else {
+      // Follow
+      user.following.push(targetId);
+      targetUser.followers.push(req.userId);
+    }
+
+    await user.save();
+    await targetUser.save();
+
+    res.json({
+      message: isFollowing ? "Unfollow хийлээ" : "Follow хийлээ",
+      isFollowing: !isFollowing,
+      followingCount: user.following.length,
+      followersCount: targetUser.followers.length
+    });
+  } catch (error) {
+    console.error("Follow error:", error);
+    res.status(500).json({ 
+      message: "Follow хийхэд алдаа гарлаа" 
+    });
+  }
+});
+
+// Following жагсаалт авах
+router.get("/following", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId)
+      .populate('following', 'username email fullName avatar accountType');
+
+    if (!user) {
+      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
+    }
+
+    res.json({
+      following: user.following || [],
+      count: user.following?.length || 0
+    });
+  } catch (error) {
+    console.error("Get following error:", error);
+    res.status(500).json({ 
+      message: "Following жагсаалт авахад алдаа гарлаа",
+      error: error.message 
+    });
+  }
+});
+
+// Followers жагсаалт авах
+router.get("/followers", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId)
+      .populate('followers', 'username email fullName avatar accountType');
+
+    if (!user) {
+      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
+    }
+
+    res.json({
+      followers: user.followers || [],
+      count: user.followers?.length || 0
+    });
+  } catch (error) {
+    console.error("Get followers error:", error);
+    res.status(500).json({ 
+      message: "Followers жагсаалт авахад алдаа гарлаа",
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;

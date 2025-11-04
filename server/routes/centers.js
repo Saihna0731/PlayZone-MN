@@ -37,9 +37,11 @@ router.post("/", auth, checkCenterLimit, async (req, res) => {
 
   try {
     // Subscription-based media restrictions
-    const user = await User.findById(req.userId);
-    const sub = user?.subscription || {};
-    const isAdmin = user?.role === 'admin';
+  const user = await User.findById(req.userId);
+  const sub = user?.subscription || {};
+  const isAdmin = user?.role === 'admin';
+  const plan = sub?.plan;
+  const canVideo = typeof sub?.canUploadVideo === 'boolean' ? sub.canUploadVideo : (plan === 'business_pro');
     const data = {
       ...req.body,
       lat: req.body.lat ? Number(req.body.lat) : undefined,
@@ -47,9 +49,14 @@ router.post("/", auth, checkCenterLimit, async (req, res) => {
       owner: req.userId // эзэмшигчийг холбоно
     };
 
-    if (!isAdmin && user?.accountType === 'centerOwner') {
-      // Enforce image limit
-      const allowedImages = Number(sub.maxImages || 0);
+  if (!isAdmin && user?.accountType === 'centerOwner') {
+      // Enforce image limit with sensible defaults by plan
+      let allowedImages = 0;
+      if (typeof sub.maxImages === 'number' && sub.maxImages > 0) {
+        allowedImages = sub.maxImages;
+      } else if (sub.plan === 'business_standard') {
+        allowedImages = 3; // default for Business Standard if not set in DB
+      }
       if (Array.isArray(data.images) && allowedImages > 0 && data.images.length > allowedImages) {
         return res.status(403).json({
           message: `Таны план дээр дээд тал нь ${allowedImages} зураг оруулах боломжтой. Илүү оруулахын тулд upgrade хийнэ үү.`,
@@ -58,7 +65,7 @@ router.post("/", auth, checkCenterLimit, async (req, res) => {
         });
       }
       // Enforce video permission
-      if (!sub.canUploadVideo && ((Array.isArray(data.videos) && data.videos.length) || (Array.isArray(data.embedVideos) && data.embedVideos.length))) {
+      if (!canVideo && ((Array.isArray(data.videos) && data.videos.length) || (Array.isArray(data.embedVideos) && data.embedVideos.length))) {
         return res.status(403).json({
           message: 'Видео оруулахын тулд Business Pro план шаардлагатай',
           upgrade: true,
@@ -66,7 +73,7 @@ router.post("/", auth, checkCenterLimit, async (req, res) => {
         });
       }
       // If not allowed, ensure server won't persist accidental inputs
-      if (!sub.canUploadVideo) {
+      if (!canVideo) {
         data.videos = [];
         data.embedVideos = [];
       }
@@ -90,9 +97,11 @@ router.post("/", auth, checkCenterLimit, async (req, res) => {
 router.put("/:id", auth, ownerCanModifyCenter, async (req, res) => {
   try {
     // Subscription-based media restrictions
-    const user = await User.findById(req.userId);
-    const sub = user?.subscription || {};
-    const isAdmin = user?.role === 'admin';
+  const user = await User.findById(req.userId);
+  const sub = user?.subscription || {};
+  const isAdmin = user?.role === 'admin';
+  const plan = sub?.plan;
+  const canVideo = typeof sub?.canUploadVideo === 'boolean' ? sub.canUploadVideo : (plan === 'business_pro');
 
     const data = {
       ...req.body,
@@ -105,7 +114,12 @@ router.put("/:id", auth, ownerCanModifyCenter, async (req, res) => {
     }
 
     if (!isAdmin && user?.accountType === 'centerOwner') {
-      const allowedImages = Number(sub.maxImages || 0);
+      let allowedImages = 0;
+      if (typeof sub.maxImages === 'number' && sub.maxImages > 0) {
+        allowedImages = sub.maxImages;
+      } else if (sub.plan === 'business_standard') {
+        allowedImages = 3;
+      }
       if (Array.isArray(data.images) && allowedImages > 0 && data.images.length > allowedImages) {
         return res.status(403).json({
           message: `Таны план дээр дээд тал нь ${allowedImages} зураг оруулах боломжтой. Илүү оруулахын тулд upgrade хийнэ үү.`,
@@ -113,14 +127,14 @@ router.put("/:id", auth, ownerCanModifyCenter, async (req, res) => {
           code: 'IMAGE_LIMIT'
         });
       }
-      if (!sub.canUploadVideo && ((Array.isArray(data.videos) && data.videos.length) || (Array.isArray(data.embedVideos) && data.embedVideos.length))) {
+      if (!canVideo && ((Array.isArray(data.videos) && data.videos.length) || (Array.isArray(data.embedVideos) && data.embedVideos.length))) {
         return res.status(403).json({
           message: 'Видео оруулахын тулд Business Pro план шаардлагатай',
           upgrade: true,
           code: 'VIDEO_NOT_ALLOWED'
         });
       }
-      if (!sub.canUploadVideo) {
+      if (!canVideo) {
         data.videos = [];
         data.embedVideos = [];
       }
@@ -240,6 +254,121 @@ router.delete("/:id", auth, ownerCanModifyCenter, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("Error deleting center:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /reels - return all centers with videos for vertical scroll feed
+router.get("/api/reels", async (req, res) => {
+  try {
+    const centers = await Center.find({
+      $or: [
+        { videos: { $exists: true, $ne: [], $not: { $size: 0 } } },
+        { embedVideos: { $exists: true, $ne: [], $not: { $size: 0 } } }
+      ]
+    })
+      .populate('owner', 'username email accountType avatar')
+      .sort({ createdAt: -1 });
+    
+    res.json(centers);
+  } catch (err) {
+    console.error("Error fetching reels:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ LIKE/DISLIKE ENDPOINTS ============
+
+// POST /api/centers/:id/like - Center-д Like дарах
+router.post("/:id/like", auth, async (req, res) => {
+  try {
+    const center = await Center.findById(req.params.id);
+    if (!center) {
+      return res.status(404).json({ error: "Center олдсонгүй" });
+    }
+
+    const userId = req.userId;
+    const hasLiked = center.likes.includes(userId);
+    const hasDisliked = center.dislikes.includes(userId);
+
+    if (hasLiked) {
+      // Unlike
+      center.likes = center.likes.filter(id => id.toString() !== userId);
+    } else {
+      // Like хийх, dislike байвал хасах
+      center.likes.push(userId);
+      if (hasDisliked) {
+        center.dislikes = center.dislikes.filter(id => id.toString() !== userId);
+      }
+    }
+
+    await center.save();
+
+    res.json({
+      message: hasLiked ? "Like-ийг цуцаллаа" : "Like хийлээ",
+      isLiked: !hasLiked,
+      likesCount: center.likes.length,
+      dislikesCount: center.dislikes.length
+    });
+  } catch (err) {
+    console.error("Like error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/centers/:id/dislike - Center-д Dislike дарах
+router.post("/:id/dislike", auth, async (req, res) => {
+  try {
+    const center = await Center.findById(req.params.id);
+    if (!center) {
+      return res.status(404).json({ error: "Center олдсонгүй" });
+    }
+
+    const userId = req.userId;
+    const hasLiked = center.likes.includes(userId);
+    const hasDisliked = center.dislikes.includes(userId);
+
+    if (hasDisliked) {
+      // Remove dislike
+      center.dislikes = center.dislikes.filter(id => id.toString() !== userId);
+    } else {
+      // Dislike хийх, like байвал хасах
+      center.dislikes.push(userId);
+      if (hasLiked) {
+        center.likes = center.likes.filter(id => id.toString() !== userId);
+      }
+    }
+
+    await center.save();
+
+    res.json({
+      message: hasDisliked ? "Dislike-ийг цуцаллаа" : "Dislike хийлээ",
+      isDisliked: !hasDisliked,
+      likesCount: center.likes.length,
+      dislikesCount: center.dislikes.length
+    });
+  } catch (err) {
+    console.error("Dislike error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/centers/:id/reactions - Center-ийн like/dislike тоог авах
+router.get("/:id/reactions", async (req, res) => {
+  try {
+    const center = await Center.findById(req.params.id)
+      .select('likes dislikes');
+    
+    if (!center) {
+      return res.status(404).json({ error: "Center олдсонгүй" });
+    }
+
+    res.json({
+      likesCount: center.likes?.length || 0,
+      dislikesCount: center.dislikes?.length || 0
+    });
+  } catch (err) {
+    console.error("Get reactions error:", err);
     res.status(500).json({ error: err.message });
   }
 });

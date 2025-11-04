@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useSubscription } from "../hooks/useSubscription";
@@ -7,12 +7,14 @@ import BottomNav from "../components/MainNavbars/BottomNav";
 import '../styles/Profile.css';
 
 export default function Profile() {
-  const { user, isAuthenticated, logout, updateProfile, isAdmin } = useAuth();
+  const { user, isAuthenticated, logout, updateProfile, isAdmin, refreshUser } = useAuth();
   const { subscription } = useSubscription();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState('');
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     phone: user?.phone || '',
@@ -27,7 +29,65 @@ export default function Profile() {
       [e.target.name]: e.target.value
     }));
     setMessage('');
+    if (e.target.name === 'avatar') {
+      setSelectedFileName('');
+    }
   };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Файлын хэмжээ шалгах (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('Зургийн хэмжээ 5MB-аас бага байх ёстой');
+      return;
+    }
+
+    // Зургийн төрөл шалгах
+    if (!file.type.startsWith('image/')) {
+      setMessage('Зөвхөн зургийн файл upload хийнэ үү');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setMessage('');
+
+    try {
+      // Base64 руу хөрвүүлэх
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({
+          ...prev,
+          avatar: reader.result
+        }));
+        setSelectedFileName(file.name);
+        setUploadingAvatar(false);
+        setMessage('Зураг амжилттай сонгогдлоо. Хадгалах товч дарна уу.');
+      };
+      reader.onerror = () => {
+        setUploadingAvatar(false);
+        setMessage('Зураг уншихад алдаа гарлаа');
+        setSelectedFileName('');
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      setUploadingAvatar(false);
+      setMessage('Зураг upload хийхэд алдаа гарлаа');
+      setSelectedFileName('');
+    }
+  };
+
+  useEffect(() => {
+    if (!editing && user) {
+      setFormData({
+        fullName: user.fullName || '',
+        phone: user.phone || '',
+        avatar: user.avatar || ''
+      });
+    }
+  }, [user, editing]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,6 +98,9 @@ export default function Profile() {
     if (result.success) {
       setMessage(result.message);
       setEditing(false);
+      setSelectedFileName('');
+      // Серверээс хамгийн сүүлийн profile-ийг дахин татаж баталгаажуулна
+      try { await refreshUser(); } catch (err) {}
     } else {
       setMessage(result.message);
     }
@@ -56,9 +119,24 @@ export default function Profile() {
       phone: user?.phone || '',
       avatar: user?.avatar || ''
     });
+    setSelectedFileName('');
     setEditing(true);
     setMessage('');
   };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setSelectedFileName('');
+    if (user) {
+      setFormData({
+        fullName: user.fullName || '',
+        phone: user.phone || '',
+        avatar: user.avatar || ''
+      });
+    }
+  };
+
+  const displayAvatar = (formData.avatar || user?.avatar || '');
 
   if (!isAuthenticated) {
     return (
@@ -111,8 +189,8 @@ export default function Profile() {
         <div className="profile-content">
           <div className="profile-avatar">
             <div className="avatar-circle">
-              {user.avatar ? (
-                <img src={user.avatar} alt="Avatar" />
+              {displayAvatar ? (
+                <img src={displayAvatar} alt="Avatar" />
               ) : (
                 <span className="avatar-text">
                   {user.fullName?.charAt(0) || user.username?.charAt(0) || '👤'}
@@ -178,13 +256,13 @@ export default function Profile() {
               </div>
               
               <div className="info-item">
-                <label>� Утасны дугаар</label>
+                <label>📞 Утасны дугаар</label>
                 <span>{user.phone || 'Оруулаагүй'}</span>
               </div>
               
               <div className="info-item">
                 <label>⭐ Дуртай төвүүд</label>
-                <span>{user.favoritesCenters?.length || 0} төв</span>
+                <span>{user.favorites?.length || 0} төв</span>
               </div>
               
               <div className="info-item">
@@ -229,14 +307,61 @@ export default function Profile() {
 
               <div className="form-group">
                 <label htmlFor="avatar">🖼️ Зургийн холбоос</label>
-                <input
-                  type="url"
-                  id="avatar"
-                  name="avatar"
-                  value={formData.avatar}
-                  onChange={handleChange}
-                  placeholder="https://example.com/avatar.jpg"
-                />
+                <div className="avatar-link-row">
+                  <input
+                    type="url"
+                    id="avatar"
+                    name="avatar"
+                    value={formData.avatar}
+                    onChange={handleChange}
+                    placeholder="https://example.com/avatar.jpg"
+                  />
+                  {formData.avatar !== (user?.avatar || '') && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, avatar: user?.avatar || '' }));
+                        setSelectedFileName('');
+                        setMessage('Зураг хуучин төлөвт шилжлээ.');
+                      }}
+                    >
+                      ↩️ Сэргээх
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Avatar Upload хэсэг */}
+              <div className="form-group">
+                <label htmlFor="avatarFile">📤 Зураг upload хийх</label>
+                <div className="file-upload-wrapper">
+                  <input
+                    type="file"
+                    id="avatarFile"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploadingAvatar}
+                    className="file-upload-input"
+                  />
+                  <label
+                    htmlFor="avatarFile"
+                    className={`file-upload-btn${uploadingAvatar ? ' disabled' : ''}`}
+                  >
+                    🖼️ Файлаас сонгох
+                  </label>
+                  <span className="file-upload-name">
+                    {selectedFileName || 'Файл сонгогдоогүй'}
+                  </span>
+                </div>
+                <small className="file-upload-hint">
+                  Max хэмжээ: 5MB • Зөвхөн зураг (JPG, PNG, GIF) • Файлаар сонговол автоматаар урьдчилан харагдана
+                </small>
+                {uploadingAvatar && (
+                  <div style={{ marginTop: '8px', color: '#1976d2' }}>
+                    ⏳ Зураг уншиж байна...
+                  </div>
+                )}
               </div>
 
               <div className="form-actions">
@@ -249,7 +374,7 @@ export default function Profile() {
                 </button>
                 <button 
                   type="button" 
-                  onClick={() => setEditing(false)}
+                  onClick={cancelEditing}
                   className="btn btn-secondary"
                   disabled={loading}
                 >

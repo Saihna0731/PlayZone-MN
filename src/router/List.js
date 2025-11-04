@@ -8,6 +8,8 @@ import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import ListSearch from "../components/ListComponents/ListSearch";
 import MapHeader from "../components/MapComponents/MapHeader";
 import AdminForm from "../admin/components/AdminForm";
+import ConfirmModal from "../components/ConfirmModal";
+import Toast from "../components/Toast";
 import CenterCard from "../components/ListComponents/CenterCard";
 import "../styles/List.css";
 
@@ -23,6 +25,8 @@ export default function List() {
   const [editingItem, setEditingItem] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirm, setConfirm] = useState({ open: false, id: null });
 
   const fetchCenters = useCallback(async () => {
     try {
@@ -60,16 +64,29 @@ export default function List() {
     window.dispatchEvent(new CustomEvent("centers:updated", { detail: saved }));
     setEditingItem(null);
     setFormOpen(false);
+    // show toast AFTER panel closes
+    setTimeout(() => {
+      setToast({ type: 'success', message: saved?._id ? 'PC Center амжилттай хадгалагдлаа' : 'PC Center амжилттай нэмэгдлээ' });
+      // Also broadcast globally for other pages if needed
+      window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: 'PC Center амжилттай нэмэгдлээ' } }));
+    }, 50);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Устгах уу?")) return;
+    setConfirm({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
+    const id = confirm.id;
+    setConfirm({ open: false, id: null });
     try {
-      await axios.delete(`${API_BASE}/api/centers/${id}`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE}/api/centers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       window.dispatchEvent(new CustomEvent("centers:updated"));
+      setToast({ type: 'info', message: 'PC Center устгагдлаа' });
     } catch (err) {
       console.error("delete:", err);
-      alert("Delete failed");
+      setToast({ type: 'error', message: err.response?.data?.message || 'Устгах үед алдаа гарлаа' });
     }
   };
 
@@ -203,6 +220,7 @@ export default function List() {
   return (
     <div className="page-with-bottom-space">
       <MapHeader />
+      <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="list-page-container">
         {/* First row: Search bar + Add button */}
         <div className="list-controls-row">
@@ -273,6 +291,15 @@ export default function List() {
           )}
         </div>
       </div>
+      <ConfirmModal
+        open={confirm.open}
+        title="Устгах уу?"
+        message="Энэ PC Center-ийг бүр мөсөн устгах гэж байна. Үйлдлийг буцаах боломжгүй."
+        confirmText="Тийм, устга"
+        cancelText="Болих"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirm({ open: false, id: null })}
+      />
     </div>
   );
 }

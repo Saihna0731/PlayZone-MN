@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FaMapMarkedAlt, FaList, FaUser } from "react-icons/fa";
-import { MdOutlineAssignment } from "react-icons/md";
+import { MdOutlineAssignment, MdVideoLibrary } from "react-icons/md";
 import '../../styles/BottomNav.css';
 
 function BottomNav() {
@@ -10,6 +10,7 @@ function BottomNav() {
   const navItems = [
     { path: "/map", icon: <FaMapMarkedAlt />, label: "Газрын зураг" },
     { path: "/list", icon: <FaList />, label: "Жагсаалт" },
+    { path: "/reels", icon: <MdVideoLibrary />, label: "Reels" },
     { path: "/booking", icon: <MdOutlineAssignment />, label: "Захиалга" },
     { path: "/profile", icon: <FaUser />, label: "Профайл" },
   ];

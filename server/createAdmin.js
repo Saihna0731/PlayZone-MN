@@ -10,7 +10,7 @@ async function main() {
 
   try {
     await mongoose.connect(MONGO_URI);
-    console.log('MongoDB connected');
+    console.log('MongoDB connected!!!!!!!!!!!!!!!!!');
 
     let admin = await User.findOne({ email });
     if (admin) {
