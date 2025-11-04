@@ -4,6 +4,8 @@ import { API_BASE } from "../../config";
 import { FaTimes, FaMapMarkerAlt, FaSave, FaGamepad, FaUpload, FaTrash } from "react-icons/fa";
 import PickerModal from "../../components/ListComponents/PickerModal";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSubscription } from "../../hooks/useSubscription";
+import Toast from "../../components/Toast";
 
 const emptyForm = {
   name: "",
@@ -30,6 +32,7 @@ const emptyForm = {
   lng: "" 
 };export default function AdminForm({ editingItem = null, onSaved, onCancel, isOpen = false }) {
   const { token } = useAuth();
+  const { subscription, plan, isOwner } = useSubscription();
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -37,6 +40,12 @@ const emptyForm = {
   const [existingImages, setExistingImages] = useState([]); // Хуучин зургууд
   const [uploadedVideos, setUploadedVideos] = useState([]);
   const [existingVideos, setExistingVideos] = useState([]); // Хуучин видеонууд
+  const [toast, setToast] = useState(null);
+
+  // Business Standard: allow max 3 images; no video upload
+  const isBusinessStandard = Boolean(isOwner && (plan === 'business_standard'));
+  const allowedImages = isBusinessStandard ? Number(subscription?.maxImages ?? 3) : Infinity;
+  const canUploadVideo = isOwner ? Boolean(subscription?.canUploadVideo ?? (plan !== 'business_standard')) : true;
 
   useEffect(() => {
     if (editingItem) {
@@ -92,7 +101,24 @@ const emptyForm = {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    files.forEach(file => {
+
+    // Enforce image limit for Business Standard
+    const urlImagesCount = form.images ? form.images.split('\n').filter((u) => u.trim()).length : 0;
+    const currentCount = existingImages.length + uploadedImages.length + urlImagesCount;
+    const remaining = allowedImages === Infinity ? Infinity : Math.max(allowedImages - currentCount, 0);
+
+    if (remaining === 0) {
+      setToast({ type: 'error', message: `Бизнес Стандарт: дээд тал нь ${allowedImages} зураг оруулах боломжтой` });
+      e.target.value = '';
+      return;
+    }
+
+    const toProcess = remaining === Infinity ? files : files.slice(0, remaining);
+    if (files.length > toProcess.length) {
+      setToast({ type: 'error', message: `Зургийн тоо ${allowedImages}-ын хязгаартай. Илүү файлууд нэмэгдсэнгүй.` });
+    }
+
+    toProcess.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
@@ -174,6 +200,7 @@ const emptyForm = {
       };
       reader.readAsDataURL(file);
     });
+    e.target.value = '';
   };
 
   const removeImage = (index) => {
@@ -186,11 +213,16 @@ const emptyForm = {
 
   // Video функцууд - сайжруулсан compression
   const handleVideoUpload = (e) => {
+    if (!canUploadVideo) {
+      setToast({ type: 'error', message: 'Видео оруулахын тулд Business Pro план шаардлагатай' });
+      e.target.value = '';
+      return;
+    }
     const files = Array.from(e.target.files);
     const videoFiles = files.filter(file => file.type.startsWith('video/'));
     
     if (videoFiles.length === 0) {
-      alert("Зөвхөн video файл upload хийж болно!");
+      setToast({ type: 'error', message: 'Зөвхөн video файл upload хийж болно!' });
       return;
     }
 
@@ -216,6 +248,7 @@ const emptyForm = {
       };
       reader.readAsDataURL(file);
     });
+    e.target.value = '';
   };
 
   const removeVideo = (index) => {
@@ -386,9 +419,21 @@ const emptyForm = {
       console.log(`Payload size: ${payloadSizeMB} MB`);
       console.log(`Images count: ${finalImages.length} (with thumbnail + high quality)`);
       
+      // Enforce image count limit just before submit
+      if (allowedImages !== Infinity && finalImages.length > allowedImages) {
+        setToast({ type: 'error', message: `Дээд тал нь ${allowedImages} зураг оруулах боломжтой. Илүүг хасна уу.` });
+        return;
+      }
+
+      // If plan doesn't allow video, strip them from payload safely
+      if (!canUploadVideo) {
+        finalVideos = [];
+        finalEmbedVideos = [];
+      }
+
       // Аюулгүй хэмжээ: 20MB (high quality + thumbnail зургуудад хангалттай)
       if (payloadSize > 20 * 1024 * 1024) { 
-        alert(`Нийт мэдээлэл хэт том байна (${payloadSizeMB}MB). Цөөн зураг оруулна уу эсвэл зургуудыг багцлан нэмнэ үү.`);
+        setToast({ type: 'error', message: `Нийт мэдээлэл хэт том байна (${payloadSizeMB}MB). Цөөн зураг оруулна уу эсвэл зургуудыг багцлан нэмнэ үү.` });
         return;
       }
       let res;
@@ -423,7 +468,7 @@ const emptyForm = {
         errorMessage = err.message;
       }
       
-      alert(errorMessage);
+      setToast({ type: 'error', message: errorMessage });
     } finally {
       setSaving(false);
     }
@@ -442,6 +487,7 @@ const emptyForm = {
       zIndex: 2000,
       padding: "20px"
     }}>
+      <Toast toast={toast} onClose={() => setToast(null)} />
       <div style={{
         background: "#fff",
         borderRadius: "16px",
@@ -1156,6 +1202,11 @@ const emptyForm = {
                   <p style={{ margin: "12px 0 0 0", color: "#666", fontSize: "14px" }}>
                     JPG, PNG файл сонгоно уу (олон зураг сонгож болно)
                   </p>
+                  {allowedImages !== Infinity && (
+                    <p style={{ margin: "8px 0 0 0", color: "#ef4444", fontSize: "12px", fontWeight: 600 }}>
+                      Бизнес Стандарт: дээд тал нь {allowedImages} зураг
+                    </p>
+                  )}
                 </div>
 
                 {/* Image Preview */}
@@ -1339,6 +1390,7 @@ const emptyForm = {
                     onChange={handleVideoUpload}
                     style={{ display: "none" }}
                     id="video-upload"
+                    disabled={!canUploadVideo}
                   />
                   <label
                     htmlFor="video-upload"
@@ -1347,10 +1399,10 @@ const emptyForm = {
                       alignItems: "center",
                       gap: "8px",
                       padding: "12px 24px",
-                      background: "linear-gradient(135deg, #667eea, #764ba2)",
-                      color: "#fff",
+                      background: canUploadVideo ? "linear-gradient(135deg, #667eea, #764ba2)" : "#cbd5e1",
+                      color: canUploadVideo ? "#fff" : "#6b7280",
                       borderRadius: "8px",
-                      cursor: "pointer",
+                      cursor: canUploadVideo ? "pointer" : "not-allowed",
                       transition: "all 0.2s",
                       fontWeight: "500",
                       border: "none",
@@ -1360,12 +1412,12 @@ const emptyForm = {
                     🎥 Видео сонгох
                   </label>
                   <p style={{ margin: "12px 0 0 0", fontSize: "12px", color: "#666" }}>
-                    MP4, AVI, MOV файл сонгоно уу (олон видео сонгож болно, 50MB хүртэл)
+                    {canUploadVideo ? 'MP4, AVI, MOV файл сонгоно уу (олон видео сонгож болно, 50MB хүртэл)' : 'Бизнес Стандарт пландад видео оруулах боломжгүй'}
                   </p>
                 </div>
 
                 {/* Video Preview */}
-                {(existingVideos.length > 0 || uploadedVideos.length > 0) && (
+                {canUploadVideo && (existingVideos.length > 0 || uploadedVideos.length > 0) && (
                   <div style={{ marginBottom: "16px" }}>
                     {/* Existing Videos */}
                     {existingVideos.length > 0 && (
@@ -1498,6 +1550,7 @@ const emptyForm = {
                     }}
                     onFocus={(e) => e.target.style.borderColor = "#1976d2"}
                     onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                    disabled={!canUploadVideo}
                   />
                 </div>
 
@@ -1525,9 +1578,10 @@ const emptyForm = {
                     }}
                     onFocus={(e) => e.target.style.borderColor = "#1976d2"}
                     onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                    disabled={!canUploadVideo}
                   />
                   <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#666" }}>
-                    YouTube, Facebook, Instagram, Vimeo холбоос эсвэл бүрэн iframe embed code оруулж болно
+                    {canUploadVideo ? 'YouTube, Facebook, Instagram, Vimeo холбоос эсвэл бүрэн iframe embed code оруулж болно' : 'Видео линк/эмбед хийх боломжгүй (Business Pro шаардлагатай)'}
                   </p>
                 </div>
               </div>

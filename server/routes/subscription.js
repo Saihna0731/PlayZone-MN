@@ -89,18 +89,29 @@ router.post('/upgrade', auth, async (req, res) => {
 		}
 
 		const planInfo = PLAN_PRICES[planId];
+		// Normalize payment method to allowed enum to avoid validation 500
+		const allowed = ['qpay', 'mostmoney', 'card', 'mock', 'admin'];
+		const method = allowed.includes(paymentMethod) ? paymentMethod : 'mock';
 		const now = new Date();
 		const endDate = new Date(now.getTime() + planInfo.duration * 24 * 60 * 60 * 1000);
 
+		// Block repurchasing same active plan
+		if (user.subscription && user.subscription.plan === planId) {
+			const notExpired = !user.subscription.endDate || new Date(user.subscription.endDate) > now;
+			if (user.subscription.isActive !== false && notExpired) {
+				return res.status(400).json({ message: 'Та энэ плантай аль хэдийн идэвхтэй байна' });
+			}
+		}
+
 		// User subscription upgrade
 		if (planId === 'normal' && user.accountType === 'user') {
-			user.subscription = {
+					user.subscription = {
 				plan: planId,
 				isActive: true,
 				startDate: now,
 				endDate: endDate,
 				autoRenew: true,
-				paymentMethod: paymentMethod
+						paymentMethod: method
 			};
 			await user.save();
 
@@ -114,13 +125,13 @@ router.post('/upgrade', auth, async (req, res) => {
 
 		// Center Owner subscription upgrade (users collection-д хадгална)
 		if ((planId === 'business_standard' || planId === 'business_pro') && user.accountType === 'centerOwner') {
-			user.subscription = {
+					user.subscription = {
 				plan: planId,
 				isActive: true,
 				startDate: now,
 				endDate: endDate,
 				autoRenew: true,
-				paymentMethod: paymentMethod,
+						paymentMethod: method,
 				maxCenters: planInfo.maxCenters,
 				maxImages: planInfo.maxImages,
 				canUploadVideo: planInfo.canUploadVideo,

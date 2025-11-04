@@ -6,7 +6,7 @@ import './SubscriptionPlans.css';
 const SubscriptionPlans = ({ showModal, onClose }) => {
   const { subscription, upgradeToplan, refreshSubscription, isOwner } = useSubscription();
   const [loading, setLoading] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
+  const [toast, setToast] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
 
@@ -75,16 +75,15 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
       if (result.success) {
         // Subscription data шинэчлэх
         await refreshSubscription();
-        
-        setToastMsg('🎉 Амжилттай төлбөр хийлээ! Таны эрх шинэчлэгдлээ. (Mock төлбөр)');
+        setToast({ message: '🎉 Амжилттай төлбөр хийлээ! Таны эрх шинэчлэгдлээ.', type: 'success' });
         setTimeout(() => {
           onClose();
         }, 2000);
       } else {
-        setToastMsg(result.message || 'Төлбөр хийхэд алдаа гарлаа');
+        setToast({ message: result.message || 'Төлбөр хийхэд алдаа гарлаа', type: 'error' });
       }
     } catch (error) {
-      setToastMsg('Төлбөр хийхэд алдаа гарлаа');
+      setToast({ message: 'Төлбөр хийхэд алдаа гарлаа', type: 'error' });
     }
     setLoading(false);
   };
@@ -92,8 +91,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
   // Automatic payment function (immediate/mock)
   const handleInstantUpgrade = (planId) => {
     setSelectedPlan(planId);
-    // run instant/mock upgrade
-    handleUpgrade(planId, 'instant_mock');
+    // run mock upgrade
+    handleUpgrade(planId, 'mock');
   };
 
   const PaymentModal = () => (
@@ -176,8 +175,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
 
           <div className="plans-grid">
             {plans.map(plan => {
-              // PC Center upgrade үед subscription plan-тай харьцуулахгүй
-              const isCurrent = effectiveType === 'center' ? false : subscription?.plan === plan.id;
+              // Одоогийн төлөвлөгөө бол дахин авахыг хориглоно (user, centerOwner аль алинд)
+              const isCurrent = subscription?.plan === plan.id;
               const isLowerTier = effectiveType === 'center' ? false : 
                 plans.findIndex(p => p.id === subscription?.plan) >= plans.findIndex(p => p.id === plan.id);
               
@@ -231,8 +230,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
         </div>
       </div>
 
-      {showPayment && <PaymentModal />}
-      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
+  {showPayment && <PaymentModal />}
+  {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
     </>
   );
 };

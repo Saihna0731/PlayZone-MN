@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Center = require("../models/Center");
+const User = require("../models/User");
 const { auth } = require("../middleware/auth");
 const { checkCenterLimit, ownerCanModifyCenter } = require("../middleware/subscription");
 
@@ -35,12 +36,41 @@ router.post("/", auth, checkCenterLimit, async (req, res) => {
   console.log("Body raw:", req.body);
 
   try {
+    // Subscription-based media restrictions
+    const user = await User.findById(req.userId);
+    const sub = user?.subscription || {};
+    const isAdmin = user?.role === 'admin';
     const data = {
       ...req.body,
       lat: req.body.lat ? Number(req.body.lat) : undefined,
       lng: req.body.lng ? Number(req.body.lng) : undefined,
       owner: req.userId // эзэмшигчийг холбоно
     };
+
+    if (!isAdmin && user?.accountType === 'centerOwner') {
+      // Enforce image limit
+      const allowedImages = Number(sub.maxImages || 0);
+      if (Array.isArray(data.images) && allowedImages > 0 && data.images.length > allowedImages) {
+        return res.status(403).json({
+          message: `Таны план дээр дээд тал нь ${allowedImages} зураг оруулах боломжтой. Илүү оруулахын тулд upgrade хийнэ үү.`,
+          upgrade: true,
+          code: 'IMAGE_LIMIT'
+        });
+      }
+      // Enforce video permission
+      if (!sub.canUploadVideo && ((Array.isArray(data.videos) && data.videos.length) || (Array.isArray(data.embedVideos) && data.embedVideos.length))) {
+        return res.status(403).json({
+          message: 'Видео оруулахын тулд Business Pro план шаардлагатай',
+          upgrade: true,
+          code: 'VIDEO_NOT_ALLOWED'
+        });
+      }
+      // If not allowed, ensure server won't persist accidental inputs
+      if (!sub.canUploadVideo) {
+        data.videos = [];
+        data.embedVideos = [];
+      }
+    }
     if (typeof data.lat === "number" && typeof data.lng === "number") {
       data.location = { type: "Point", coordinates: [data.lng, data.lat] };
     }
@@ -59,6 +89,11 @@ router.post("/", auth, checkCenterLimit, async (req, res) => {
 // PUT update center (protected)
 router.put("/:id", auth, ownerCanModifyCenter, async (req, res) => {
   try {
+    // Subscription-based media restrictions
+    const user = await User.findById(req.userId);
+    const sub = user?.subscription || {};
+    const isAdmin = user?.role === 'admin';
+
     const data = {
       ...req.body,
       lat: req.body.lat ? Number(req.body.lat) : undefined,
@@ -67,6 +102,28 @@ router.put("/:id", auth, ownerCanModifyCenter, async (req, res) => {
     
     if (typeof data.lat === "number" && typeof data.lng === "number") {
       data.location = { type: "Point", coordinates: [data.lng, data.lat] };
+    }
+
+    if (!isAdmin && user?.accountType === 'centerOwner') {
+      const allowedImages = Number(sub.maxImages || 0);
+      if (Array.isArray(data.images) && allowedImages > 0 && data.images.length > allowedImages) {
+        return res.status(403).json({
+          message: `Таны план дээр дээд тал нь ${allowedImages} зураг оруулах боломжтой. Илүү оруулахын тулд upgrade хийнэ үү.`,
+          upgrade: true,
+          code: 'IMAGE_LIMIT'
+        });
+      }
+      if (!sub.canUploadVideo && ((Array.isArray(data.videos) && data.videos.length) || (Array.isArray(data.embedVideos) && data.embedVideos.length))) {
+        return res.status(403).json({
+          message: 'Видео оруулахын тулд Business Pro план шаардлагатай',
+          upgrade: true,
+          code: 'VIDEO_NOT_ALLOWED'
+        });
+      }
+      if (!sub.canUploadVideo) {
+        data.videos = [];
+        data.embedVideos = [];
+      }
     }
 
     const center = await Center.findByIdAndUpdate(req.params.id, data, { 
