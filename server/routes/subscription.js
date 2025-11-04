@@ -49,16 +49,24 @@ router.get('/me', auth, async (req, res) => {
 			return res.status(404).json({ message: 'Хэрэглэгч олдсонгүй' });
 		}
 
+		const plan = user.subscription?.plan || 'free';
+		// Default based on plan when not stored on user
+		const defaults = {
+			maxCenters: plan === 'business_standard' ? 1 : plan === 'business_pro' ? 3 : 0,
+			maxImages: plan === 'business_standard' ? 3 : plan === 'business_pro' ? PLAN_PRICES.business_pro.maxImages : 0,
+			canUploadVideo: plan === 'business_pro'
+		};
+
 		let subscriptionData = {
-			plan: user.subscription?.plan || 'free',
+			plan,
 			isActive: user.subscription?.isActive || false,
 			startDate: user.subscription?.startDate,
 			endDate: user.subscription?.endDate,
 			autoRenew: user.subscription?.autoRenew || false,
 			accountType: user.accountType,
-			maxCenters: user.subscription?.maxCenters || 0,
-			maxImages: user.subscription?.maxImages || 0,
-			canUploadVideo: user.subscription?.canUploadVideo || false,
+			maxCenters: typeof user.subscription?.maxCenters === 'number' && user.subscription?.maxCenters > 0 ? user.subscription.maxCenters : defaults.maxCenters,
+			maxImages: typeof user.subscription?.maxImages === 'number' && user.subscription?.maxImages > 0 ? user.subscription.maxImages : defaults.maxImages,
+			canUploadVideo: typeof user.subscription?.canUploadVideo === 'boolean' ? user.subscription.canUploadVideo : defaults.canUploadVideo,
 			hasMarketingBoost: user.subscription?.hasMarketingBoost || false,
 			hasAdvancedAnalytics: user.subscription?.hasAdvancedAnalytics || false
 		};

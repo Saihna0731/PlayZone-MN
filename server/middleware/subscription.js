@@ -169,8 +169,15 @@ const checkCenterLimit = async (req, res, next) => {
 			});
 		}
 
-		// Center тоо хязгаарлалт шалгах
-	const maxCenters = subscription.maxCenters || 0;
+			// Center тоо хязгаарлалт шалгах (use sensible defaults when not set)
+			let maxCenters = 0;
+			if (typeof subscription.maxCenters === 'number' && subscription.maxCenters > 0) {
+				maxCenters = subscription.maxCenters;
+			} else if (subscription.plan === 'business_standard') {
+				maxCenters = 1;
+			} else if (subscription.plan === 'business_pro') {
+				maxCenters = 3;
+			}
 		if (currentCenterCount >= maxCenters) {
 			return res.status(403).json({ 
 				message: `Таны план дээр ${maxCenters} PC Center нэмэх боломжтой. Илүү нэмэхийн тулд upgrade хийнэ үү.`,

@@ -44,7 +44,10 @@ const emptyForm = {
 
   // Business Standard: allow max 3 images; no video upload
   const isBusinessStandard = Boolean(isOwner && (plan === 'business_standard'));
-  const allowedImages = isBusinessStandard ? Number(subscription?.maxImages ?? 3) : Infinity;
+  // Fallback to 3 if server hasn't populated maxImages yet
+  const allowedImages = isBusinessStandard
+    ? (Number(subscription?.maxImages) > 0 ? Number(subscription?.maxImages) : 3)
+    : Infinity;
   const canUploadVideo = isOwner ? Boolean(subscription?.canUploadVideo ?? (plan !== 'business_standard')) : true;
 
   useEffect(() => {
@@ -352,7 +355,7 @@ const emptyForm = {
         }
       }
 
-      // Video array бэлтгэх - object болон string format дэмжих
+      // Video array бэлтгэх - зөвхөн upload хийсэн видеонуудыг ашиглах (URL-ээр нэмэхийг болиулсан)
       let finalVideos = [];
       
       if (editingItem) {
@@ -371,28 +374,10 @@ const emptyForm = {
             }
           });
         }
-        
-        // URL-аар оруулсан видеог нэмэх
-        if (form.videos && form.videos.trim()) {
-          const urlVideos = form.videos.split('\n').filter(url => url.trim());
-          // Давхардаагүй видеог л нэмэх
-          urlVideos.forEach(url => {
-            if (!finalVideos.find(video => 
-              (typeof video === 'string' && video === url) || 
-              (typeof video === 'object' && video.data === url)
-            )) {
-              finalVideos.push(url); // URL видео - string байдлаар хадгална
-            }
-          });
-        }
+        // Видео холбоосоор нэмэхийг дэмжихгүй
       } else {
-        // Шинэ item режимд: uploadedVideos болон URL видеонуудыг нэмэх
+        // Шинэ item режимд: зөвхөн upload хийсэн видеонууд
         finalVideos = [...uploadedVideos]; // Энэ нь video objects байна
-        
-        if (form.videos && form.videos.trim()) {
-          const urlVideos = form.videos.split('\n').filter(url => url.trim());
-          finalVideos = [...finalVideos, ...urlVideos]; // URL видеонууд - string байдлаар нэмэгдэнэ
-        }
       }
 
       // Embed Videos array бэлтгэх
@@ -1526,35 +1511,10 @@ const emptyForm = {
                   </div>
                 )}
 
-                {/* Video URL Input */}
-                <div style={{ marginBottom: "16px" }}>
-                  <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
-                    Видеоны холбоос оруулах (шинэ мөрөөр тусгаарла)
-                  </label>
-                  <textarea
-                    placeholder="https://example.com/video1.mp4&#10;https://example.com/video2.mp4"
-                    value={form.videos}
-                    onChange={onChange("videos")}
-                    rows={3}
-                    style={{
-                      width: "100%",
-                      padding: "12px 16px",
-                      border: "2px solid #e0e0e0",
-                      borderRadius: "8px",
-                      fontSize: "16px",
-                      outline: "none",
-                      transition: "border-color 0.2s",
-                      boxSizing: "border-box",
-                      resize: "vertical",
-                      fontFamily: "inherit"
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = "#1976d2"}
-                    onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
-                    disabled={!canUploadVideo}
-                  />
-                </div>
+                {/* Видео холбоосоор нэмэхийг хассан - зөвхөн upload эсвэл embed */}
 
                 {/* Embed Video Input */}
+                {canUploadVideo && (
                 <div style={{ marginBottom: "16px" }}>
                   <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
                     Embed видео (YouTube, Vimeo, etc) - iframe эсвэл холбоос
@@ -1578,12 +1538,12 @@ const emptyForm = {
                     }}
                     onFocus={(e) => e.target.style.borderColor = "#1976d2"}
                     onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
-                    disabled={!canUploadVideo}
                   />
                   <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#666" }}>
                     {canUploadVideo ? 'YouTube, Facebook, Instagram, Vimeo холбоос эсвэл бүрэн iframe embed code оруулж болно' : 'Видео линк/эмбед хийх боломжгүй (Business Pro шаардлагатай)'}
                   </p>
                 </div>
+                )}
               </div>
 
               <div>
