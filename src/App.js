@@ -10,6 +10,7 @@ import BottomNav from "./components/MainNavbars/BottomNav";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import { AuthProvider } from "./contexts/AuthContext";
+import GlobalToast from "./components/GlobalToast";
 
 function App() {
   const location = useLocation();
@@ -30,6 +31,7 @@ function App() {
           <Route path="/center/:id" element={<CenterDetail />} />
         </Routes>
         {!hideNav && <BottomNav />}
+        <GlobalToast />
       </div>
     </AuthProvider>
   );

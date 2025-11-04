@@ -170,22 +170,25 @@ const checkCenterLimit = async (req, res, next) => {
 		}
 
 			// Center тоо хязгаарлалт шалгах (use sensible defaults when not set)
-			let maxCenters = 0;
-			if (typeof subscription.maxCenters === 'number' && subscription.maxCenters > 0) {
-				maxCenters = subscription.maxCenters;
-			} else if (subscription.plan === 'business_standard') {
-				maxCenters = 1;
-			} else if (subscription.plan === 'business_pro') {
-				maxCenters = 3;
+				let maxCenters = 0;
+				if (subscription.plan === 'business_standard') {
+					maxCenters = Math.max(Number(subscription.maxCenters || 0), 1);
+				} else if (subscription.plan === 'business_pro') {
+					maxCenters = Math.max(Number(subscription.maxCenters || 0), 2);
+				} else {
+					maxCenters = Number(subscription.maxCenters || 0);
+				}
+			if (currentCenterCount >= maxCenters) {
+				const extraCenterPrice = 19900; // ₮ per extra center
+				return res.status(403).json({ 
+					message: `Таны план дээр ${maxCenters} PC Center нэмэх боломжтой. Хязгаар давуулах бол төв бүр ${extraCenterPrice.toLocaleString()}₮ болно.`,
+					upgrade: true,
+					code: 'CENTER_LIMIT',
+					currentCount: currentCenterCount,
+					maxCount: maxCenters,
+					extraCenterPrice
+				});
 			}
-		if (currentCenterCount >= maxCenters) {
-			return res.status(403).json({ 
-				message: `Таны план дээр ${maxCenters} PC Center нэмэх боломжтой. Илүү нэмэхийн тулд upgrade хийнэ үү.`,
-				upgrade: true,
-				currentCount: currentCenterCount,
-				maxCount: maxCenters
-			});
-		}
 
 		next();
 	} catch (error) {

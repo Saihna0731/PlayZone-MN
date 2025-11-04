@@ -431,8 +431,10 @@ const emptyForm = {
       
       if (editingItem && (editingItem._id || editingItem.id)) {
         res = await axios.put(`${API_BASE}/api/centers/${editingItem._id ?? editingItem.id}`, payload, config);
+        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'PC Center амжилттай шинэчлэгдлээ' } }));
       } else {
         res = await axios.post(`${API_BASE}/api/centers`, payload, config);
+        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'PC Center амжилттай нэмэгдлээ' } }));
       }
       window.dispatchEvent(new CustomEvent("centers:updated", { detail: res.data }));
       onSaved && onSaved(res.data);
