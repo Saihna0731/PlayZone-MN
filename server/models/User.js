@@ -73,16 +73,7 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Center'
   }],
-  // Following - дагаж буй Center Owner-үүд эсвэл Center-үүд
-  following: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User' // эсвэл 'Center' байж болно
-  }],
-  // Followers - энэ хэрэглэгчийг дагаж буй хүмүүс
-  followers: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
+  
   // Subscription/Төлбөрийн мэдээлэл
   subscription: {
     plan: {

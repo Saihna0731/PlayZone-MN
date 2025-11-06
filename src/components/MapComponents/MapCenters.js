@@ -185,38 +185,35 @@ function MapClickBlocker({ canViewDetails, showToast, getSubscriptionMessage }) 
   const map = useMap();
   
   useEffect(() => {
+    if (canViewDetails) {
+      // Эрхтэй хэрэглэгчдэд listener хэрэггүй — marker-ууд чөлөөтэй ажиллана
+      return undefined;
+    }
+
     const handleMarkerClick = (e) => {
-  // Зөвхөн төлбөргүй (эсвэл нэвтрээгүй) хэрэглэгчдэд block хийх
-  if (!canViewDetails) {
-        const clickedElement = e.originalEvent?.target;
-        
-        // Marker element шалгах
-        const isMarkerClick = clickedElement && (
-          clickedElement.closest('.custom-marker') ||
-          clickedElement.closest('.leaflet-marker-icon') ||
-          clickedElement.classList?.contains('marker-body') ||
-          clickedElement.tagName === 'IMG'
-        );
-        
-        if (isMarkerClick) {
-          e.originalEvent?.preventDefault();
-          e.originalEvent?.stopPropagation();
-          e.originalEvent?.stopImmediatePropagation();
-          
-          // Эрхгүй хэрэглэгчдэд сануулга
-          if (showToast) {
-            showToast(getSubscriptionMessage(), "warning");
-          }
-          
-          return false;
+      if (canViewDetails) return;
+      const clickedElement = e.originalEvent?.target;
+      const isMarkerClick = clickedElement && (
+        clickedElement.closest('.custom-marker') ||
+        clickedElement.closest('.leaflet-marker-icon') ||
+        clickedElement.classList?.contains('marker-body') ||
+        clickedElement.tagName === 'IMG'
+      );
+
+      if (isMarkerClick) {
+        e.originalEvent?.preventDefault();
+        e.originalEvent?.stopPropagation();
+        e.originalEvent?.stopImmediatePropagation();
+
+        if (showToast) {
+          showToast(getSubscriptionMessage(), "warning");
         }
       }
     };
 
-    // Map click event listener
     map.on('click', handleMarkerClick);
     map.on('dblclick', handleMarkerClick);
-    
+
     return () => {
       map.off('click', handleMarkerClick);
       map.off('dblclick', handleMarkerClick);
@@ -229,13 +226,14 @@ function MapClickBlocker({ canViewDetails, showToast, getSubscriptionMessage }) 
 export default function MapCenters({ query = "", mapStyle = "osm", showToast }) {
   const [centers, setCenters] = useState([]);
   const [focus, setFocus] = useState(null);
-  const { canViewDetails, subscription } = useSubscription();
+  const { canViewDetails, subscription, plan } = useSubscription();
   const { isAuthenticated } = useAuth();
   
   // Subscription мэдээлэл notification-д ашиглах
   const getSubscriptionMessage = () => {
     if (!isAuthenticated) return "Нэвтэрч байж үзнэ үү";
-    if (!subscription || subscription.plan === 'free') {
+    const normalizedPlan = (plan || subscription?.plan || '').toString().toLowerCase();
+    if (!subscription || !normalizedPlan || normalizedPlan === 'free') {
       return "Дэлгэрэнгүй мэдээлэл харахын тулд планаа шинэчлэх шаардлагатай";
     }
     return "Энэ үйлдэл хийх эрх танд байхгүй байна";
@@ -466,7 +464,7 @@ export default function MapCenters({ query = "", mapStyle = "osm", showToast }) 
         {visible.map((c) => {
           // Marker үүсгэх үед subscription эрх шалгах
           const markerId = c._id ?? c.id;
-          
+          const markerKey = `${markerId}-${canViewDetails ? '1' : '0'}`;
 
           
           const canInteract = Boolean(canViewDetails);
@@ -489,7 +487,7 @@ export default function MapCenters({ query = "", mapStyle = "osm", showToast }) 
           }
 
           return (
-            <Marker key={markerId} {...markerProps}>
+            <Marker key={markerKey} {...markerProps}>
             {/* Popup зөвхөн subscription эрхтэй хэрэглэгчдэд харуулах */}
             {canViewDetails && (
               <Popup>

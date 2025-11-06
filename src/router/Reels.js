@@ -154,9 +154,21 @@ export default function Reels() {
   const [touchStart, setTouchStart] = useState(0);
   const [triedFullscreen, setTriedFullscreen] = useState(false);
   
-  // Back navigation handler
-  const handleBack = () => {
-    navigate(-1);
+  // Back neg daraad shuud garna 
+  const handleBack = async () => {
+    try {
+      const doc = document;
+      const isFs = doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement;
+      if (isFs) {
+        const exit = doc.exitFullscreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+        if (exit) {
+          try { await exit.call(doc); } catch (_) {}
+        }
+      }
+    } finally {
+      // Always send user to MapView with a single tap
+      navigate('/map', { replace: true });
+    }
   };
   
   // Интерактив товчнуудын төлөвүүд
