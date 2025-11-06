@@ -15,7 +15,7 @@ import GlobalToast from "./components/GlobalToast";
 
 function App() {
   const location = useLocation();
-  const hideNav = ["/login", "/register", "/auth"].includes(location.pathname) || location.pathname.startsWith('/center/');
+  const hideNav = ["/login", "/register", "/auth", "/reels"].includes(location.pathname) || location.pathname.startsWith('/center/');
   const lockScroll = location.pathname === '/map' || location.pathname === '/reels';
   return (
     <AuthProvider>

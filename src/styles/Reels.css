@@ -1,12 +1,19 @@
 /* Reels.css - Загварлаг Reels хуудас */
 
 .reels-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 999;
   height: 100vh;
   width: 100vw;
   background: #000;
-  position: relative;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  /* Reserve a virtual height for embed player controls so overlays don't cover them */
+  --player-controls-height: 84px;
 }
 
 .reels-video-wrapper {
@@ -16,6 +23,9 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  /* Бүрэн fullscreen; зөвхөн safe-area-ийн доод зай үлдээнэ (минимал) */
+  box-sizing: border-box;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .reels-video {
@@ -40,12 +50,23 @@
   padding-top: 56.25%;
 }
 
+/* Vertical (9:16) embeds such as Facebook Reels/YouTube Shorts */
+.reels-embed-box.vertical::before {
+  padding-top: 177.78%;
+}
+
 /* Modern browsers also get aspect-ratio, which overrides the padding trick visually */
 @supports (aspect-ratio: 16 / 9) {
   .reels-embed-box {
     aspect-ratio: 16 / 9;
   }
   .reels-embed-box::before { padding-top: 0; }
+}
+
+@supports (aspect-ratio: 9 / 16) {
+  .reels-embed-box.vertical {
+    aspect-ratio: 9 / 16;
+  }
 }
 
 .reels-embed-box.fullscreen {
@@ -62,6 +83,28 @@
   height: 100%;
   border: 0;
   overflow: hidden;
+}
+
+/* Төвд байрлуулах хувилбар — inline хэмжээтэй үед яг голлуулна */
+.reels-embed.fit-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Vertical embeds: fill height and center horizontally to avoid top/bottom black bars */
+.reels-embed-box.vertical {
+  height: 100%;
+  width: auto;
+  max-height: 100%;
+  margin: 0 auto;
+}
+.reels-embed-box.vertical .reels-embed,
+.reels-embed-box.vertical .reels-embed-fallback {
+  height: 100%;
+  width: auto;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Буцах товч */
@@ -86,6 +129,7 @@
   z-index: 20;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
+
 
 .reels-back-button:hover {
   background: rgba(0, 0, 0, 0.7);
@@ -180,13 +224,14 @@
 /* Эзэмшигч мэдээлэл (доод зүүн) */
 .reels-owner-info {
   position: absolute;
-  bottom: 100px;
+  /* Доод хар зайд яг багтаах байдлаар байршуулна, видеотой давхцахгүй */
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   left: 16px;
-  z-index: 10;
+  z-index: 1001;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: calc(100% - 180px);
+  gap: 10px;
+  max-width: calc(100% - 140px);
 }
 
 .reels-owner-wrapper {
@@ -196,7 +241,7 @@
   background: rgba(0, 0, 0, 0.5);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -448,6 +493,7 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  /* Owner info stays in the bottom black bar on small screens as well */
   .reels-actions {
     right: 12px;
     top: 50%;
@@ -464,11 +510,7 @@
     font-size: 22px;
   }
 
-  .reels-owner-info {
-    bottom: 90px;
-    left: 12px;
-    max-width: calc(100% - 90px);
-  }
+  .reels-owner-info { left: 12px; bottom: 35px; max-width: calc(100% - 90px); }
 
   .reels-back-button {
     top: 12px;
@@ -478,6 +520,11 @@
   }
   
   .reels-back-button {
+    left: 12px;
+  }
+  .reels-playpause-btn {
+    width: 40px;
+    height: 40px;
     left: 12px;
   }
   

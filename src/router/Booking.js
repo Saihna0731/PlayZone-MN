@@ -8,6 +8,7 @@ import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import BottomNav from "../components/MainNavbars/BottomNav";
 import CenterCard from "../components/ListComponents/CenterCard";
 import AdminForm from "../admin/components/AdminForm";
+import ConfirmModal from "../components/ConfirmModal";
 
 // Ачаалал шинэчлэх Modal компонент
 function OccupancyModal({ center, isOpen, onClose, onUpdate }) {
@@ -276,6 +277,8 @@ export default function Booking() {
   const [occupancyModalCenter, setOccupancyModalCenter] = useState(null);
   const [occupancyModalOpen, setOccupancyModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -376,23 +379,46 @@ export default function Booking() {
     }
   };
 
-  // Center устгах handler
-  const handleDelete = async (centerId) => {
-    if (!window.confirm("PC төвийг устгах уу?")) return;
-    
+  // Center устгах handler - confirm modal нээх
+  const handleDelete = (centerId) => {
+    if (!centerId) return;
+    setDeleteConfirm({ open: true, id: centerId });
+  };
+
+  const confirmDeleteCenter = async () => {
+    if (!deleteConfirm.id || deleteLoading) return;
+
+    setDeleteLoading(true);
     try {
-      await axios.delete(`${API_BASE}/api/centers/${centerId}`);
-      
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      await axios.delete(`${API_BASE}/api/centers/${deleteConfirm.id}`, { headers });
+
       // Local state-ээс устгах
-      setFavorites(prev => prev.filter(center => center._id !== centerId));
-      
+      setFavorites(prev =>
+        prev.filter(center => {
+          const id = center._id ?? center.id;
+          return String(id) !== String(deleteConfirm.id);
+        })
+      );
+      setExpandedIndex(null);
+
       // Map дээр шинэчлэх
       window.dispatchEvent(new CustomEvent("centers:updated"));
-      
+
+      setDeleteConfirm({ open: false, id: null });
     } catch (err) {
       console.error("Failed to delete center:", err);
-      alert("PC төв устгахад алдаа гарлаа");
+      alert(err.response?.data?.message || "PC төв устгахад алдаа гарлаа");
+    } finally {
+      setDeleteLoading(false);
     }
+  };
+
+  const cancelDeleteCenter = () => {
+    if (deleteLoading) return;
+    setDeleteConfirm({ open: false, id: null });
   };
 
   // Center хадгалах handler
@@ -621,6 +647,10 @@ export default function Booking() {
     );
   }
 
+  const deleteTarget = deleteConfirm.id
+    ? favorites.find(center => String(center._id ?? center.id) === String(deleteConfirm.id))
+    : null;
+
   return (
     <div style={{ 
       paddingBottom: 80,
@@ -721,7 +751,7 @@ export default function Booking() {
                   expanded={expandedIndex === index}
                   onToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
                   onEdit={() => handleEdit(center)}
-                  onDelete={() => handleDelete(center._id)}
+                  onDelete={handleDelete}
                   canEdit={isCenterOwner && center.owner && String(center.owner) === String(user?._id)}
                   isBookingMode={true}
                   onOccupancyUpdate={handleOccupancyUpdate}
@@ -779,6 +809,20 @@ export default function Booking() {
         )}
       </div>
       
+      <ConfirmModal
+        open={deleteConfirm.open}
+        title="PC төвийг устгах уу?"
+        message={
+          deleteTarget
+            ? `${deleteTarget.name || "PC төв"}-ийг бүр мөсөн устгах гэж байна. Үйлдлийг буцаах боломжгүй.`
+            : "PC төвийг устгах уу?"
+        }
+        confirmText={deleteLoading ? "Устгаж байна..." : "Тийм, устга"}
+        cancelText="Болих"
+        onConfirm={confirmDeleteCenter}
+        onCancel={cancelDeleteCenter}
+      />
+
       <BottomNav />
     </div>
   );

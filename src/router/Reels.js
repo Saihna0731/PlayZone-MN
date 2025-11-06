@@ -9,13 +9,32 @@ import '../styles/Reels.css';
 
 // Iframe renderer for embed codes (e.g., Facebook) to avoid remounts on fullscreen toggle
 const EmbedIframe = React.memo(function EmbedIframe({ embedCode, fullscreen }) {
+  const boxRef = React.useRef(null);
   const match = /src="([^"]+)"/i.exec(embedCode || '');
-  let src = match ? match[1] : null;
-  // Autoplay сайжруулалт: YouTube/Facebook линк дээр query параметрүүд нэмнэ
+  let baseSrc = match ? match[1] : null;
+  // Whether the embed is a vertical video (e.g., Facebook Reels or YouTube Shorts)
+  let isVertical = false;
+  // Build a base URL with autoplay params (width/height will be adjusted after layout)
   try {
-    if (src) {
-      const url = new URL(src, window.location.href);
+    if (baseSrc) {
+      let url = new URL(baseSrc, window.location.href);
       const host = url.hostname || '';
+
+      // Facebook Reels линк илэрвэл plugins/video.php руу хөрвүүлнэ
+      if (host.includes('facebook.com') && (/\/reel\//i.test(url.pathname) || /\/reels\//i.test(url.pathname))) {
+        // Mark as vertical and use the official plugin URL so autoplay works more reliably
+        isVertical = true;
+        const plugin = new URL('https://www.facebook.com/plugins/video.php');
+        plugin.searchParams.set('href', url.toString());
+        plugin.searchParams.set('autoplay', '1');
+        plugin.searchParams.set('mute', '1');
+        plugin.searchParams.set('muted', '1');
+        plugin.searchParams.set('playsinline', '1');
+        plugin.searchParams.set('show_text', '0');
+        // width/height-ийг дараа нь бодитоор хэмжиж тохируулна
+        url = plugin;
+      }
+
       if (host.includes('youtube.com') || host.includes('youtu.be')) {
         // Ensure embed endpoint
         // (ихэнх тохиолдолд аль хэдийн /embed/... байна)
@@ -24,41 +43,101 @@ const EmbedIframe = React.memo(function EmbedIframe({ embedCode, fullscreen }) {
         url.searchParams.set('playsinline', '1');
         url.searchParams.set('rel', '0');
         url.searchParams.set('enablejsapi', '1');
+        url.searchParams.set('controls', url.searchParams.get('controls') ?? '0');
+        // YouTube Shorts are vertical
+        if (/\/shorts\//i.test(url.pathname)) {
+          isVertical = true;
+        }
       } else if (host.includes('facebook.com')) {
         // FB plugins/video.php
-        url.searchParams.set('autoplay', 'true');
+        url.searchParams.set('autoplay', '1');
+        url.searchParams.set('mute', '1');
+        url.searchParams.set('muted', '1');
+        url.searchParams.set('playsinline', '1');
         // show-text байхгүй/эсвэл 0 бол илүү цэвэр харагдана
         if (!url.searchParams.has('show_text')) url.searchParams.set('show_text', '0');
+        // If the plugin points to a reel via its href param, treat as vertical
+        try {
+          const href = url.searchParams.get('href') || '';
+          if (/\/reel(s)?\//i.test(href)) {
+            isVertical = true;
+          }
+        } catch (e) {}
+        // width/height-ийг дараа хэмжилтээр тохируулна
+      } else {
+        // Ерөнхий кейс: autoplay/mute/playsinline параметрүүдийг нэмнэ
+        url.searchParams.set('autoplay', url.searchParams.get('autoplay') ?? '1');
+        url.searchParams.set('mute', url.searchParams.get('mute') ?? '1');
+        url.searchParams.set('muted', url.searchParams.get('muted') ?? '1');
+        url.searchParams.set('playsinline', url.searchParams.get('playsinline') ?? '1');
       }
-      src = url.toString();
+      baseSrc = url.toString();
     }
   } catch (e) {
     // no-op — буруу URL байсан ч алдааг залгиад fallback ашиглана
   }
-  if (!src) {
+  const [finalSrc, setFinalSrc] = React.useState(baseSrc || null);
+
+  // Measure wrapper and adjust FB plugin width/height to match real size
+  React.useEffect(() => {
+    if (!baseSrc) return;
+    try {
+      const url = new URL(baseSrc, window.location.href);
+      const host = url.hostname || '';
+      if (!host.includes('facebook.com')) {
+        setFinalSrc(baseSrc);
+        return;
+      }
+      const measureAndUpdate = () => {
+        const el = boxRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        // Fullscreen wrapper-ийн бодит хэмжээтэй 1:1 тааруулна
+        const targetW = Math.max(Math.round(rect.width), 1);
+        const targetH = Math.max(Math.round(rect.height), 1);
+        const newUrl = new URL(baseSrc);
+        // plugins/video.php width/height параметрүүдийг тохируулна
+        newUrl.searchParams.set('width', String(targetW));
+        newUrl.searchParams.set('height', String(targetH));
+        setFinalSrc(newUrl.toString());
+      };
+      // next frame дээр хэмжинэ
+      const r = requestAnimationFrame(measureAndUpdate);
+      const onResize = () => measureAndUpdate();
+      window.addEventListener('resize', onResize);
+      return () => {
+        cancelAnimationFrame(r);
+        window.removeEventListener('resize', onResize);
+      };
+    } catch (e) {
+      setFinalSrc(baseSrc);
+    }
+  }, [baseSrc, isVertical]);
+
+  if (!finalSrc) {
     // Fallback: render raw HTML once
     return (
-      <div className={`reels-embed-box ${fullscreen ? 'fullscreen' : ''}`}>
+      <div ref={boxRef} className={`reels-embed-box ${fullscreen ? 'fullscreen' : ''}`}>
         <div
           className="reels-embed-fallback"
           dangerouslySetInnerHTML={{ __html: embedCode || '' }}
-          style={{ width: '100%', height: '100%' }}
         />
       </div>
     );
   }
   return (
-    <div className={`reels-embed-box ${fullscreen ? 'fullscreen' : ''}`}>
+    <div ref={boxRef} className={`reels-embed-box ${fullscreen ? 'fullscreen' : ''} ${isVertical ? 'vertical' : ''}`}>
       <iframe
         className="reels-embed"
-        src={src}
+        src={finalSrc}
         title="Embedded Video"
         frameBorder="0"
-        allow="autoplay; encrypted-media; picture-in-picture; web-share"
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
         referrerPolicy="no-referrer-when-downgrade"
         scrolling="no"
         allowFullScreen
-        style={{ width: '100%', height: '100%' }}
+        loading="eager"
+        style={{ aspectRatio: isVertical ? '9 / 16' : '16 / 9' }}
       />
     </div>
   );
@@ -73,6 +152,12 @@ export default function Reels() {
   const [loading, setLoading] = useState(true);
   const containerRef = useRef(null);
   const [touchStart, setTouchStart] = useState(0);
+  const [triedFullscreen, setTriedFullscreen] = useState(false);
+  
+  // Back navigation handler
+  const handleBack = () => {
+    navigate(-1);
+  };
   
   // Интерактив товчнуудын төлөвүүд
   const [isFavorite, setIsFavorite] = useState(false);
@@ -235,6 +320,69 @@ export default function Reels() {
     }
   }, [currentIndex, reels.length]);
 
+  // When current reel changes or on mount, try to programmatically play HTML5 video elements.
+  useEffect(() => {
+    const playCurrentMedia = async () => {
+      if (!containerRef.current) return;
+      // Try HTML5 video first
+      const video = containerRef.current.querySelector('video');
+      if (video) {
+        try {
+          // Some browsers require muted to allow autoplay; videos are already muted attribute in markup
+          await video.play();
+        } catch (err) {
+          // ignore - browser blocked autoplay
+          console.debug('Video play() blocked:', err);
+        }
+        return;
+      }
+
+      // For iframes we rely on query params (autoplay=1 & muted). Nothing safe to call cross-origin.
+      const iframe = containerRef.current.querySelector('iframe');
+      if (iframe) {
+        try {
+          // Focus may help some browsers start playback
+          iframe.focus();
+        } catch (e) {}
+      }
+    };
+
+    playCurrentMedia();
+  }, [currentIndex, reels]);
+
+  // Try to request fullscreen on Windows when entering the Reels page.
+  useEffect(() => {
+    const tryFullscreenOnWindows = async () => {
+      if (triedFullscreen) return;
+      setTriedFullscreen(true);
+      if (!containerRef.current) return;
+      const ua = navigator.userAgent || '';
+      const isWindows = /Windows|Win32|Win64/i.test(ua);
+      if (!isWindows) return;
+
+      const el = containerRef.current;
+      const request = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      if (request && (document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled)) {
+        try {
+          await request.call(el);
+          console.debug('Requested fullscreen for Reels container');
+        } catch (err) {
+          console.debug('Fullscreen request blocked or failed:', err);
+          try {
+            window.dispatchEvent(new CustomEvent('toast:show', {
+              detail: { type: 'info', message: 'Браузер fullscreen хүсэлтийг хориглолоо. Та гараар fullscreen хийж болно.' }
+            }));
+          } catch (_) {}
+          // Not fatal — just continue
+        }
+      }
+    };
+
+    // Run shortly after mount so navigation gesture may count as user interaction in some browsers
+    const t = setTimeout(tryFullscreenOnWindows, 250);
+    return () => clearTimeout(t);
+  }, [triedFullscreen]);
+
   // Одоогийн reel-ийн favorite статусыг шалгах
   useEffect(() => {
     if (user && Array.isArray(user.favorites) && reels.length > 0) {
@@ -287,10 +435,11 @@ export default function Reels() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       className="reels-container"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       {/* Буцах товч */}
       <button 
-        onClick={() => navigate(-1)} 
+        onClick={handleBack} 
         className="reels-back-button"
         aria-label="Буцах"
       >
@@ -301,7 +450,7 @@ export default function Reels() {
       <div className="reels-video-wrapper">
         {currentReel.isEmbed ? (
           <>
-            <EmbedIframe key={currentReel.key} embedCode={currentReel.embedCode} />
+            <EmbedIframe key={currentReel.key} embedCode={currentReel.embedCode} fullscreen />
             <span className="reels-embed-decor" aria-hidden>🎬</span>
           </>
         ) : (
@@ -313,6 +462,7 @@ export default function Reels() {
             muted
             playsInline
             className="reels-video"
+            style={{ margin: '0 auto' }}
           />
         )}
       </div>
