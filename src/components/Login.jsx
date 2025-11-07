@@ -30,7 +30,7 @@ const Login = () => {
 			return;
 		}
 
-		const result = await login(formData);
+		const result = await login({ ...formData, accountType });
 		if (result.success) {
 			navigate('/map');
 		} else {
@@ -89,6 +89,10 @@ const Login = () => {
 								<Link to={`/register?type=${accountType==='centerOwner'?'owner':'user'}`} className="auth-link">Бүртгүүлэх</Link>
 							</p>
 						)}
+						{/* Forgot password link */}
+						<p>
+							<Link to="/forgot" className="auth-link">Нууц үгээ мартсан уу?</Link>
+						</p>
 						<div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
 							<Link to="/auth?mode=register" className="back-link">← Сонголт руу буцах</Link>
 							<Link to="/map" className="back-link">🏠 Нүүр хуудас</Link>

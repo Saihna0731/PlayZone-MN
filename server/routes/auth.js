@@ -6,6 +6,19 @@ const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
+// Имэйл бүртгэлтэй эсэхийг шалгах (email enumeration-ийг аль болох багасгах зорилгоор rate-limit хэрэглэхийг зөвлөе)
+router.post('/email-exists', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ message: 'Имэйл шаардлагатай' });
+  const existing = await User.findOne({ email }).select('_id');
+  return res.json({ exists: !!existing });
+  } catch (error) {
+    console.error('Email exists check error:', error);
+    return res.status(500).json({ message: 'Серверийн алдаа' });
+  }
+});
+
 // Бүртгүүлэх
 router.post("/register", async (req, res) => {
   try {
@@ -95,14 +108,18 @@ router.post("/register", async (req, res) => {
 // Нэвтрэх
 router.post("/login", async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    const { emailOrUsername, password, accountType } = req.body;
 
     // Хэрэглэгчийг олох (имэйл эсвэл хэрэглэгчийн нэрээр)
+    const baseQuery = [
+      { email: emailOrUsername },
+      { username: emailOrUsername }
+    ];
+
     const user = await User.findOne({
-      $or: [
-        { email: emailOrUsername },
-        { username: emailOrUsername }
-      ]
+      $or: baseQuery,
+      ...(accountType === 'user' ? { role: 'user' } : {}),
+      ...(accountType === 'centerOwner' ? { role: 'centerOwner' } : {})
     });
 
     if (!user) {
@@ -137,6 +154,21 @@ router.post("/login", async (req, res) => {
       message: "Нэвтрэхэд алдаа гарлаа",
       error: error.message 
     });
+  }
+});
+
+// Нууц үг сэргээх хүсэлт авах (stub) - Жинхэнэ хэрэгжилт дээр токен үүсгэж имэйлээр илгээнэ
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ message: 'Имэйл шаардлагатай' });
+    // Хэрэглэгч байгаа эсэхийг шалгана (одоогоор токен хадгалахгүй)
+    const user = await User.findOne({ email }).select('_id');
+    // Enumeration багасгахын тулд үргэлж ижил success мессеж буцаана
+    return res.json({ message: 'Хэрэв энэхүү имэйл бүртгэлтэй бол сэргээх заавар илгээгдлээ' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ message: 'Серверийн алдаа' });
   }
 });
 

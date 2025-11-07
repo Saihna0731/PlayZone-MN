@@ -59,9 +59,9 @@ export function AuthProvider({ children }) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const login = async ({ emailOrUsername, password }) => {
+	const login = async ({ emailOrUsername, password, accountType }) => {
 		try {
-			const res = await axios.post(`${API_BASE}/api/auth/login`, { emailOrUsername, password });
+			const res = await axios.post(`${API_BASE}/api/auth/login`, { emailOrUsername, password, accountType });
 			const { token, user } = res.data;
 			localStorage.setItem('token', token);
 			axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
