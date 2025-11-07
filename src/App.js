@@ -10,6 +10,7 @@ import Reels from "./router/Reels";
 import BottomNav from "./components/MainNavbars/BottomNav";
 import Login from "./components/Login";
 import Register from "./components/Register";
+import ForgotPassword from "./components/ForgotPassword";
 import { AuthProvider } from "./contexts/AuthContext";
 import GlobalToast from "./components/GlobalToast";
 
@@ -19,7 +20,8 @@ function App() {
   const lockScroll = location.pathname === '/map' || location.pathname === '/reels';
   return (
     <AuthProvider>
-      <div style={{ height: "100vh", width: "100vw", overflow: lockScroll ? "hidden" : "auto", position: "relative" }}>
+      {/* Use percentage width to avoid 100vw scrollbar gap on pages with vertical scroll */}
+      <div style={{ minHeight: "100vh", width: "100%", overflow: lockScroll ? "hidden" : "auto", position: "relative" }}>
         <Routes>
           <Route path="/" element={<Navigate to="/map" replace />} />
           <Route path="/map" element={<MapView />} />
@@ -29,6 +31,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot" element={<ForgotPassword />} />
           <Route path="/auth" element={<AuthChoice />} />
           <Route path="/center/:id" element={<CenterDetail />} />
         </Routes>

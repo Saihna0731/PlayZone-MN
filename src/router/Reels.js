@@ -36,16 +36,57 @@ const EmbedIframe = React.memo(function EmbedIframe({ embedCode, fullscreen }) {
       }
 
       if (host.includes('youtube.com') || host.includes('youtu.be')) {
-        // Ensure embed endpoint
-        // (ихэнх тохиолдолд аль хэдийн /embed/... байна)
-        url.searchParams.set('autoplay', '1');
-        url.searchParams.set('mute', '1');
-        url.searchParams.set('playsinline', '1');
+        // Normalize to YouTube embed URL so that controls reliably show
+        const toEmbed = (u) => {
+          try {
+            // Attempt to extract the video id from various URL formats
+            const original = new URL(u.toString());
+            let vid = original.searchParams.get('v');
+            const path = original.pathname || '';
+            if (!vid) {
+              // youtu.be/<id>
+              const short = /youtu\.be\/([A-Za-z0-9_-]{6,})/i.exec(original.href);
+              if (short) vid = short[1];
+            }
+            if (!vid) {
+              // /watch?v=..., /embed/<id>, /shorts/<id>
+              const fromPath = /\/(embed|shorts)\/([A-Za-z0-9_-]{6,})/i.exec(path);
+              if (fromPath) vid = fromPath[2];
+            }
+            // Fallback: last path segment if it looks like an id
+            if (!vid) {
+              const segs = path.split('/').filter(Boolean);
+              const last = segs[segs.length - 1] || '';
+              if (/^[A-Za-z0-9_-]{6,}$/.test(last)) vid = last;
+            }
+            if (!vid) return u; // could not normalize — return original
+
+            const embed = new URL(`https://www.youtube.com/embed/${vid}`);
+            // Preserve start time if present
+            if (original.searchParams.has('t')) embed.searchParams.set('start', original.searchParams.get('t'));
+            if (original.searchParams.has('start')) embed.searchParams.set('start', original.searchParams.get('start'));
+            return embed;
+          } catch {
+            return u;
+          }
+        };
+
+        url = toEmbed(url);
+  // Prefer showing player controls, and autoplay muted so it starts automatically
+  url.searchParams.set('controls', '1');
+  url.searchParams.set('autoplay', '1');
+  // Autoplay is allowed only if muted in most browsers
+  url.searchParams.set('mute', '1');
+  url.searchParams.set('muted', '1');
+  url.searchParams.set('playsinline', '1');
         url.searchParams.set('rel', '0');
+        url.searchParams.set('modestbranding', '1');
+        url.searchParams.set('fs', '1');
         url.searchParams.set('enablejsapi', '1');
-        url.searchParams.set('controls', url.searchParams.get('controls') ?? '0');
+        try { url.searchParams.set('origin', window.location.origin); } catch (_) {}
+
         // YouTube Shorts are vertical
-        if (/\/shorts\//i.test(url.pathname)) {
+        if (/\/shorts\//i.test(baseSrc) || /\/shorts\//i.test(url.pathname)) {
           isVertical = true;
         }
       } else if (host.includes('facebook.com')) {

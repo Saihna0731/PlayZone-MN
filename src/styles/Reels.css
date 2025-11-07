@@ -246,8 +246,8 @@
 /* Эзэмшигч мэдээлэл (доод зүүн) */
 .reels-owner-info {
   position: absolute;
-  /* Доод хар зайд яг багтаах байдлаар байршуулна, видеотой давхцахгүй */
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  /* Доод хяналтын самбартай давхардахгүйгээр зай авах */
+  bottom: calc(var(--player-controls-height) + 12px + env(safe-area-inset-bottom, 0px));
   left: 16px;
   z-index: 1001;
   display: flex;
@@ -532,7 +532,7 @@
     font-size: 22px;
   }
 
-  .reels-owner-info { left: 12px; bottom: 35px; max-width: calc(100% - 90px); }
+  .reels-owner-info { left: 12px; bottom: calc(var(--player-controls-height) + 10px); max-width: calc(100% - 90px); }
 
   .reels-back-button {
     top: 12px;
