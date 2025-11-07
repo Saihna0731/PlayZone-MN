@@ -1,3 +1,11 @@
+/* Global resets to prevent unintended page margins and horizontal gaps */
+html, body, #root {
+  height: 100%;
+  margin: 0;            /* remove default body margin that creates white edges */
+}
+* { box-sizing: border-box; }
+body { overflow-x: hidden; }
+
 /* Map container */
 .leaflet-container {
   width: 100%;

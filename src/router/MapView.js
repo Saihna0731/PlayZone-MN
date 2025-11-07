@@ -41,7 +41,7 @@ export default function MapView() {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "100dvh",
         width: "100vw",
         position: "relative",
         overflow: "hidden",
@@ -56,8 +56,7 @@ export default function MapView() {
           <MapSearch onSearch={(v) => setQuery(v)} />
         </div>
       </div>
-
-      <main style={{ flex: 1, width: "100%", position: 'relative', paddingBottom: 60 }}>
+      <main style={{ flex: 1, width: "100%", position: 'relative' }}>
         <MapCenters key={refreshKey} query={query} mapStyle={mapStyle} showToast={showToast} />
 
         <div className="bottom-controls">
