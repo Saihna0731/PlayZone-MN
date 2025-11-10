@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ScrollView, Text, TouchableOpacity } from "react-native";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "../config";
@@ -12,6 +11,7 @@ import AdminForm from "../admin/components/AdminForm";
 import ConfirmModal from "../components/ConfirmModal";
 import Toast from "../components/Toast";
 import CenterCard from "../components/ListComponents/CenterCard";
+import BonusCard from "../components/ListComponents/BonusCard";
 import "../styles/List.css";
 
 export default function List() {
@@ -217,9 +217,17 @@ export default function List() {
       </div>
     );
   }
-
   // Derived sections
-  const bonusCenters = items.filter(it => Array.isArray(it.bonus) && it.bonus.length > 0);
+  
+  // Bonus зөвхөн Business Pro эрхтэй centerOwner-ийнх
+  const bonusCenters = items.filter(it => {
+    const hasBonus = Array.isArray(it.bonus) && it.bonus.length > 0;
+    // Owner populate хийсэн тул шууд owner.subscription.plan -г ашиглана
+    const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
+    const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
+    const isBusinessPro = normalized === 'business_pro';
+    return hasBonus && isBusinessPro;
+  });
   const vipCenters = items.filter(it => it.isVip);
   const regularCenters = filtered.filter(it => !it.isVip);
 
@@ -250,31 +258,29 @@ export default function List() {
         {bonusCenters.length > 0 && (
           <div className="list-section">
             <div className="list-section-header">
-              <h3>Bonus</h3>
+              <h3 className="list-title">Bonus</h3>
+              <button type="button" className="see-all-link" onClick={() => { window.location.href = '/bonuses'; }}>See all</button>
             </div>
             <div className="list-horizontal" data-section="bonus">
               {bonusCenters.map(center => {
                 const key = `bonus-${center._id || center.id}`;
-                const manageable = (isAdmin || isAdminLocal) || (isCenterOwner && center.owner && String(center.owner) === String(user?._id));
-                // Latest bonus info (for potential badge/overlay)
-                const latestBonus = Array.isArray(center.bonus) ? center.bonus[center.bonus.length - 1] : null;
                 return (
-                  <div className="horizontal-card-wrapper" key={key}>
-                    {latestBonus && (
-                      <div className="bonus-badge" title={latestBonus.text || latestBonus.title}>
-                        {latestBonus.title || 'Bonus'}
-                      </div>
-                    )}
-                    <CenterCard
-                      item={center}
-                      horizontal
-                      expanded={expandedIndex === key}
-                      onToggle={() => setExpandedIndex(expandedIndex === key ? null : key)}
-                      onEdit={() => { setFormOpen(true); setEditingItem(center); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      onDelete={handleDelete}
-                      canEdit={manageable}
-                    />
-                  </div>
+                  <BonusCard
+                    key={key}
+                    center={center}
+                    onOrder={() => {
+                      window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'Захиалгын хүсэлт илгээгдлээ' } }));
+                    }}
+                    onClick={() => {
+                      // Navigate to center detail if user has access; otherwise show toast
+                      // Navigation uses window.location to avoid importing useNavigate here
+                      if (isAdmin || isPremiumUser || (isCenterOwner && subscription?.plan !== 'free')) {
+                        window.location.href = `/center/${center._id || center.id}`;
+                      } else {
+                        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'info', message: 'Дэлгэрэнгүй харахын тулд төлөвлөгөө идэвхжүүлнэ үү' } }));
+                      }
+                    }}
+                  />
                 );
               })}
             </div>
@@ -310,32 +316,36 @@ export default function List() {
 
         {/* Category chips (kept below VIP) */}
         <div className="list-controls-category">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3 mb-2">
-            <TouchableOpacity
-              onPress={() => setCategory('all')}
+          <div className="category-chip-row">
+            <button
+              type="button"
+              onClick={() => setCategory('all')}
               className={`category-chip ${category === 'all' ? 'active' : ''}`}
             >
-              <Text>Бүгд</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setCategory('GameCenter')}
+              Бүгд
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('GameCenter')}
               className={`category-chip ${category === 'GameCenter' ? 'active' : ''}`}
             >
-              <Text>Game Center</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setCategory('Ps')}
+              Game Center
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('Ps')}
               className={`category-chip ${category === 'Ps' ? 'active' : ''}`}
             >
-              <Text>Playstation</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setCategory('Billard')}
+              Playstation
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('Billard')}
               className={`category-chip ${category === 'Billard' ? 'active' : ''}`}
             >
-              <Text>Billard</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              Billard
+            </button>
+          </div>
         </div>
 
         {(isAdmin || isCenterOwner || isAdminLocal) && (

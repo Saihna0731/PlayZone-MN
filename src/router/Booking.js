@@ -279,6 +279,8 @@ export default function Booking() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [bonusModalCenter, setBonusModalCenter] = useState(null);
+  const [bonusModalOpen, setBonusModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -305,7 +307,10 @@ export default function Booking() {
       
       // Эзэмшигч бол зөвхөн өөрийн төвүүдийг харуулна, эс бөгөөс бүх PC төвүүд
       const visible = (isCenterOwner && user?._id)
-        ? pcCenters.filter(c => String(c.owner) === String(user._id))
+        ? pcCenters.filter(c => {
+            const ownerId = (c && typeof c.owner === 'object' && c.owner !== null) ? (c.owner._id || c.owner.id) : c.owner;
+            return String(ownerId) === String(user._id);
+          })
         : pcCenters;
 
       // Харагдах жагсаалт болгон байршуулна
@@ -744,19 +749,30 @@ export default function Booking() {
           
           {favorites.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {favorites.map((center, index) => (
-                <CenterCard 
-                  key={center._id || center.id} 
-                  item={center}
-                  expanded={expandedIndex === index}
-                  onToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
-                  onEdit={() => handleEdit(center)}
-                  onDelete={handleDelete}
-                  canEdit={isCenterOwner && center.owner && String(center.owner) === String(user?._id)}
-                  isBookingMode={true}
-                  onOccupancyUpdate={handleOccupancyUpdate}
-                />
-              ))}
+              {favorites.map((center, index) => {
+                const ownerId = (center && typeof center.owner === 'object' && center.owner !== null) ? (center.owner._id || center.owner.id) : center.owner;
+                const isOwner = isCenterOwner && ownerId && String(ownerId) === String(user?._id);
+                return (
+                  <div key={center._id || center.id} style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    <CenterCard 
+                      item={center}
+                      expanded={expandedIndex === index}
+                      onToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                      onEdit={() => handleEdit(center)}
+                      onDelete={handleDelete}
+                      canEdit={isOwner}
+                      isBookingMode={true}
+                      onOccupancyUpdate={handleOccupancyUpdate}
+                    />
+                    {isOwner && subscription?.plan === 'business_pro' && (
+                      <button
+                        onClick={() => { setBonusModalCenter(center); setBonusModalOpen(true); }}
+                        style={{ alignSelf:'flex-end', padding:'8px 12px', background:'linear-gradient(135deg,#9333ea,#6366f1)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 12px rgba(99,102,241,.35)' }}
+                      >🎁 Бонус нэмэх</button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div style={{
@@ -823,7 +839,69 @@ export default function Booking() {
         onCancel={cancelDeleteCenter}
       />
 
+      {/* Bonus Modal */}
+      <AddBonusModal
+        center={bonusModalCenter}
+        isOpen={bonusModalOpen}
+        onClose={() => { setBonusModalOpen(false); setBonusModalCenter(null); }}
+        onAdded={(updatedCenter) => {
+          if (updatedCenter?._id) {
+            setFavorites(prev => prev.map(c => c._id === updatedCenter._id ? updatedCenter : c));
+          }
+        }}
+      />
+
       <BottomNav />
     </div>
   );
 }
+
+// Бонус нэмэх Modal (энгийн хувилбар)
+function AddBonusModal({ center, isOpen, onClose, onAdded }) {
+  const [form, setForm] = useState({ title: '', text: '', standardFree: '', vipFree: '', stageFree: '' });
+  const [saving, setSaving] = useState(false);
+  if (!isOpen || !center) return null;
+  const change = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const submit = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        title: form.title,
+        text: form.text,
+        standardFree: form.standardFree ? Number(form.standardFree) : undefined,
+        vipFree: form.vipFree ? Number(form.vipFree) : undefined,
+        stageFree: form.stageFree ? Number(form.stageFree) : undefined
+      };
+      const res = await axios.post(`${API_BASE}/api/centers/${center._id}/bonus`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      onAdded?.(res.data);
+      onClose();
+    } catch (err) {
+      console.error('Add bonus error:', err);
+      alert(err.response?.data?.error || 'Бонус хадгалахад алдаа гарлаа');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div style={{ background:'#fff', width:'100%', maxWidth:420, borderRadius:16, padding:24, boxShadow:'0 10px 32px rgba(0,0,0,.25)', position:'relative' }}>
+        <button onClick={onClose} style={{ position:'absolute', top:12, right:12, background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#666' }}>✕</button>
+        <h3 style={{ margin:0, marginBottom:16, fontSize:18, fontWeight:700, display:'flex', alignItems:'center', gap:8 }}>🎁 Бонус нэмэх</h3>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <input name="title" placeholder="Гарчиг" value={form.title} onChange={change} style={inputStyle} />
+          <textarea name="text" placeholder="Тайлбар (сонголттой)" value={form.text} onChange={change} style={{ ...inputStyle, minHeight:80 }} />
+          <div style={{ display:'flex', gap:8 }}>
+            <input name="standardFree" placeholder="STD" value={form.standardFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+            <input name="vipFree" placeholder="VIP" value={form.vipFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+            <input name="stageFree" placeholder="STG" value={form.stageFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+          </div>
+          <button disabled={saving} onClick={submit} style={btnPrimary}>{saving ? '🔄 Хадгалж байна...' : '✅ Хадгалах'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle = { width:'100%', padding:'10px 14px', border:'2px solid #e5e7eb', borderRadius:12, fontSize:13, fontWeight:600, outline:'none' };
+const btnPrimary = { padding:'12px 18px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', border:'none', borderRadius:12, fontWeight:700, cursor:'pointer', fontSize:14, boxShadow:'0 4px 14px rgba(99,102,241,.35)' };

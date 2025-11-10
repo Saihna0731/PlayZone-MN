@@ -8,7 +8,10 @@ const { checkCenterLimit, ownerCanModifyCenter } = require("../middleware/subscr
 // GET all (public)
 router.get("/", async (req, res) => {
   try {
-    const centers = await Center.find().sort({ createdAt: -1 });
+    // Owner-ийн subscription.plan-г фронт талд ашиглахын тулд populate хийв
+    const centers = await Center.find()
+      .populate('owner', 'subscription accountType role')
+      .sort({ createdAt: -1 });
     res.json(centers);
   } catch (err) {
     res.status(500).json({ error: err.message });

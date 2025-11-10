@@ -1309,7 +1309,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         </div>
 
         {/* Address */}
-        <div style={{ 
+        {/* <div style={{ 
           display: "flex", 
           alignItems: "center", 
           gap: 6, 
@@ -1319,7 +1319,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         }}>
           <FaMapMarkerAlt size={12} />
           <span>{item.address || "No address provided"}</span>
-        </div>
+        </div> */}
 
         {/* Category tag */}
         {item.category && (
@@ -1343,20 +1343,6 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         {item.occupancy && (
           <OccupancyInline occupancy={item.occupancy} />
         )}
-
-        {/* Description preview */}
-        <div style={{ 
-          color: "#666", 
-          fontSize: 14, 
-          lineHeight: "1.4",
-          marginBottom: 16,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden"
-        }}>
-          {item.description || item.note || "Тайлбар байхгүй байна."}
-        </div>
 
         {/* Bonuses (if any) */}
         {Array.isArray(item.bonus) && item.bonus.length > 0 && (
@@ -1421,29 +1407,6 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
           </div>
         )}
 
-        {/* Phone number */}
-        {item.phone && (
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 8, 
-            marginBottom: 16
-          }}>
-            <FaPhone style={{ color: "#4caf50", fontSize: 14 }} />
-            <a
-              href={`tel:${item.phone}`}
-              onClick={(e) => e.stopPropagation()}
-              style={{ 
-                color: "#1976d2", 
-                textDecoration: "none", 
-                fontSize: 14,
-                fontWeight: "500"
-              }}
-            >
-              {item.phone}
-            </a>
-          </div>
-        )}
 
         {/* Booking Mode - Ачаалал шинэчлэх товч */}
   {isBookingMode && ((canEdit) || userIsAdmin) && (

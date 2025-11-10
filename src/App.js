@@ -5,6 +5,7 @@ import List from "./router/List";
 import Booking from "./router/Booking";
 import Profile from "./router/Profile";
 import CenterDetail from "./router/CenterDetail";
+import Bonuses from "./router/Bonuses";
 import AuthChoice from "./router/AuthChoice";
 import Reels from "./router/Reels";
 import BottomNav from "./components/MainNavbars/BottomNav";
@@ -34,6 +35,7 @@ function App() {
           <Route path="/forgot" element={<ForgotPassword />} />
           <Route path="/auth" element={<AuthChoice />} />
           <Route path="/center/:id" element={<CenterDetail />} />
+          <Route path="/bonuses" element={<Bonuses />} />
         </Routes>
         {!hideNav && <BottomNav />}
         <GlobalToast />
