@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { ScrollView, Text, TouchableOpacity } from "react-native";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "../config";
@@ -217,21 +218,26 @@ export default function List() {
     );
   }
 
+  // Derived sections
+  const bonusCenters = items.filter(it => Array.isArray(it.bonus) && it.bonus.length > 0);
+  const vipCenters = items.filter(it => it.isVip);
+  const regularCenters = filtered.filter(it => !it.isVip);
+
   return (
     <div className="page-with-bottom-space">
       <MapHeader />
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="list-page-container">
-        {/* First row: Search bar + Add button */}
+        {/* Search + Add */}
         <div className="list-controls-row">
           <ListSearch value={query} onChange={(v) => setQuery(v)} />
           {(isAdmin || isAdminLocal || (isCenterOwner && subscription?.plan !== 'free')) && (
-            <button 
+            <button
               className="btn-modern btn-primary-modern"
-              onClick={() => { 
-                setEditingItem(null); 
-                setFormOpen(true); 
-                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+              onClick={() => {
+                setEditingItem(null);
+                setFormOpen(true);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             >
               <span className="btn-icon">➕</span>
@@ -240,18 +246,96 @@ export default function List() {
           )}
         </div>
 
-        {/* Second row: Category select */}
+        {/* Bonus horizontal section */}
+        {bonusCenters.length > 0 && (
+          <div className="list-section">
+            <div className="list-section-header">
+              <h3>Bonus</h3>
+            </div>
+            <div className="list-horizontal" data-section="bonus">
+              {bonusCenters.map(center => {
+                const key = `bonus-${center._id || center.id}`;
+                const manageable = (isAdmin || isAdminLocal) || (isCenterOwner && center.owner && String(center.owner) === String(user?._id));
+                // Latest bonus info (for potential badge/overlay)
+                const latestBonus = Array.isArray(center.bonus) ? center.bonus[center.bonus.length - 1] : null;
+                return (
+                  <div className="horizontal-card-wrapper" key={key}>
+                    {latestBonus && (
+                      <div className="bonus-badge" title={latestBonus.text || latestBonus.title}>
+                        {latestBonus.title || 'Bonus'}
+                      </div>
+                    )}
+                    <CenterCard
+                      item={center}
+                      horizontal
+                      expanded={expandedIndex === key}
+                      onToggle={() => setExpandedIndex(expandedIndex === key ? null : key)}
+                      onEdit={() => { setFormOpen(true); setEditingItem(center); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      onDelete={handleDelete}
+                      canEdit={manageable}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* VIP horizontal section */}
+        {vipCenters.length > 0 && (
+          <div className="list-section">
+            <div className="list-section-header">
+              <h3>VIP Special Centers</h3>
+            </div>
+            <div className="list-horizontal" data-section="vip">
+              {vipCenters.map(vipItem => {
+                const vipKey = `vip-${vipItem._id || vipItem.id}`;
+                const manageable = (isAdmin || isAdminLocal) || (isCenterOwner && vipItem.owner && String(vipItem.owner) === String(user?._id));
+                return (
+                  <CenterCard
+                    key={vipKey}
+                    item={vipItem}
+                    horizontal
+                    expanded={expandedIndex === vipKey}
+                    onToggle={() => setExpandedIndex(expandedIndex === vipKey ? null : vipKey)}
+                    onEdit={() => { setFormOpen(true); setEditingItem(vipItem); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onDelete={handleDelete}
+                    canEdit={manageable}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Category chips (kept below VIP) */}
         <div className="list-controls-category">
-          <select 
-            className="category-select"
-            value={category} 
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option value="all">Бүгд</option>
-            <option value="shop">Дэлгүүр</option>
-            <option value="office">Оффис</option>
-            <option value="service">Үйлчилгээ</option>
-          </select>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3 mb-2">
+            <TouchableOpacity
+              onPress={() => setCategory('all')}
+              className={`category-chip ${category === 'all' ? 'active' : ''}`}
+            >
+              <Text>Бүгд</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setCategory('GameCenter')}
+              className={`category-chip ${category === 'GameCenter' ? 'active' : ''}`}
+            >
+              <Text>Game Center</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setCategory('Ps')}
+              className={`category-chip ${category === 'Ps' ? 'active' : ''}`}
+            >
+              <Text>Playstation</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setCategory('Billard')}
+              className={`category-chip ${category === 'Billard' ? 'active' : ''}`}
+            >
+              <Text>Billard</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </div>
 
         {(isAdmin || isCenterOwner || isAdminLocal) && (
@@ -263,9 +347,9 @@ export default function List() {
           />
         )}
 
-        {/* list */}
+        {/* Vertical list of remaining centers */}
         <div className="center-list">
-          {filtered.map((it, idx) => {
+          {regularCenters.map((it, idx) => {
             const id = it._id ?? it.id;
             return (
               <CenterCard
@@ -279,7 +363,7 @@ export default function List() {
               />
             );
           })}
-          {filtered.length === 0 && (
+          {regularCenters.length === 0 && (
             <div style={{ 
               color: "#666", 
               textAlign: "center", 

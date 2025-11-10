@@ -5,6 +5,59 @@
   padding-bottom: 80px;
 }
 
+/* Section header */
+.list-section { margin-bottom: 18px; }
+.list-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.list-section-header h3 { margin: 0; font-size: 16px; font-weight: 800; color: #111827; }
+
+/* Horizontal scroller for bonus/vip */
+.list-horizontal {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 85%;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+}
+.list-horizontal .horizontal-card-wrapper { scroll-snap-align: start; position: relative; }
+.list-horizontal::-webkit-scrollbar { height: 8px; }
+.list-horizontal::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 8px; }
+
+/* Bonus badge overlay */
+.bonus-badge {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 2;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+@media (min-width: 640px) {
+  .list-horizontal { grid-auto-columns: 60%; }
+}
+@media (min-width: 1024px) {
+  .list-horizontal { grid-auto-columns: 33%; }
+}
+
+/* Category chips styling for RN components rendered on web */
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  margin-right: 8px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+}
+.category-chip.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+
 /* First row: Search + Add button */
 .list-controls-row {
   display: flex;
