@@ -23,7 +23,6 @@ const emptyForm = {
     overnight: ""
   },
   rating: "",
-  isVip: false,
   logo: "",
   images: "",
   videos: "",
@@ -69,7 +68,6 @@ const emptyForm = {
           overnight: editingItem.pricing?.overnight || ""
         },
         rating: editingItem.rating || "",
-        isVip: editingItem.isVip || false,
         logo: editingItem.logo || "",
         images: editingItem.images ? editingItem.images.join('\n') : "",
         videos: editingItem.videos ? editingItem.videos.join('\n') : "",
@@ -393,7 +391,6 @@ const emptyForm = {
         lat: form.lat === "" ? undefined : Number(form.lat), 
         lng: form.lng === "" ? undefined : Number(form.lng),
         rating: form.rating === "" ? undefined : Number(form.rating),
-        isVip: Boolean(form.isVip),
         logo: form.logo || undefined,
         images: finalImages,
         videos: finalVideos,
@@ -820,18 +817,6 @@ const emptyForm = {
                     onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
                   />
                 </div>
-              </div>
-
-              <div>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "8px" }}>
-                  <input
-                    type="checkbox"
-                    checked={form.isVip || false}
-                    onChange={(e) => setForm((s) => ({ ...s, isVip: e.target.checked }))}
-                    style={{ width: "18px", height: "18px", cursor: "pointer" }}
-                  />
-                  <span style={{ fontWeight: "600", color: "#333" }}>VIP Special Center</span>
-                </label>
               </div>
 
               <div>
