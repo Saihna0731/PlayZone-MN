@@ -36,6 +36,8 @@ const CenterSchema = new mongoose.Schema({
   videos: [mongoose.Schema.Types.Mixed], // array of strings or objects
   embedVideos: [String], // array of embed codes/urls
   facilities: [String], // дэд бүтэц, тоног төхөөрөмжийн жагсаалт
+  // VIP статус (онцгой төвүүдийг ялгаж харуулах)
+  isVip: { type: Boolean, default: false },
   // Бонус мэдээлэл (owner-ийн оруулдаг сурталчилгаа/сул суудал/хөнгөлөлт)
   bonus: [
     new mongoose.Schema({

@@ -8,10 +8,11 @@ import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import ListSearch from "../components/ListComponents/ListSearch";
 import MapHeader from "../components/MapComponents/MapHeader";
 import AdminForm from "../admin/components/AdminForm";
-import ConfirmModal from "../components/ConfirmModal";
-import Toast from "../components/Toast";
+import ConfirmModal from "../components/LittleComponents/ConfirmModal";
+import Toast from "../components/LittleComponents/Toast";
 import CenterCard from "../components/ListComponents/CenterCard";
 import BonusCard from "../components/ListComponents/BonusCard";
+import SpecialCenterCard from "../components/ListComponents/SpecialCenterCard";
 import "../styles/List.css";
 
 export default function List() {
@@ -292,21 +293,22 @@ export default function List() {
           <div className="list-section">
             <div className="list-section-header">
               <h3>VIP Special Centers</h3>
+              <button type="button" className="see-all-link" onClick={() => { window.location.href = '/list?filter=vip'; }}>See all</button>
             </div>
             <div className="list-horizontal" data-section="vip">
               {vipCenters.map(vipItem => {
                 const vipKey = `vip-${vipItem._id || vipItem.id}`;
-                const manageable = (isAdmin || isAdminLocal) || (isCenterOwner && vipItem.owner && String(vipItem.owner) === String(user?._id));
                 return (
-                  <CenterCard
+                  <SpecialCenterCard
                     key={vipKey}
-                    item={vipItem}
-                    horizontal
-                    expanded={expandedIndex === vipKey}
-                    onToggle={() => setExpandedIndex(expandedIndex === vipKey ? null : vipKey)}
-                    onEdit={() => { setFormOpen(true); setEditingItem(vipItem); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    onDelete={handleDelete}
-                    canEdit={manageable}
+                    center={vipItem}
+                    onClick={() => {
+                      if (isAdmin || isPremiumUser || (isCenterOwner && subscription?.plan !== 'free')) {
+                        window.location.href = `/center/${vipItem._id || vipItem.id}`;
+                      } else {
+                        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'info', message: 'Дэлгэрэнгүй харахын тулд төлөвлөгөө идэвхжүүлнэ үү' } }));
+                      }
+                    }}
                   />
                 );
               })}

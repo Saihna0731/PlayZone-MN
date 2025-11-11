@@ -17,9 +17,9 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 82%;
-  gap: 10px;
+  gap: 12px;
   overflow-x: auto;
-  padding-bottom: 12px;
+  padding: 0 10px 12px;
   scroll-snap-type: x mandatory;
 }
 .list-horizontal .horizontal-card-wrapper { scroll-snap-align: start; position: relative; margin-right: 12px; }
@@ -64,10 +64,11 @@
 .bonus-card-title { font-size: 20px; font-weight:800; color:#fff; letter-spacing:.5px; }
 .bonus-card-text { font-size:13px; color:#f3f4f6; line-height:1.3; max-height:2.6em; overflow:hidden; }
 .bonus-card-meta { font-size:12px; font-weight:600; color:#cbd5e1; text-transform:uppercase; letter-spacing:.08em; }
-.bonus-seat-highlight { display:flex; gap:8px; margin-top:4px; flex-wrap:wrap; }
-.seat-badge.xl { font-size:13px; font-weight:900; padding:6px 10px; border-radius:999px; color:#fff; letter-spacing:.02em; box-shadow:0 6px 16px rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.2); }
-.seat-badge.xl.std { background: linear-gradient(135deg,#2563eb,#1d4ed8); }
-.seat-badge.xl.vip { background: linear-gradient(135deg,#a855f7,#ec4899); }
+.bonus-seat-highlight { display:flex; flex-direction:column; gap:4px; margin-top:6px; background:linear-gradient(135deg, rgba(16,185,129,.18), rgba(16,185,129,.08)); padding:8px; border-radius:12px; border:1px solid rgba(16,185,129,.25); box-shadow:0 4px 16px rgba(16,185,129,.15) inset; }
+.bonus-seat-highlight .seat-row { display:flex; gap:6px; flex-wrap:nowrap; }
+.seat-badge.xl { font-size:13px; font-weight:900; padding:6px 12px; border-radius:999px; color:#fff; letter-spacing:.02em; box-shadow:0 6px 16px rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.2); }
+.seat-badge.xl.std { background: linear-gradient(135deg,#22c55e,#16a34a); }
+.seat-badge.xl.vip { background: linear-gradient(135deg,#34d399,#10b981); }
 .seat-badge.xl.stage { background: linear-gradient(135deg,#22c55e,#16a34a); }
 .bonus-card-list { margin-top:6px; display:flex; flex-direction:column; gap:6px; }
 .bonus-item { background:rgba(17,24,39,.45); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px 10px; color:#e5e7eb; }
@@ -75,11 +76,24 @@
 .bonus-item-title { font-weight:800; font-size:12px; color:#fff; }
 .bonus-item-time { font-size:11px; color:#cbd5e1; }
 .bonus-item-text { font-size:12px; color:#e5e7eb; }
-.bonus-seat-row { display:flex; gap:6px; margin-top:4px; }
-.seat-badge { font-size:11px; font-weight:800; padding:3px 8px; border-radius:999px; color:#fff; }
-.seat-badge.std { background:#4b5563; }
-.seat-badge.vip { background:#a855f7; }
-.seat-badge.stage { background:#22c55e; }
+.bonus-seat-compact { margin-top:6px; display:flex; flex-direction:column; gap:4px; }
+.bonus-seat-row { display:flex; gap:6px; flex-wrap:wrap; }
+/* Modern green-forward seat badges */
+.seat-badge { 
+  font-size:12px; 
+  font-weight:800; 
+  padding:4px 10px; 
+  border-radius:999px; 
+  color:#fff; 
+  background: linear-gradient(135deg, #10b981 0%, #22c55e 100%);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 2px 8px rgba(34,197,94,.25);
+  letter-spacing:.02em;
+}
+.seat-badge.std { background: linear-gradient(135deg, #059669 0%, #16a34a 100%); }
+.seat-badge.vip { background: linear-gradient(135deg, #14b8a6 0%, #22c55e 100%); }
+.seat-badge.stage { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+
 .bonus-more { font-size:12px; color:#cbd5e1; }
 .bonus-card-order { margin-top:8px; align-self:flex-start; background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#ec4899 100%); color:#fff; font-size:12px; font-weight:700; padding:10px 16px; border:none; border-radius:999px; box-shadow:0 4px 14px rgba(99,102,241,.4); cursor:pointer; transition:.25s; }
 .bonus-card-order:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(99,102,241,.55); }
@@ -87,13 +101,113 @@
 
 @media (min-width:640px){ .bonus-card { width:360px; height:200px; } }
 @media (min-width:1024px){ .bonus-card { width:380px; height:210px; } }
-@media (max-width:639px){ .list-horizontal { gap:12px; grid-auto-columns:88%; padding-bottom: 14px; } .list-horizontal .horizontal-card-wrapper { margin-right: 12px; } }
+@media (max-width:639px){ .list-horizontal { gap:12px; grid-auto-columns:88%; padding-bottom: 14px; } .list-horizontal .horizontal-card-wrapper { margin-right: 12px; } .bonus-card{ width: 300px; } }
 
 @media (min-width: 640px) {
   .list-horizontal { grid-auto-columns: 60%; gap:12px; }
 }
 @media (min-width: 1024px) {
   .list-horizontal { grid-auto-columns: 33%; gap:10px; }
+}
+
+/* ===== SpecialCenterCard (VIP Modern Travel Style) ===== */
+.special-center-card {
+  position: relative;
+  width: 280px;
+  flex: 0 0 auto;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.special-center-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+}
+.special-card-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+}
+.special-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.special-card-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+/* Rating badge (top-left) */
+.special-card-rating {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255,255,255,0.95);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #111;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+/* VIP badge (top-right) */
+.special-card-vip-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 12px rgba(240,147,251,0.4);
+}
+.special-card-body {
+  padding: 14px 16px 16px;
+}
+.special-card-title {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+.special-card-location {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1.2;
+}
+.special-card-price {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  color: #059669;
+  letter-spacing: 0.02em;
+}
+@media (min-width: 640px) {
+  .special-center-card { width: 300px; }
+}
+@media (min-width: 1024px) {
+  .special-center-card { width: 320px; }
 }
 
 /* Category chips styling for RN components rendered on web */
