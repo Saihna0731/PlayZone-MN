@@ -229,8 +229,20 @@ export default function List() {
     const isBusinessPro = normalized === 'business_pro';
     return hasBonus && isBusinessPro;
   });
-  const vipCenters = items.filter(it => it.isVip);
-  const regularCenters = filtered.filter(it => !it.isVip);
+  
+  // Special Centers - Business Pro эрхтэй owner-ийн бүх төвүүд
+  const specialCenters = items.filter(it => {
+    const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
+    const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
+    return normalized === 'business_pro';
+  });
+  
+  const regularCenters = filtered.filter(it => {
+    // Business Pro биш төвүүдийг л regular хэсэгт харуулна
+    const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
+    const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
+    return normalized !== 'business_pro';
+  });
 
   return (
     <div className="page-with-bottom-space">
@@ -288,23 +300,23 @@ export default function List() {
           </div>
         )}
 
-        {/* VIP horizontal section */}
-        {vipCenters.length > 0 && (
+        {/* Business Pro Special Centers horizontal section */}
+        {specialCenters.length > 0 && (
           <div className="list-section">
             <div className="list-section-header">
-              <h3>VIP Special Centers</h3>
-              <button type="button" className="see-all-link" onClick={() => { window.location.href = '/list?filter=vip'; }}>See all</button>
+              <h3>Business Pro Special Centers</h3>
+              <button type="button" className="see-all-link" onClick={() => { window.location.href = '/list?filter=business_pro'; }}>See all</button>
             </div>
-            <div className="list-horizontal" data-section="vip">
-              {vipCenters.map(vipItem => {
-                const vipKey = `vip-${vipItem._id || vipItem.id}`;
+            <div className="list-horizontal" data-section="special">
+              {specialCenters.map(specialItem => {
+                const specialKey = `special-${specialItem._id || specialItem.id}`;
                 return (
                   <SpecialCenterCard
-                    key={vipKey}
-                    center={vipItem}
+                    key={specialKey}
+                    center={specialItem}
                     onClick={() => {
                       if (isAdmin || isPremiumUser || (isCenterOwner && subscription?.plan !== 'free')) {
-                        window.location.href = `/center/${vipItem._id || vipItem.id}`;
+                        window.location.href = `/center/${specialItem._id || specialItem.id}`;
                       } else {
                         window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'info', message: 'Дэлгэрэнгүй харахын тулд төлөвлөгөө идэвхжүүлнэ үү' } }));
                       }

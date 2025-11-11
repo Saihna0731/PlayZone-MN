@@ -29,8 +29,8 @@ export default function SpecialCenterCard({ center, onClick }) {
             ⭐ {rating.toFixed(1)}
           </div>
         )}
-        {/* VIP badge top-right */}
-        <div className="special-card-vip-badge">VIP</div>
+        {/* Business Pro badge top-right */}
+        <div className="special-card-vip-badge">PRO</div>
       </div>
       <div className="special-card-body">
         <h4 className="special-card-title">{center.name}</h4>

@@ -163,12 +163,12 @@
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
-/* VIP badge (top-right) */
+/* Business Pro badge (top-right) */
 .special-card-vip-badge {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: linear-gradient(135deg, #f093fb, #f5576c);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
   font-size: 10px;
   font-weight: 900;
@@ -176,7 +176,7 @@
   border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 0 4px 12px rgba(240,147,251,0.4);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.5);
 }
 .special-card-body {
   padding: 14px 16px 16px;
