@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaPhone, FaMapMarkerAlt, FaClock, FaGlobe, FaEnvelope, FaStar, FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaPlay } from "react-icons/fa";
+import { FaPhone, FaMapMarkerAlt, FaClock, FaGlobe, FaEnvelope, FaStar, FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaPlay } from "react-icons/fa";
 import axios from "axios";
 import { API_BASE } from "../config";
+import "../styles/CenterDetail.css";
 
 // Текстийг товчлох helper
 const snippet = (s, max = 140) => {
@@ -125,34 +126,14 @@ export default function CenterDetail() {
     );
   };
 
-  const showOnMap = () => {
-    if (!centerData) return;
-    window.dispatchEvent(new CustomEvent("centers:updated", { 
-      detail: { lat: centerData.lat, lng: centerData.lng } 
-    }));
-    navigate("/map");
-  };
+  // "Show on map" action removed from header; if needed later, reintroduce as a button using navigate("/map")
 
   if (loading) {
     return (
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        background: "#f8f9fa"
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{
-            width: "40px",
-            height: "40px",
-            border: "4px solid #e0e0e0",
-            borderTop: "4px solid #1976d2",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 16px"
-          }}></div>
-          <p style={{ color: "#666" }}>Мэдээлэл ачааллаж байна...</p>
+      <div className="center-loading-state">
+        <div className="center-loading-content">
+          <div className="center-loading-spinner"></div>
+          <p className="center-loading-text">Мэдээлэл ачааллаж байна...</p>
         </div>
       </div>
     );
@@ -160,26 +141,10 @@ export default function CenterDetail() {
 
   if (!centerData) {
     return (
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        background: "#f8f9fa"
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <p style={{ color: "#666", marginBottom: "16px" }}>Мэдээлэл олдсонгүй</p>
-          <button 
-            onClick={() => navigate("/list")}
-            style={{
-              padding: "12px 24px",
-              background: "#1976d2",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer"
-            }}
-          >
+      <div className="center-error-state">
+        <div className="center-error-content">
+          <p className="center-error-text">Мэдээлэл олдсонгүй</p>
+          <button onClick={() => navigate("/list")} className="center-error-btn">
             Буцах
           </button>
         </div>
@@ -188,46 +153,9 @@ export default function CenterDetail() {
   }
 
   return (
-    <>
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-      <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-      {/* Header with back button */}
-      <div style={{
-        position: "sticky",
-        top: 0,
-        background: "#fff",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        zIndex: 100,
-        padding: "16px 20px",
-        display: "flex",
-        alignItems: "center",
-        gap: "16px"
-      }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            background: "none",
-            border: "none",
-            fontSize: "20px",
-            color: "#1976d2",
-            cursor: "pointer",
-            padding: "8px"
-          }}
-        >
-          <FaArrowLeft />
-        </button>
-        <h2 style={{ margin: 0, flex: 1, fontSize: "18px", color: "#333" }}>
-          {centerData.name}
-        </h2>
-      </div>
-
-      {/* Image carousel */}
-      <div style={{ position: "relative", height: "300px", background: "#000" }}>
+    <div className="center-detail-container">
+      {/* Image carousel - Airbnb style */}
+      <div className="center-hero-carousel">
         <img
           src={(() => {
             const currentImage = centerData.images[currentImageIndex];
@@ -239,117 +167,84 @@ export default function CenterDetail() {
             return currentImage;
           })()}
           alt={centerData.name}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover"
-          }}
+          className="center-carousel-image"
           onError={(e) => {
             // Зураг load болохгүй бол default зураг харуулах
             e.target.src = "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&h=900&fit=crop&q=90&auto=format";
           }}
         />
         
+        {/* Top overlay controls */}
+        <div className="center-carousel-top-controls">
+          <button onClick={() => navigate(-1)} className="center-carousel-close">
+            <FaTimes />
+          </button>
+        </div>
+        
+        {/* Photo counter badge */}
+        <div className="center-photo-counter">
+          {currentImageIndex + 1} / {centerData.images.length}
+        </div>
+        
         {/* Image navigation */}
-        <button
-          onClick={prevImage}
-          style={{
-            position: "absolute",
-            left: "16px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "rgba(0,0,0,0.6)",
-            border: "none",
-            color: "#fff",
-            padding: "12px",
-            borderRadius: "50%",
-            cursor: "pointer",
-            fontSize: "16px"
-          }}
-        >
+        <button onClick={prevImage} className="center-carousel-nav center-carousel-nav-left">
           <FaChevronLeft />
         </button>
         
-        <button
-          onClick={nextImage}
-          style={{
-            position: "absolute",
-            right: "16px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "rgba(0,0,0,0.6)",
-            border: "none",
-            color: "#fff",
-            padding: "12px",
-            borderRadius: "50%",
-            cursor: "pointer",
-            fontSize: "16px"
-          }}
-        >
+        <button onClick={nextImage} className="center-carousel-nav center-carousel-nav-right">
           <FaChevronRight />
         </button>
 
         {/* Image indicators */}
-        <div style={{
-          position: "absolute",
-          bottom: "16px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: "8px"
-        }}>
+        <div className="center-carousel-indicators">
           {centerData.images.map((_, index) => (
             <div
               key={index}
               onClick={() => setCurrentImageIndex(index)}
-              style={{
-                width: index === currentImageIndex ? "24px" : "8px",
-                height: "8px",
-                borderRadius: "4px",
-                background: index === currentImageIndex ? "#fff" : "rgba(255,255,255,0.5)",
-                cursor: "pointer",
-                transition: "all 0.3s ease"
-              }}
+              className={`center-carousel-dot ${index === currentImageIndex ? 'active' : ''}`}
             />
           ))}
         </div>
       </div>
 
+      {/* Title and rating - Airbnb style: below carousel */}
+      <div className="center-title-section">
+        <h1 className="center-title">{centerData.name}</h1>
+        <div className="center-title-meta">
+          <div className="center-rating-inline">
+            <FaStar /> {centerData.rating} <span className="reviews-text">(116 reviews)</span>
+          </div>
+          <span className="meta-separator">·</span>
+          <div className="center-category-inline">{centerData.category}</div>
+        </div>
+      </div>
+
       {/* Content */}
-      <div style={{ padding: "20px", paddingBottom: "80px" }}>
+      <div className="center-detail-content">
         {/* Bonus section - if any */}
         {centerData.bonus && centerData.bonus.length > 0 && (
-          <div style={{
-            background: "#fff8e1",
-            borderRadius: "12px",
-            padding: "16px",
-            marginBottom: "20px",
-            border: "1px solid #ffe0b2",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
-          }}>
-            <div style={{ fontSize: "16px", fontWeight: 800, color: "#e65100", marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>🎁 Шинэ бонус</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="center-bonus-section">
+            <h3 className="center-bonus-title">🎁 Идэвхтэй бонус</h3>
+            <div className="center-bonus-list">
               {(() => {
                 const now = Date.now();
                 const active = centerData.bonus.filter(b => !b?.expiresAt || new Date(b.expiresAt).getTime() > now);
                 const toShow = (active.length ? active : centerData.bonus).slice(0, 3);
                 return toShow.map((b, idx) => (
-                  <div key={b._id || idx} style={{
-                    background: '#fff', border: '1px solid #ffe0b2', borderRadius: 10, padding: 12
-                  }}>
-                    <div style={{ fontWeight: 700, color: '#5d4037' }}>{b.title || 'Бонус'}</div>
+                  <div key={b._id || idx} className="center-bonus-card">
+                    <div className="center-bonus-card-title">{b.title || 'Бонус'}</div>
                     {(b.standardFree || b.vipFree || b.stageFree) && (
-                      <div style={{ marginTop: 4, color: '#6d4c41' }}>
+                      <div className="center-bonus-card-seats">
                         {b.standardFree ? `Энгийн: ${b.standardFree} суудал сул` : ''}
                         {b.vipFree ? `${b.standardFree ? ' • ' : ''}VIP: ${b.vipFree} суудал сул` : ''}
                         {b.stageFree ? `${(b.standardFree || b.vipFree) ? ' • ' : ''}Stage: ${b.stageFree} суудал сул` : ''}
                       </div>
                     )}
                     {b.text && (
-                      <div style={{ marginTop: 4, color: '#6d4c41' }}>{snippet(b.text, 180)}</div>
+                      <div className="center-bonus-card-text">{snippet(b.text, 180)}</div>
                     )}
                     {b.expiresAt && (
-                      <div style={{ marginTop: 4, fontSize: 12, color: '#8d6e63' }}>Дуусах хугацаа: {new Date(b.expiresAt).toLocaleString()}</div>
+                      <div className="center-bonus-card-expiry">Дуусах хугацаа: {new Date(b.expiresAt).toLocaleString()}</div>
                     )}
                   </div>
                 ));
@@ -357,190 +252,114 @@ export default function CenterDetail() {
             </div>
           </div>
         )}
-        {/* Title and rating */}
-        <div style={{ marginBottom: "24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "700", color: "#1a1a1a" }}>
-              {centerData.name}
-            </h1>
-            <div style={{
-              background: "#4caf50",
-              color: "#fff",
-              padding: "6px 12px",
-              borderRadius: "20px",
-              fontSize: "14px",
-              fontWeight: "600",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px"
-            }}>
-              <FaStar />
-              {centerData.rating}
-            </div>
-          </div>
-          
-          <div style={{
-            background: "#e3f2fd",
-            color: "#1976d2",
-            padding: "4px 12px",
-            borderRadius: "16px",
-            fontSize: "14px",
-            fontWeight: "500",
-            display: "inline-block",
-            marginBottom: "12px"
-          }}>
-            {centerData.category}
-          </div>
-        </div>
 
         {/* Price */}
-        <div style={{
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-        }}>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: "600", color: "#333" }}>
-            💰 Үнийн мэдээлэл
-          </h3>
+        <div className="center-section">
+          <h3 className="center-section-title">💰 Үнийн мэдээлэл</h3>
           
           {centerData.pricing && (centerData.pricing.standard || centerData.pricing.vip || centerData.pricing.stage || centerData.pricing.overnight) ? (
-            <div style={{ display: "grid", gap: "12px" }}>
+            <div className="center-pricing-grid">
               {centerData.pricing.standard && (
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  background: "#f1f8e9",
-                  borderRadius: "8px",
-                  border: "1px solid #c8e6c9"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "20px" }}>🎮</span>
-                    <span style={{ fontWeight: "500", color: "#333" }}>Заал</span>
+                <div className="center-pricing-card standard">
+                  <div className="center-pricing-card-label">
+                    <span className="center-pricing-card-icon">🎮</span>
+                    <span>Заал</span>
                   </div>
-                  <div style={{ fontSize: "24px", fontWeight: "700", color: "#4caf50" }}>
+                  <div className="center-pricing-card-price">
                     {parseInt(centerData.pricing.standard).toLocaleString()}₮/цаг
                   </div>
                 </div>
               )}
               
               {centerData.pricing.vip && (
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  background: "#fff3e0",
-                  borderRadius: "8px",
-                  border: "1px solid #ffcc02"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "20px" }}>👑</span>
-                    <span style={{ fontWeight: "500", color: "#333" }}>VIP өрөө</span>
+                <div className="center-pricing-card vip">
+                  <div className="center-pricing-card-label">
+                    <span className="center-pricing-card-icon">👑</span>
+                    <span>VIP өрөө</span>
                   </div>
-                  <div style={{ fontSize: "24px", fontWeight: "700", color: "#ff9800" }}>
+                  <div className="center-pricing-card-price">
                     {parseInt(centerData.pricing.vip).toLocaleString()}₮/цаг
                   </div>
                 </div>
               )}
               
               {centerData.pricing.stage && (
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  background: "#f3e5f5",
-                  borderRadius: "8px",
-                  border: "1px solid #ce93d8"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "20px" }}>🎭</span>
-                    <span style={{ fontWeight: "500", color: "#333" }}>Stage өрөө</span>
+                <div className="center-pricing-card stage">
+                  <div className="center-pricing-card-label">
+                    <span className="center-pricing-card-icon">🎭</span>
+                    <span>Stage өрөө</span>
                   </div>
-                  <div style={{ fontSize: "24px", fontWeight: "700", color: "#9c27b0" }}>
+                  <div className="center-pricing-card-price">
                     {parseInt(centerData.pricing.stage).toLocaleString()}₮/цаг
                   </div>
                 </div>
               )}
               
               {centerData.pricing.overnight && (
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  background: "#e8eaf6",
-                  borderRadius: "8px",
-                  border: "1px solid #9fa8da"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "20px" }}>🌙</span>
-                    <span style={{ fontWeight: "500", color: "#333" }}>Хоног</span>
+                <div className="center-pricing-card overnight">
+                  <div className="center-pricing-card-label">
+                    <span className="center-pricing-card-icon">🌙</span>
+                    <span>Хоног</span>
                   </div>
-                  <div style={{ fontSize: "24px", fontWeight: "700", color: "#3f51b5" }}>
+                  <div className="center-pricing-card-price">
                     {parseInt(centerData.pricing.overnight).toLocaleString()}₮/хоног
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <div>
-              <div style={{ fontSize: "32px", fontWeight: "700", color: "#1976d2", marginBottom: "4px" }}>
-                {centerData.price}
-              </div>
-              <div style={{ color: "#666", fontSize: "14px" }}>
-                Цагийн төлбөр
-              </div>
+            <div className="center-pricing-fallback">
+              <div className="center-pricing-fallback-price">{centerData.price}</div>
+              <div className="center-pricing-fallback-label">Цагийн төлбөр</div>
             </div>
           )}
         </div>
 
         {/* Contact info */}
-        <div style={{
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-        }}>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: "600" }}>
-            Холбоо барих
-          </h3>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <FaMapMarkerAlt style={{ color: "#f44336", fontSize: "16px" }} />
-              <span style={{ color: "#333" }}>{centerData.address}</span>
+        <div className="center-info-cards">
+          <div className="center-info-card">
+            <FaMapMarkerAlt className="center-info-icon location" />
+            <div className="center-info-content">
+              <div className="center-info-label">Хаяг</div>
+              <div className="center-info-value">{centerData.address}</div>
             </div>
-            
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <FaPhone style={{ color: "#4caf50", fontSize: "16px" }} />
-              <a href={`tel:${centerData.phone}`} style={{ color: "#1976d2", textDecoration: "none" }}>
+          </div>
+          
+          <div className="center-info-card">
+            <FaPhone className="center-info-icon phone" />
+            <div className="center-info-content">
+              <div className="center-info-label">Утас</div>
+              <a href={`tel:${centerData.phone}`} className="center-info-value link">
                 {centerData.phone}
               </a>
             </div>
-            
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <FaClock style={{ color: "#ff9800", fontSize: "16px" }} />
-              <span style={{ color: "#333" }}>{centerData.opening}</span>
+          </div>
+          
+          <div className="center-info-card">
+            <FaClock className="center-info-icon clock" />
+            <div className="center-info-content">
+              <div className="center-info-label">Цагийн хуваарь</div>
+              <div className="center-info-value">{centerData.opening}</div>
             </div>
-            
-            {centerData.email && (
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <FaEnvelope style={{ color: "#2196f3", fontSize: "16px" }} />
-                <a href={`mailto:${centerData.email}`} style={{ color: "#1976d2", textDecoration: "none" }}>
+          </div>
+          
+          {centerData.email && (
+            <div className="center-info-card">
+              <FaEnvelope className="center-info-icon email" />
+              <div className="center-info-content">
+                <div className="center-info-label">Имэйл</div>
+                <a href={`mailto:${centerData.email}`} className="center-info-value link">
                   {centerData.email}
                 </a>
               </div>
-            )}
-            
-            {centerData.website && (
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <FaGlobe style={{ color: "#9c27b0", fontSize: "16px" }} />
+            </div>
+          )}
+          
+          {centerData.website && (
+            <div className="center-info-card">
+              <FaGlobe className="center-info-icon website" />
+              <div className="center-info-content">
+                <div className="center-info-label">Вэб хуудас</div>
                 <a 
                   href={centerData.website.startsWith('http://') || centerData.website.startsWith('https://') ? 
                     centerData.website : 
@@ -548,13 +367,13 @@ export default function CenterDetail() {
                   } 
                   target="_blank" 
                   rel="noreferrer" 
-                  style={{ color: "#1976d2", textDecoration: "none" }}
+                  className="center-info-value link"
                 >
                   {centerData.website}
                 </a>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Embed Videos */}
@@ -1048,170 +867,69 @@ export default function CenterDetail() {
         )}
 
         {/* Facilities */}
-        <div style={{
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-        }}>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: "600" }}>
-            Боломжууд
-          </h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+        <div className="center-section">
+          <h3 className="center-section-title">✨ Боломжууд</h3>
+          <div className="center-facilities-wrap">
             {centerData.facilities.map((facility, index) => (
-              <span
-                key={index}
-                style={{
-                  background: "#f1f3f4",
-                  color: "#333",
-                  padding: "6px 12px",
-                  borderRadius: "16px",
-                  fontSize: "14px"
-                }}
-              >
+              <span key={index} className="center-facilities-chip">
                 {facility}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
-          <button
-            onClick={showOnMap}
-            style={{
-              flex: 1,
-              background: "#1976d2",
-              color: "#fff",
-              border: "none",
-              padding: "16px",
-              borderRadius: "12px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px"
-            }}
-          >
-            <FaMapMarkerAlt />
-            Газрын зураг дээр харах
-          </button>
-          
-          <button
-            style={{
-              flex: 1,
-              background: "#4caf50",
-              color: "#fff",
-              border: "none",
-              padding: "16px",
-              borderRadius: "12px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer"
-            }}
-          >
-            Захиалах
-          </button>
+      </div>
+
+      {/* Sticky booking footer - Airbnb style */}
+      <div className="center-booking-footer">
+        <div className="center-booking-info">
+          <div className="center-booking-price">
+            {centerData.pricing?.standard ? (
+              <>
+                <span className="price-amount">{parseInt(centerData.pricing.standard).toLocaleString()}₮</span>
+                <span className="price-unit">/ цаг</span>
+              </>
+            ) : (
+              <span className="price-amount">{centerData.price}</span>
+            )}
+          </div>
+          {centerData.rating && (
+            <div className="center-booking-rating">
+              <FaStar /> {centerData.rating} <span className="reviews-count">(116 reviews)</span>
+            </div>
+          )}
         </div>
+        <button className="center-booking-btn">
+          Захиалах
+        </button>
       </div>
 
       {/* Video Modal */}
       {videoModal.isOpen && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.9)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px"
-        }}>
-          {/* Modal Content */}
-          <div style={{
-            position: "relative",
-            width: "100%",
-            maxWidth: "1200px",
-            height: "80vh",
-            background: "#000",
-            borderRadius: "16px",
-            overflow: "hidden",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
-          }}>
-            {/* Close Button */}
+        <div className="center-video-modal">
+          <div className="center-video-modal-content">
             <button
               onClick={() => setVideoModal({ isOpen: false, content: null, title: "" })}
-              style={{
-                position: "absolute",
-                top: "16px",
-                right: "16px",
-                background: "rgba(255,255,255,0.9)",
-                border: "none",
-                color: "#333",
-                padding: "12px",
-                borderRadius: "50%",
-                cursor: "pointer",
-                fontSize: "18px",
-                zIndex: 10000,
-                width: "44px",
-                height: "44px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
-              }}
+              className="center-video-modal-close"
             >
               <FaTimes />
             </button>
             
-            {/* Video Title */}
-            <div style={{
-              position: "absolute",
-              top: "16px",
-              left: "16px",
-              background: "rgba(0,0,0,0.7)",
-              color: "white",
-              padding: "8px 16px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: "500",
-              zIndex: 10000
-            }}>
+            <div className="center-video-modal-title">
               {videoModal.title}
             </div>
             
-            {/* Video Content */}
-            <div style={{
-              width: "100%",
-              height: "100%",
-              position: "relative"
-            }}>
+            <div className="center-video-modal-wrapper">
               {videoModal.content}
             </div>
           </div>
           
-          {/* Background Click to Close */}
           <div 
             onClick={() => setVideoModal({ isOpen: false, content: null, title: "" })}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: -1
-            }}
+            className="center-video-modal-backdrop"
           />
         </div>
       )}
-
-      </div>
-    </>
+    </div>
   );
 }

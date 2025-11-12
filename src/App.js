@@ -13,7 +13,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import ForgotPassword from "./components/ForgotPassword";
 import { AuthProvider } from "./contexts/AuthContext";
-import GlobalToast from "./components/GlobalToast";
+import GlobalToast from "./components/LittleComponents/GlobalToast";
 
 function App() {
   const location = useLocation();

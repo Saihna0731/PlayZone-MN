@@ -236,13 +236,17 @@ router.put("/:id/bonus/:bonusId", auth, ownerCanModifyCenter, async (req, res) =
 // Delete a bonus
 router.delete("/:id/bonus/:bonusId", auth, ownerCanModifyCenter, async (req, res) => {
   try {
-    const center = await Center.findById(req.params.id);
+    const { id, bonusId } = req.params;
+    const center = await Center.findById(id);
     if (!center) return res.status(404).json({ error: "Center not found" });
-    const b = (center.bonus || []).id(req.params.bonusId);
-    if (!b) return res.status(404).json({ error: "Bonus not found" });
-    b.remove();
+    if (!Array.isArray(center.bonus)) center.bonus = [];
+    const before = center.bonus.length;
+    center.bonus = center.bonus.filter(b => String(b._id) !== String(bonusId));
+    if (before === center.bonus.length) {
+      return res.status(404).json({ error: "Bonus not found" });
+    }
     await center.save();
-    res.json(center);
+    res.json({ success:true, center });
   } catch (err) {
     console.error("Error deleting bonus:", err);
     res.status(500).json({ error: err.message });

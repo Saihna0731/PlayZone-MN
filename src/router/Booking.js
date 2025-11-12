@@ -8,7 +8,7 @@ import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import BottomNav from "../components/MainNavbars/BottomNav";
 import CenterCard from "../components/ListComponents/CenterCard";
 import AdminForm from "../admin/components/AdminForm";
-import ConfirmModal from "../components/ConfirmModal";
+import ConfirmModal from "../components/LittleComponents/ConfirmModal";
 
 // Ачаалал шинэчлэх Modal компонент
 function OccupancyModal({ center, isOpen, onClose, onUpdate }) {
@@ -281,6 +281,8 @@ export default function Booking() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [bonusModalCenter, setBonusModalCenter] = useState(null);
   const [bonusModalOpen, setBonusModalOpen] = useState(false);
+  const [manageModalCenter, setManageModalCenter] = useState(null);
+  const [manageModalOpen, setManageModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -765,10 +767,20 @@ export default function Booking() {
                       onOccupancyUpdate={handleOccupancyUpdate}
                     />
                     {isOwner && subscription?.plan === 'business_pro' && (
-                      <button
-                        onClick={() => { setBonusModalCenter(center); setBonusModalOpen(true); }}
-                        style={{ alignSelf:'flex-end', padding:'8px 12px', background:'linear-gradient(135deg,#9333ea,#6366f1)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 12px rgba(99,102,241,.35)' }}
-                      >🎁 Бонус нэмэх</button>
+                      <div style={{ display:'flex', gap:8, alignSelf:'flex-end' }}>
+                        <button
+                          onClick={() => handleOccupancyUpdate(center)}
+                          style={{ padding:'8px 12px', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:800, cursor:'pointer', boxShadow:'0 4px 12px rgba(5,150,105,.35)' }}
+                        >Ачаалал</button>
+                        <button
+                          onClick={() => { setBonusModalCenter(center); setBonusModalOpen(true); }}
+                          style={{ padding:'8px 12px', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:800, cursor:'pointer', boxShadow:'0 4px 12px rgba(5,150,105,.35)' }}
+                        >+ Бонус</button>
+                        <button
+                          onClick={() => { setManageModalCenter(center); setManageModalOpen(true); }}
+                          style={{ padding:'8px 12px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:800, cursor:'pointer', boxShadow:'0 4px 12px rgba(99,102,241,.35)' }}
+                        >Засах/Устгах</button>
+                      </div>
                     )}
                   </div>
                 );
@@ -851,6 +863,17 @@ export default function Booking() {
         }}
       />
 
+      <BonusManageModal
+        center={manageModalCenter}
+        isOpen={manageModalOpen}
+        onClose={() => { setManageModalOpen(false); setManageModalCenter(null); }}
+        onUpdated={(updatedCenter) => {
+          if (updatedCenter?._id) {
+            setFavorites(prev => prev.map(c => c._id === updatedCenter._id ? updatedCenter : c));
+          }
+        }}
+      />
+
       <BottomNav />
     </div>
   );
@@ -905,3 +928,122 @@ function AddBonusModal({ center, isOpen, onClose, onAdded }) {
 
 const inputStyle = { width:'100%', padding:'10px 14px', border:'2px solid #e5e7eb', borderRadius:12, fontSize:13, fontWeight:600, outline:'none' };
 const btnPrimary = { padding:'12px 18px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', border:'none', borderRadius:12, fontWeight:700, cursor:'pointer', fontSize:14, boxShadow:'0 4px 14px rgba(99,102,241,.35)' };
+
+// Бонус засах/устгах Modal (орчин үеийн загвар)
+function BonusManageModal({ center, isOpen, onClose, onUpdated }) {
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ title:'', text:'', standardFree:'', vipFree:'', stageFree:'' });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  if (!isOpen || !center) return null;
+
+  const startEdit = (b) => {
+    setEditingId(b._id);
+    setForm({
+      title: b.title || '',
+      text: b.text || '',
+      standardFree: b.standardFree ?? '',
+      vipFree: b.vipFree ?? '',
+      stageFree: b.stageFree ?? ''
+    });
+  };
+  const cancelEdit = () => { setEditingId(null); setForm({ title:'', text:'', standardFree:'', vipFree:'', stageFree:'' }); };
+  const change = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+
+  const doSave = async () => {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        title: form.title,
+        text: form.text,
+        standardFree: form.standardFree === '' ? undefined : Number(form.standardFree),
+        vipFree: form.vipFree === '' ? undefined : Number(form.vipFree),
+        stageFree: form.stageFree === '' ? undefined : Number(form.stageFree)
+      };
+      const res = await axios.put(`${API_BASE}/api/centers/${center._id}/bonus/${editingId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      onUpdated?.(res.data);
+      cancelEdit();
+    } catch (err) {
+      console.error('Update bonus error:', err);
+      alert(err.response?.data?.error || 'Бонус шинэчлэхэд алдаа гарлаа');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const doDelete = async (bid) => {
+    if (!bid || deleting) return;
+    setDeleting(bid);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.delete(`${API_BASE}/api/centers/${center._id}/bonus/${bid}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data?.success) {
+        onUpdated?.(res.data.center);
+        window.dispatchEvent(new CustomEvent('toast', { detail: { type:'info', message:'Бонус амжилттай устлаа' } }));
+        if (editingId === bid) cancelEdit();
+        // Refresh centers after short delay
+        setTimeout(() => window.dispatchEvent(new Event('centers:updated')), 150);
+      } else {
+        onUpdated?.(res.data);
+      }
+    } catch (err) {
+      console.error('Delete bonus error:', err);
+      window.dispatchEvent(new CustomEvent('toast', { detail: { type:'error', message: err.response?.data?.error || 'Бонус устгахад алдаа гарлаа' } }));
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const bonuses = Array.isArray(center.bonus) ? center.bonus.slice() : [];
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div style={{ background:'#fff', width:'100%', maxWidth:520, borderRadius:16, padding:24, boxShadow:'0 10px 32px rgba(0,0,0,.25)', position:'relative' }}>
+        <button onClick={onClose} style={{ position:'absolute', top:12, right:12, background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#666' }}>✕</button>
+        <h3 style={{ margin:0, marginBottom:12, fontSize:18, fontWeight:800, display:'flex', alignItems:'center', gap:8 }}>🎛️ Бонус засах / устгах</h3>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {bonuses.length === 0 && <div style={{ color:'#666', fontSize:14 }}>Бонус одоогоор байхгүй</div>}
+          {bonuses.map(b => (
+            <div key={b._id || b.createdAt} style={{ border:'1px solid #e5e7eb', borderRadius:12, padding:12 }}>
+              {editingId === b._id ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  <input name="title" placeholder="Гарчиг" value={form.title} onChange={change} style={inputStyle} />
+                  <textarea name="text" placeholder="Тайлбар (сонголттой)" value={form.text} onChange={change} style={{ ...inputStyle, minHeight:80 }} />
+                  <div style={{ display:'flex', gap:8 }}>
+                    <input name="standardFree" placeholder="STD" value={form.standardFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+                    <input name="vipFree" placeholder="VIP" value={form.vipFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+                    <input name="stageFree" placeholder="STG" value={form.stageFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+                  </div>
+                  <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                    <button onClick={cancelEdit} style={{ padding:'10px 14px', borderRadius:10, border:'1px solid #e5e7eb', background:'#f8fafc', fontWeight:700, fontSize:12 }}>Болих</button>
+                    <button disabled={saving} onClick={doSave} style={btnPrimary}>{saving ? '🔄 Хадгалж байна...' : '✅ Хадгалах'}</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ fontWeight:800 }}>{b.title || 'Бонус'}</div>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button onClick={() => startEdit(b)} style={{ padding:'6px 10px', borderRadius:10, border:'1px solid #e5e7eb', background:'#f8fafc', fontSize:12, fontWeight:700 }}>Засах</button>
+                      <button onClick={() => doDelete(b._id)} disabled={deleting === b._id} style={{ padding:'6px 10px', borderRadius:10, background:'linear-gradient(135deg,#ef4444,#dc2626)', color:'#fff', border:'none', fontSize:12, fontWeight:800 }}>{deleting === b._id ? 'Устгаж...' : 'Устгах'}</button>
+                    </div>
+                  </div>
+                  {b.text && <div style={{ fontSize:13, color:'#475569' }}>{b.text}</div>}
+                  {(b.standardFree || b.vipFree || b.stageFree) && (
+                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                      {b.standardFree ? <span className="seat-badge std">STD {b.standardFree}</span> : null}
+                      {b.vipFree ? <span className="seat-badge vip">VIP {b.vipFree}</span> : null}
+                      {b.stageFree ? <span className="seat-badge stage">STG {b.stageFree}</span> : null}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

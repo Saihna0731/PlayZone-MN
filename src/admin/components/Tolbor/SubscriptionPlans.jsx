@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSubscription } from '../../../hooks/useSubscription';
-import Toast from '../../../components/Toast';
+import Toast from '../../../components/LittleComponents/Toast';
 import './SubscriptionPlans.css';
 
 const SubscriptionPlans = ({ showModal, onClose }) => {

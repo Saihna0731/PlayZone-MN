@@ -4,7 +4,7 @@ import MapButtons from "../components/MapComponents/MapButtons";
 import MapRefreshButton from "../components/MapComponents/MapRefreshButton";
 import MapCenters from "../components/MapComponents/MapCenters";
 import MapSearch from "../components/MapComponents/MapSearch";
-import Toast from "../components/Toast";
+import Toast from "../components/LittleComponents/Toast";
 import { cacheUtils } from "../utils/cache";
 
 export default function MapView() {

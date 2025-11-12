@@ -8,13 +8,13 @@ import React from 'react';
 export default function BonusCard({ center, onOrder, onClick }) {
   if (!center) return null;
   const img = center.image || center.logo || (Array.isArray(center.images) ? (center.images[0]?.high || center.images[0]?.thumbnail || center.images[0]) : null);
-  const bonuses = Array.isArray(center.bonus) ? center.bonus.slice().reverse() : []; // Шинэ нь түрүүлж гарна
+  // Server талд bonus-ыг unshift-аар хамгийн эхэнд нэмдэг тул шууд slice() хийж хуулж авна
+  const bonuses = Array.isArray(center.bonus) ? center.bonus.slice() : [];
   const primary = bonuses[0];
   const title = primary?.title || 'Онцгой урамшуулал';
   const text = primary?.text || '';
-  const std = primary?.standardFree || 0;
-  const vip = primary?.vipFree || 0;
-  const stg = primary?.stageFree || 0;
+  const showSeats = !!(primary && (primary.standardFree || primary.vipFree || primary.stageFree));
+  const showText = !showSeats && !!text;
 
   return (
     <div className="bonus-card" onClick={onClick} role="button" tabIndex={0}>
@@ -28,19 +28,19 @@ export default function BonusCard({ center, onOrder, onClick }) {
       </div>
       <div className="bonus-card-content">
         <div className="bonus-card-title">{title}</div>
-        {text && <div className="bonus-card-text">{text}</div>}
-        {!text && (std || vip || stg) ? (
-          <div className="bonus-seat-emphasis" aria-label="Сул суудлын мэдээлэл">
-            {std ? <span className="seat-badge xl std">STD {std}</span> : null}
-            {vip ? <span className="seat-badge xl vip">VIP {vip}</span> : null}
-            {stg ? <span className="seat-badge xl stage">STG {stg}</span> : null}
-          </div>
-        ) : null}
-        {!text && primary && (primary.standardFree || primary.vipFree || primary.stageFree) && (
-          <div className="bonus-seat-highlight">
-            {primary.standardFree ? <span className="seat-badge xl std" title="Энгийн сул суудал">STD {primary.standardFree}</span> : null}
-            {primary.vipFree ? <span className="seat-badge xl vip" title="VIP сул суудал">VIP {primary.vipFree}</span> : null}
-            {primary.stageFree ? <span className="seat-badge xl stage" title="Stage сул суудал">STG {primary.stageFree}</span> : null}
+        {showText && <div className="bonus-card-text">{text}</div>}
+        {/* Primary bonus seat (compact, no background panel). Stage shown on second row below STD/VIP */}
+        {showSeats && (
+          <div className="bonus-seat-compact">
+            <div className="bonus-seat-row">
+              {primary.standardFree ? <span className="seat-badge std" title="Энгийн сул суудал">STD {primary.standardFree}</span> : null}
+              {primary.vipFree ? <span className="seat-badge vip" title="VIP сул суудал">VIP {primary.vipFree}</span> : null}
+            </div>
+            {primary.stageFree ? (
+              <div className="bonus-seat-row">
+                <span className="seat-badge stage" title="Stage сул суудал">STG {primary.stageFree}</span>
+              </div>
+            ) : null}
           </div>
         )}
         <div className="bonus-card-meta">{center.name}</div>
@@ -58,10 +58,16 @@ export default function BonusCard({ center, onOrder, onClick }) {
                 </div>
                 {b.text && <div className="bonus-item-text">{b.text}</div>}
                 {(b.standardFree || b.vipFree || b.stageFree) && (
-                  <div className="bonus-seat-row">
-                    {b.standardFree ? <span className="seat-badge std" title="Энгийн сул суудал">STD {b.standardFree}</span> : null}
-                    {b.vipFree ? <span className="seat-badge vip" title="VIP сул суудал">VIP {b.vipFree}</span> : null}
-                    {b.stageFree ? <span className="seat-badge stage" title="Stage сул суудал">STG {b.stageFree}</span> : null}
+                  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                    <div className="bonus-seat-row">
+                      {b.standardFree ? <span className="seat-badge std" title="Энгийн сул суудал">STD {b.standardFree}</span> : null}
+                      {b.vipFree ? <span className="seat-badge vip" title="VIP сул суудал">VIP {b.vipFree}</span> : null}
+                    </div>
+                    {b.stageFree ? (
+                      <div className="bonus-seat-row">
+                        <span className="seat-badge stage" title="Stage сул суудал">STG {b.stageFree}</span>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
