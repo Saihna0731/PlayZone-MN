@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaPhone, FaMapMarkerAlt, FaClock, FaGlobe, FaEnvelope, FaStar, FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaPlay } from "react-icons/fa";
+import { FaPhone, FaMapMarkerAlt, FaClock, FaGlobe, FaEnvelope, FaStar, FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaPlay, FaBell } from "react-icons/fa";
 import axios from "axios";
 import { API_BASE } from "../config";
 import "../styles/CenterDetail.css";
@@ -19,6 +19,7 @@ export default function CenterDetail() {
   const [centerData, setCenterData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [videoModal, setVideoModal] = useState({ isOpen: false, content: null, title: "" });
+  const [bonusPanelOpen, setBonusPanelOpen] = useState(false);
 
   useEffect(() => {
     const fetchCenter = async () => {
@@ -181,6 +182,18 @@ export default function CenterDetail() {
           <button onClick={() => navigate(-1)} className="center-carousel-close">
             <FaTimes />
           </button>
+          
+          {/* Notification button with badge */}
+          {centerData.bonus && centerData.bonus.length > 0 && (
+            <button 
+              onClick={() => setBonusPanelOpen(true)} 
+              className="center-notification-btn"
+              aria-label="Бонус мэдэгдэл"
+            >
+              <FaBell />
+              <span className="center-notification-badge">{centerData.bonus.length}</span>
+            </button>
+          )}
         </div>
         
         {/* VIP badge */}
@@ -228,37 +241,6 @@ export default function CenterDetail() {
 
       {/* Content */}
       <div className="center-detail-content">
-        {/* Bonus section - if any */}
-        {centerData.bonus && centerData.bonus.length > 0 && (
-          <div className="center-bonus-section">
-            <h3 className="center-bonus-title">🎁 Идэвхтэй бонус</h3>
-            <div className="center-bonus-list">
-              {(() => {
-                const now = Date.now();
-                const active = centerData.bonus.filter(b => !b?.expiresAt || new Date(b.expiresAt).getTime() > now);
-                const toShow = (active.length ? active : centerData.bonus).slice(0, 3);
-                return toShow.map((b, idx) => (
-                  <div key={b._id || idx} className="center-bonus-card">
-                    <div className="center-bonus-card-title">{b.title || 'Бонус'}</div>
-                    {(b.standardFree || b.vipFree || b.stageFree) && (
-                      <div className="center-bonus-card-seats">
-                        {b.standardFree ? `Энгийн: ${b.standardFree} суудал сул` : ''}
-                        {b.vipFree ? `${b.standardFree ? ' • ' : ''}VIP: ${b.vipFree} суудал сул` : ''}
-                        {b.stageFree ? `${(b.standardFree || b.vipFree) ? ' • ' : ''}Stage: ${b.stageFree} суудал сул` : ''}
-                      </div>
-                    )}
-                    {b.text && (
-                      <div className="center-bonus-card-text">{snippet(b.text, 180)}</div>
-                    )}
-                    {b.expiresAt && (
-                      <div className="center-bonus-card-expiry">Дуусах хугацаа: {new Date(b.expiresAt).toLocaleString()}</div>
-                    )}
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-        )}
 
         {/* Price */}
         <div className="center-section">
@@ -936,6 +918,75 @@ export default function CenterDetail() {
             className="center-video-modal-backdrop"
           />
         </div>
+      )}
+
+      {/* Bonus Slide-in Panel */}
+      {bonusPanelOpen && (
+        <>
+          <div 
+            className="bonus-panel-backdrop" 
+            onClick={() => setBonusPanelOpen(false)}
+          />
+          <div className="bonus-panel">
+            <div className="bonus-panel-header">
+              <h3 className="bonus-panel-title">🎁 Идэвхтэй бонус</h3>
+              <button 
+                onClick={() => setBonusPanelOpen(false)} 
+                className="bonus-panel-close"
+                aria-label="Хаах"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            
+            <div className="bonus-panel-content">
+              {centerData.bonus && centerData.bonus.length > 0 ? (
+                <div className="bonus-panel-list">
+                  {(() => {
+                    const now = Date.now();
+                    const active = centerData.bonus.filter(b => !b?.expiresAt || new Date(b.expiresAt).getTime() > now);
+                    const toShow = active.length ? active : centerData.bonus;
+                    return toShow.map((b, idx) => (
+                      <div key={b._id || idx} className="bonus-panel-item">
+                        <div className="bonus-panel-item-header">
+                          <div className="bonus-panel-item-title">{b.title || 'Бонус'}</div>
+                          {b.expiresAt && (
+                            <div className="bonus-panel-item-expiry">
+                              {new Date(b.expiresAt).toLocaleDateString('mn-MN', { month: 'short', day: 'numeric' })}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {(b.standardFree || b.vipFree || b.stageFree) && (
+                          <div className="bonus-panel-item-seats">
+                            {b.standardFree && (
+                              <span className="bonus-seat-chip standard">Энгийн: {b.standardFree}</span>
+                            )}
+                            {b.vipFree && (
+                              <span className="bonus-seat-chip vip">VIP: {b.vipFree}</span>
+                            )}
+                            {b.stageFree && (
+                              <span className="bonus-seat-chip stage">Stage: {b.stageFree}</span>
+                            )}
+                          </div>
+                        )}
+                        
+                        {b.text && (
+                          <div className="bonus-panel-item-text">{b.text}</div>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              ) : (
+                <div className="bonus-panel-empty">
+                  <div className="bonus-panel-empty-icon">🎁</div>
+                  <p>Одоогоор бонус байхгүй байна</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
