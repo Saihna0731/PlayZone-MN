@@ -1,0 +1,11 @@
+{
+  "watch": ["."],
+  "ext": "js,json",
+  "ignore": [
+    "../src/*",
+    "../public/*",
+    "../build/*",
+    "../node_modules/*",
+    "*.map"
+  ]
+}

@@ -12,15 +12,20 @@ async function main() {
     await mongoose.connect(MONGO_URI);
     console.log('MongoDB connected!!!!!!!!!!!!!!!!!');
 
-    let admin = await User.findOne({ email });
+    // Find by email OR default admin username to avoid duplicate username errors
+    let admin = await User.findOne({ $or: [{ email }, { username: 'admin' }] });
     if (admin) {
-      console.log('Admin user already exists:', email);
+      console.log('Admin user already exists:', admin.email || email);
       // Update role if needed
       if (admin.role !== 'admin') {
         admin.role = 'admin';
         await admin.save();
         console.log('Admin role updated.');
       }
+      // Ensure username and fullName are set
+      if (!admin.username) admin.username = 'admin';
+      if (!admin.fullName) admin.fullName = fullName;
+      await admin.save();
     } else {
       admin = new User({
         email,

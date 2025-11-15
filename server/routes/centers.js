@@ -5,14 +5,44 @@ const User = require("../models/User");
 const { auth } = require("../middleware/auth");
 const { checkCenterLimit, ownerCanModifyCenter } = require("../middleware/subscription");
 
-// GET all (public)
+// GET all (public, optimized)
 router.get("/", async (req, res) => {
   try {
-    // Owner-ийн subscription.plan-г фронт талд ашиглахын тулд populate хийв
-    const centers = await Center.find()
-      .populate('owner', 'subscription accountType role')
-      .sort({ createdAt: -1 });
-    res.json(centers);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const skip = (page - 1) * limit;
+
+    // Lightweight projection for map/list to avoid huge payloads
+    const projection = {
+      name: 1,
+      category: 1,
+      address: 1,
+      phone: 1,
+      pricing: 1,
+      price: 1,
+      occupancy: 1,
+      rating: 1,
+      lat: 1,
+      lng: 1,
+      isVip: 1,
+      bonus: { $slice: 1 }, // only last bonus if possible when used with aggregation; harmless in select
+      createdAt: 1,
+      // intentionally exclude heavy media fields (images/videos) for list
+      images: 0,
+      videos: 0,
+      embedVideos: 0,
+      longDescription: 0
+    };
+
+    const centers = await Center.find({}, projection)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Short cache headers for mobile perf
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
+    res.json({ centers, page, limit });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -21,10 +51,11 @@ router.get("/", async (req, res) => {
 // GET single center by ID (public)
 router.get("/:id", async (req, res) => {
   try {
-    const center = await Center.findById(req.params.id);
+    const center = await Center.findById(req.params.id).lean();
     if (!center) {
       return res.status(404).json({ error: "Center not found" });
     }
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json(center);
   } catch (err) {
     console.error("Error fetching center:", err);
@@ -159,7 +190,7 @@ router.put("/:id", auth, ownerCanModifyCenter, async (req, res) => {
   }
 });
 
-// PUT update occupancy only (no auth required for real-time updates)
+// PUT update occupancy (secured by API key or auth)
 router.put("/:id/occupancy", async (req, res) => {
   try {
     const { occupancy } = req.body;
@@ -168,16 +199,28 @@ router.put("/:id/occupancy", async (req, res) => {
       return res.status(400).json({ error: "Occupancy data required" });
     }
 
+    // Allow either a trusted device with API key or authenticated owner/admin
+    const apiKey = req.header('X-API-Key');
+    const allowedApiKey = process.env.OCCUPANCY_API_KEY || '';
+    if (apiKey !== allowedApiKey) {
+      // fallback to auth check via ownerCanModifyCenter
+      return ownerCanModifyCenter(req, res, async () => {
+        const center = await Center.findByIdAndUpdate(
+          req.params.id, 
+          { occupancy }, 
+          { new: true, runValidators: true }
+        ).lean();
+        if (!center) return res.status(404).json({ error: "Center not found" });
+        return res.json({ success: true, occupancy: center.occupancy });
+      });
+    }
+
     const center = await Center.findByIdAndUpdate(
       req.params.id, 
       { occupancy }, 
       { new: true, runValidators: true }
-    );
-    
-    if (!center) {
-      return res.status(404).json({ error: "Center not found" });
-    }
-    
+    ).lean();
+    if (!center) return res.status(404).json({ error: "Center not found" });
     res.json({ success: true, occupancy: center.occupancy });
   } catch (err) {
     console.error("Error updating occupancy:", err);
