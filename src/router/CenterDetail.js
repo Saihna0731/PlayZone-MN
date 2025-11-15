@@ -173,6 +173,8 @@ export default function CenterDetail() {
             e.target.src = "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&h=900&fit=crop&q=90&auto=format";
           }}
         />
+        {/* Доод градиент overlay – зураг дээрх текстийг тодруулна */}
+        <div className="center-carousel-gradient" />
         
         {/* Top overlay controls */}
         <div className="center-carousel-top-controls">
@@ -181,6 +183,11 @@ export default function CenterDetail() {
           </button>
         </div>
         
+        {/* VIP badge */}
+        {((centerData.isVip) || (centerData.owner && centerData.owner.subscription && (String(centerData.owner.subscription.plan || '').toLowerCase() === 'business_pro' || String(centerData.owner.subscription.plan || '').toLowerCase() === 'business pro'))) && (
+          <div className="center-vip-badge">VIP</div>
+        )}
+
         {/* Photo counter badge */}
         <div className="center-photo-counter">
           {currentImageIndex + 1} / {centerData.images.length}
