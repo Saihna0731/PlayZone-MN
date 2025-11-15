@@ -29,7 +29,10 @@ router.get("/", async (req, res) => {
       createdAt: 1
     };
 
-    const centers = await Center.find({}, projection)
+    // Include small media + minimal owner info
+    const mediaProjection = { ...projection, logo: 1, image: 1, images: { $slice: 1 } };
+    const centers = await Center.find({}, mediaProjection)
+      .populate('owner', 'subscription')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

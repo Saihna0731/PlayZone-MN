@@ -45,19 +45,20 @@ const snippet = (s, max = 120) => {
 };
 
 const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) => {
-  // Center-ийн logo эсвэл default logo ашиглах - thumbnail хэсгийг эхлээд шалгах
+  // Center-ийн logo эсвэл эхний зураг → thumbnail/highQuality/стринг → legacy image → default
   let logoSrc = "/logo192.png";
-  
   if (center?.logo) {
     logoSrc = center.logo;
-  } else if (center?.images && center.images.length > 0) {
-    // Эхний зургийн thumbnail-г logo болгон ашиглах
+  } else if (Array.isArray(center?.images) && center.images.length > 0) {
     const firstImage = center.images[0];
-    if (typeof firstImage === 'object' && firstImage.thumbnail) {
-      logoSrc = firstImage.thumbnail;
+    if (firstImage && typeof firstImage === 'object') {
+      logoSrc = firstImage.thumbnail || firstImage.highQuality || logoSrc;
     } else if (typeof firstImage === 'string') {
       logoSrc = firstImage;
     }
+  } else if (center?.image) {
+    // legacy single image field
+    logoSrc = center.image;
   }
   
   // Төлбөртэй хэрэглэгчдэд ачаалалын өнгө, бусдад серийн өнгө
@@ -102,13 +103,14 @@ const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) 
           overflow: hidden;
           pointer-events: ${canInteract ? 'auto' : 'none'};
         ">
-          <img src="${logoSrc}" alt="Logo" style="
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
-            pointer-events: ${canInteract ? 'auto' : 'none'};
-          " onerror="this.onerror=null; this.src='/logo192.png';" onload="this.style.opacity='1';" style="opacity:0.5;" />
+            <img src="${logoSrc}" alt="Logo" style="
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              border-radius: 50%;
+              pointer-events: ${canInteract ? 'auto' : 'none'};
+              opacity: 1.5;
+            " onerror="this.onerror=null; this.src='/logo192.png';" />
         </div>
         ${recent ? `
         <div style="

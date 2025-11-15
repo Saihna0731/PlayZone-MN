@@ -33,8 +33,13 @@ export default function List() {
   const fetchCenters = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE}/api/centers`);
-      setItems(res.data || []);
-      setFiltered(res.data || []);
+      const centers = Array.isArray(res.data?.centers)
+        ? res.data.centers
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setItems(centers);
+      setFiltered(centers);
     } catch (err) {
       console.error("fetchCenters:", err);
     }
@@ -54,7 +59,8 @@ export default function List() {
 
   useEffect(() => {
     const q = query.trim().toLowerCase();
-    const list = items.filter((it) => {
+    const base = Array.isArray(items) ? items : [];
+    const list = base.filter((it) => {
       if (category !== "all" && it.category !== category) return false;
       if (!q) return true;
       return (it.name || "").toLowerCase().includes(q) || (it.address || "").toLowerCase().includes(q);
@@ -221,7 +227,10 @@ export default function List() {
   // Derived sections
   
   // Bonus зөвхөн Business Pro эрхтэй centerOwner-ийнх
-  const bonusCenters = items.filter(it => {
+  const safeItems = Array.isArray(items) ? items : [];
+  const safeFiltered = Array.isArray(filtered) ? filtered : [];
+
+  const bonusCenters = safeItems.filter(it => {
     const hasBonus = Array.isArray(it.bonus) && it.bonus.length > 0;
     // Owner populate хийсэн тул шууд owner.subscription.plan -г ашиглана
     const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
@@ -231,13 +240,13 @@ export default function List() {
   });
   
   // Special Centers - Business Pro эрхтэй owner-ийн бүх төвүүд
-  const specialCenters = items.filter(it => {
+  const specialCenters = safeItems.filter(it => {
     const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
     const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
     return normalized === 'business_pro';
   });
   
-  const regularCenters = filtered.filter(it => {
+  const regularCenters = safeFiltered.filter(it => {
     // Business Pro биш төвүүдийг л regular хэсэгт харуулна
     const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
     const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
