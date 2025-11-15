@@ -25,13 +25,8 @@ router.get("/", async (req, res) => {
       lat: 1,
       lng: 1,
       isVip: 1,
-      bonus: { $slice: 1 }, // only last bonus if possible when used with aggregation; harmless in select
-      createdAt: 1,
-      // intentionally exclude heavy media fields (images/videos) for list
-      images: 0,
-      videos: 0,
-      embedVideos: 0,
-      longDescription: 0
+      bonus: 1,
+      createdAt: 1
     };
 
     const centers = await Center.find({}, projection)
