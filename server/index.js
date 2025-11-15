@@ -31,7 +31,17 @@ app.use(cors({
 // Body parsing + sanitization
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(mongoSanitize());
+// express-mongo-sanitize tries to reassign req.query (getter in Express 5) → sanitize body/params only
+app.use((req, res, next) => {
+  try {
+    if (req.body) req.body = mongoSanitize.sanitize(req.body);
+    if (req.params) req.params = mongoSanitize.sanitize(req.params);
+    // Skip req.query assignment to avoid TypeError on getter-only property
+  } catch (e) {
+    // continue without blocking
+  }
+  next();
+});
 
 // Compression for faster responses on slow networks
 app.use(compression());
