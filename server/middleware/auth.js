@@ -17,7 +17,13 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: "Хэрэглэгч олдсонгүй эсвэл идэвхгүй байна" });
     }
 
+    // Check token version if it exists in token
+    if (decoded.tokenVersion !== undefined && user.tokenVersion !== decoded.tokenVersion) {
+       return res.status(401).json({ message: "Session expired. Please login again." });
+    }
+
     req.userId = decoded.userId;
+    req.user = user;
     // role-г токенээс унших (хуучин токенууд accountType-ыг хадгалдаг)
     req.userRole = decoded.role || decoded.accountType;
     next();

@@ -42,11 +42,19 @@ const Login = () => {
 	return (
 		<div className="auth-container">
 			<div className="auth-background">
-				<div className="auth-card login-card">
-				<div className="auth-header">
-					<h1>🎮 PC Center</h1>
-					<h2>{accountType === 'centerOwner' ? '🏢 Эзэмшигч нэвтрэх' : accountType === 'admin' ? '� Админ нэвтрэх' : '�👤 Хэрэглэгч нэвтрэх'}</h2>
-					<p>Тавтай морил! Дансандаа нэвтэрнэ үү</p>
+				<div className="auth-card login-card" style={{
+					background: 'white',
+					borderRadius: '20px',
+					boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+					padding: '32px',
+					maxWidth: '440px'
+				}}>
+				<div className="auth-header" style={{ textAlign: 'center', marginBottom: '24px' }}>
+					<h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1f2937', marginBottom: '8px' }}>🎮 Game Center</h1>
+					<h2 style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6', marginBottom: '6px' }}>
+						{accountType === 'centerOwner' ? '🏢 Эзэмшигч нэвтрэх' : accountType === 'admin' ? '👨‍💼 Админ нэвтрэх' : '👤 Хэрэглэгч нэвтрэх'}
+					</h2>
+					<p style={{ color: '#6b7280', fontSize: '14px' }}>Тавтай морил! Дансандаа нэвтэрнэ үү</p>
 				</div>
 
 				<form onSubmit={handleSubmit} className="auth-form">

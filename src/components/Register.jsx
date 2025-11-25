@@ -55,7 +55,7 @@ const Register = () => {
 
     // Эзэмшигчийн validation
     if (accountType === 'centerOwner' && !formData.centerName) {
-      return 'PC Center-ийн нэрийг оруулна уу';
+      return 'Game Center-ийн нэрийг оруулна уу';
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -102,11 +102,19 @@ const Register = () => {
   return (
     <div className="auth-container">
       <div className="auth-background">
-        <div className="auth-card register-card">
-          <div className="auth-header">
-            <h1>🎮 PC Center</h1>
-            <h2>{accountType === 'centerOwner' ? '🏢 Эзэмшигч бүртгэл' : '👤 Хэрэглэгч бүртгэл'}</h2>
-            <p>Шинэ данс үүсгэн орно уу</p>
+        <div className="auth-card register-card" style={{
+          background: 'white',
+          borderRadius: '20px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+          padding: '32px',
+          maxWidth: '540px'
+        }}>
+          <div className="auth-header" style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1f2937', marginBottom: '8px' }}>🎮 Game Center</h1>
+            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6', marginBottom: '6px' }}>
+              {accountType === 'centerOwner' ? '🏢 Эзэмшигч бүртгэл' : '👤 Хэрэглэгч бүртгэл'}
+            </h2>
+            <p style={{ color: '#6b7280', fontSize: '14px' }}>Шинэ данс үүсгэн орно уу</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -153,7 +161,7 @@ const Register = () => {
             ) : (
               <div className="form-group">
                 <label htmlFor="centerName">
-                  🏢 PC Center-ийн нэр *
+                  🏢 Game Center-ийн нэр *
                 </label>
                 <input
                   type="text"

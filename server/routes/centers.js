@@ -26,11 +26,13 @@ router.get("/", async (req, res) => {
       lng: 1,
       isVip: 1,
       bonus: 1,
+      facilities: 1,
       createdAt: 1
     };
 
-    // Include small media + minimal owner info
-    const mediaProjection = { ...projection, logo: 1, image: 1, images: { $slice: 1 } };
+    // Include media + minimal owner info
+    // Return ALL images so VIP slideshow and dots can work on list page
+    const mediaProjection = { ...projection, logo: 1, image: 1, images: 1, videos: 1, embedVideos: 1 };
     const centers = await Center.find({}, mediaProjection)
       .populate('owner', 'subscription')
       .sort({ createdAt: -1 })
@@ -41,6 +43,19 @@ router.get("/", async (req, res) => {
     // Short cache headers for mobile perf
     res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
     res.json({ centers, page, limit });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET my centers (protected)
+router.get("/my-centers", auth, async (req, res) => {
+  try {
+    const centers = await Center.find({ owner: req.userId })
+      .sort({ createdAt: -1 })
+      .lean() // Use lean() for faster queries
+      .limit(50); // Reasonable limit
+    res.json(centers);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

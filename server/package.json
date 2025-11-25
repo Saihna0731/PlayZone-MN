@@ -6,7 +6,9 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "seed": "node seed.js",
-    "admin": "node createAdmin.js"
+    "admin": "node createAdmin.js",
+    "create-indexes": "node scripts/createIndexes.js",
+    "cleanup-bookings": "node scripts/cleanupOldBookings.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

@@ -48,9 +48,19 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'centerOwner', 'admin'],
+    enum: ['user', 'admin', 'centerOwner'],
     default: 'user'
   },
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationCode: String,
+  emailVerificationExpires: Date,
   centerName: {
     type: String,
     required: function() {

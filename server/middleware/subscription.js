@@ -69,7 +69,7 @@ const checkCenterOwnerPlan = (requiredFeature) => {
 			// Center Owner эсэх шалгах
 			if (user.accountType !== 'centerOwner') {
 				return res.status(403).json({ 
-					message: 'Зөвхөн PC Center эзэмшигчид хандах эрхтэй' 
+					message: 'Зөвхөн Game Center эзэмшигчид хандах эрхтэй' 
 				});
 			}
 
@@ -155,7 +155,7 @@ const checkCenterLimit = async (req, res, next) => {
 		}
 
 		if (user.accountType !== 'centerOwner') {
-			return res.status(403).json({ message: 'Зөвхөн PC Center эзэмшигчид' });
+			return res.status(403).json({ message: 'Зөвхөн Game Center эзэмшигчид' });
 		}
 
 		const subscription = user.subscription || {};
@@ -164,7 +164,7 @@ const checkCenterLimit = async (req, res, next) => {
 		// Free plan бол center нэмэх эрхгүй
 		if (!subscription || subscription.plan === 'free') {
 			return res.status(403).json({ 
-				message: 'PC Center нэмэхийн тулд Business план авах шаардлагатай',
+				message: 'Game Center нэмэхийн тулд Business план авах шаардлагатай',
 				upgrade: true 
 			});
 		}
@@ -181,7 +181,7 @@ const checkCenterLimit = async (req, res, next) => {
 			if (currentCenterCount >= maxCenters) {
 				const extraCenterPrice = 19900; // ₮ per extra center
 				return res.status(403).json({ 
-					message: `Таны план дээр ${maxCenters} PC Center нэмэх боломжтой. Хязгаар давуулах бол төв бүр ${extraCenterPrice.toLocaleString()}₮ болно.`,
+					message: `Таны план дээр ${maxCenters} Game Center нэмэх боломжтой. Хязгаар давуулах бол төв бүр ${extraCenterPrice.toLocaleString()}₮ болно.`,
 					upgrade: true,
 					code: 'CENTER_LIMIT',
 					currentCount: currentCenterCount,
@@ -219,7 +219,7 @@ module.exports = {
 			}
 
 			if (user.accountType !== 'centerOwner') {
-				return res.status(403).json({ message: 'Зөвхөн PC Center эзэмшигчид энэ үйлдлийг хийх эрхтэй' });
+				return res.status(403).json({ message: 'Зөвхөн Game Center эзэмшигчид энэ үйлдлийг хийх эрхтэй' });
 			}
 
 			const centerId = req.params.id;

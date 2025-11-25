@@ -13,7 +13,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
   // Одоогийн хэрэглэгчийн төрлөөс (user vs centerOwner) хамаарч panel-аа автоматаар сонгоно
   const effectiveType = isOwner || subscription?.accountType === 'centerOwner' ? 'center' : 'subscription';
 
-  // PC Center upgrade plans - зөвхөн бизнес планууд
+  // Game Center upgrade plans - зөвхөн бизнес планууд
   const centerPlans = [
     {
       id: 'business_standard',
@@ -22,7 +22,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
       monthly: true,
       popular: true,
       features: [
-        '✅ PC Center эзэмшигч',
+        '✅ Game Center эзэмшигч',
         '✅ 1 төв нэмэх',
         '✅ 3 зураг оруулах',
         '✅ Ачаалал засах'
@@ -35,8 +35,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
       price: '59,900₮',
       monthly: true,
       features: [
-        '✅ PC Center эзэмшигч',
-        '✅ 3 төв нэмэх',
+        '✅ Game Center эзэмшигч',
+        '✅ 2 төв нэмэх',
         '✅ Хязгааргүй зураг оруулах',
         '✅ Ачаалал удирдлага',
         '✅ Дэлгэрэнгүй тайлан',
@@ -58,7 +58,9 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
         '✅ Бүх төв харах',
         '✅ Дэлгэрэнгүй мэдээлэл',
         '✅ Ачаалал шалгах',
-        '✅ Дуртай төв нэмэх'
+        '✅ Дуртай төв нэмэх',
+        '✅ Захиалага хийх',
+        '✅ Шинэлэг Game Center-уудын бичлэг гүйлгэж үзэх(Reels)'
       ],
       color: '#28a745'
     }
@@ -154,7 +156,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
       <div className="subscription-modal-overlay">
         <div className="subscription-modal">
           <div className="modal-header">
-            <h2>{effectiveType === 'center' ? 'PC Center Эзэмшигчийн план' : 'Планаа сонгоорой'}</h2>
+            <h2>{effectiveType === 'center' ? 'Game Center Эзэмшигчийн план' : 'Планаа сонгоорой'}</h2>
             <button className="close-btn" onClick={onClose}>×</button>
           </div>
 
@@ -169,7 +171,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
 
           {effectiveType === 'center' && (
             <div className="current-plan">
-              <span>🏢 PC Center эзэмшигч болж, өөрийн төвийг удирдаарай!</span>
+              <span>🏢 Game Center эзэмшигч болж, өөрийн төвийг удирдаарай!</span>
             </div>
           )}
 

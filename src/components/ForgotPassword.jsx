@@ -43,10 +43,16 @@ const ForgotPassword = () => {
   return (
     <div className="auth-container">
       <div className="auth-background">
-        <div className="auth-card">
-          <div className="auth-header">
-            <h1>Нууц үг сэргээх</h1>
-            <p>Бүртгэлтэй имэйл хаягаа оруулж, илгээх товчийг дарна уу.</p>
+        <div className="auth-card" style={{
+          background: 'white',
+          borderRadius: '20px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+          padding: '32px',
+          maxWidth: '440px'
+        }}>
+          <div className="auth-header" style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1f2937', marginBottom: '8px' }}>🔑 Нууц үг сэргээх</h1>
+            <p style={{ color: '#6b7280', fontSize: '14px' }}>Бүртгэлтэй имэйл хаягаа оруулж, илгээх товчийг дарна уу.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">

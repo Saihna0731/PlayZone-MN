@@ -8,74 +8,123 @@ import React from 'react';
 export default function BonusCard({ center, onOrder, onClick }) {
   if (!center) return null;
   const img = center.image || center.logo || (Array.isArray(center.images) ? (center.images[0]?.high || center.images[0]?.thumbnail || center.images[0]) : null);
-  // Server талд bonus-ыг unshift-аар хамгийн эхэнд нэмдэг тул шууд slice() хийж хуулж авна
   const bonuses = Array.isArray(center.bonus) ? center.bonus.slice() : [];
   const primary = bonuses[0];
-  const title = primary?.title || 'Онцгой урамшуулал';
-  const text = primary?.text || '';
-  const showSeats = !!(primary && (primary.standardFree || primary.vipFree || primary.stageFree));
-  const showText = !showSeats && !!text;
-
+  const title = primary?.title || center.name;
+  
+  // Зургийн дагуу card style
   return (
-    <div className="bonus-card" onClick={onClick} role="button" tabIndex={0}>
-      <div className="bonus-card-media">
-        {img ? (
-          <img src={typeof img === 'string' ? img : ''} alt={center.name} />
-        ) : (
-          <div className="bonus-card-fallback">{center.name?.charAt(0) || '🎮'}</div>
+    <div style={{
+      position: 'relative',
+      width: '280px',
+      height: '160px',
+      borderRadius: '16px',
+      overflow: 'hidden',
+      cursor: 'pointer',
+      flexShrink: 0,
+      background: '#000'
+    }} onClick={onClick}>
+      {/* Background Image */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundImage: img ? `url(${img})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: img ? 'transparent' : 'linear-gradient(135deg, #8B5CF6, #A855F7)'
+      }}>
+        {!img && (
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #8B5CF6, #A855F7)',
+            fontSize: '40px',
+            color: '#fff'
+          }}>
+            🎮
+          </div>
         )}
-        <div className="bonus-card-gradient" />
       </div>
-      <div className="bonus-card-content">
-        <div className="bonus-card-title">{title}</div>
-        {showText && <div className="bonus-card-text">{text}</div>}
-        {/* Primary bonus seat (compact, no background panel). Stage shown on second row below STD/VIP */}
-        {showSeats && (
-          <div className="bonus-seat-compact">
-            <div className="bonus-seat-row">
-              {primary.standardFree ? <span className="seat-badge std" title="Энгийн сул суудал">STD {primary.standardFree}</span> : null}
-              {primary.vipFree ? <span className="seat-badge vip" title="VIP сул суудал">VIP {primary.vipFree}</span> : null}
-            </div>
-            {primary.stageFree ? (
-              <div className="bonus-seat-row">
-                <span className="seat-badge stage" title="Stage сул суудал">STG {primary.stageFree}</span>
-              </div>
-            ) : null}
-          </div>
-        )}
-        <div className="bonus-card-meta">{center.name}</div>
-        {bonuses.length > 1 && (
-          <div className="bonus-card-list">
-            {bonuses.slice(1, 5).map(b => (
-              <div key={b._id || b.createdAt || b.title} className="bonus-item">
-                <div className="bonus-item-head">
-                  <span className="bonus-item-title">{b.title || 'Бонус'}</span>
-                  { (b.expiresAt || b.createdAt) && (
-                    <span className="bonus-item-time" title={b.expiresAt ? 'Дуусах:' + new Date(b.expiresAt).toLocaleString() : new Date(b.createdAt).toLocaleString()}>
-                      {b.expiresAt ? '⏰ ' + new Date(b.expiresAt).toLocaleDateString() : '🗓 ' + new Date(b.createdAt).toLocaleDateString()}
-                    </span>
-                  ) }
-                </div>
-                {b.text && <div className="bonus-item-text">{b.text}</div>}
-                {(b.standardFree || b.vipFree || b.stageFree) && (
-                  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                    <div className="bonus-seat-row">
-                      {b.standardFree ? <span className="seat-badge std" title="Энгийн сул суудал">STD {b.standardFree}</span> : null}
-                      {b.vipFree ? <span className="seat-badge vip" title="VIP сул суудал">VIP {b.vipFree}</span> : null}
-                    </div>
-                    {b.stageFree ? (
-                      <div className="bonus-seat-row">
-                        <span className="seat-badge stage" title="Stage сул суудал">STG {b.stageFree}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            ))}
-            {bonuses.length > 5 && <div className="bonus-more">… бусад {bonuses.length - 5} бонус</div>}
-          </div>
-        )}
-        <button type="button" className="bonus-card-order" onClick={(e) => { e.stopPropagation(); onOrder?.(); }}>
+      
+      {/* Gradient Overlay */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)'
+      }} />
+      
+      {/* Content */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: '16px',
+        color: '#fff'
+      }}>
+        <h3 style={{
+          fontSize: '16px',
+          fontWeight: '700',
+          margin: '0 0 8px 0',
+          color: '#fff'
+        }}>
+          {title}
+        </h3>
+        
+        {/* Seat badges зургийн дагуу */}
+        <div style={{
+          display: 'flex',
+          gap: '6px',
+          marginBottom: '12px'
+        }}>
+          {primary?.standardFree && (
+            <span style={{
+              background: '#10b981',
+              color: '#fff',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: '600'
+            }}>
+              Заал {primary.standardFree}
+            </span>
+          )}
+          {primary?.vipFree && (
+            <span style={{
+              background: '#8B5CF6',
+              color: '#fff',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: '600'
+            }}>
+              VIP {primary.vipFree}
+            </span>
+          )}
+        </div>
+        
+        <button 
+          style={{
+            background: 'linear-gradient(135deg, #8B5CF6, #A855F7)',
+            color: '#fff',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '999px',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+          onClick={(e) => { e.stopPropagation(); onOrder?.(); }}
+        >
           Get Offer Now →
         </button>
       </div>

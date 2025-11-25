@@ -66,6 +66,10 @@ app.use("/api/auth", authRouter);
 const subscriptionRouter = require("./routes/subscription");
 app.use("/api/subscription", subscriptionRouter);
 
+// Mount booking routes
+const bookingsRouter = require("./routes/bookings");
+app.use("/api/bookings", bookingsRouter);
+
 // Simple root and health endpoints to verify backend from phone/browser
 app.get('/', (req, res) => {
   res.send(
@@ -82,11 +86,18 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Import cleanup job
+const { startCleanupJob } = require('./jobs/cleanupBookings');
+
 const PORT = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/my-map-app';
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 15000 })
   .then(() => {
     console.log("MongoDB connected");
+    
+    // Start automatic cleanup job for old bookings
+    startCleanupJob();
+    
     // Explicitly bind to 0.0.0.0 so it's reachable from other devices on the LAN
     app.listen(PORT, '0.0.0.0', () => console.log(`Server running on http://0.0.0.0:${PORT}`));
   })

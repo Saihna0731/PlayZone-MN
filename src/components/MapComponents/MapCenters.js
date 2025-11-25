@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import L from "leaflet";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { Marker, Popup, useMap } from "react-leaflet";
 import axios from "axios";
 import { API_BASE } from "../../config";
 import "leaflet/dist/leaflet.css";
@@ -8,6 +8,16 @@ import "../../styles/CustomMarker.css";
 import { cacheUtils } from "../../utils/cache";
 import { useSubscription } from "../../hooks/useSubscription";
 import { useAuth } from "../../contexts/AuthContext";
+import { FaStar, FaMapMarkerAlt, FaClock, FaPhone } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+
+// Fix for default marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+  iconUrl: require('leaflet/dist/images/marker-icon.png'),
+  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+});
 
 // Ачаалалын өнгө авах функц (subscription эрхтэй хэрэглэгчдэд зориулсан)
 const getOccupancyColor = (percentage) => {
@@ -20,29 +30,6 @@ const getOccupancyColor = (percentage) => {
 // Custom marker icon with center's logo - subscription шалгалттай
 // Bonus байгаа эсэхийг шалгана (одоогоор хугацаагаар хязгаарлахгүй)
 const hasRecentActivity = (center) => Array.isArray(center?.bonus) && center.bonus.length > 0;
-
-// Тухайн төвийн хамгийн сүүлийн (шинэ) бонусыг авах helper
-const getLatestBonus = (center) => {
-  try {
-    if (!center || !Array.isArray(center.bonus) || center.bonus.length === 0) return null;
-    const items = center.bonus
-      .filter(b => b && (b.title || b.text || b.description))
-      .sort((a, b) => {
-        const ad = new Date(a.createdAt || a.expiresAt || a.updatedAt || 0).getTime();
-        const bd = new Date(b.createdAt || b.expiresAt || b.updatedAt || 0).getTime();
-        return bd - ad;
-      });
-    return items[0] || null;
-  } catch {
-    return null;
-  }
-};
-
-// Урт текстийг popup-д багтаах богино тайлбар болгоно
-const snippet = (s, max = 120) => {
-  if (!s || typeof s !== 'string') return '';
-  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
-};
 
 const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) => {
   // Center-ийн logo эсвэл эхний зураг → thumbnail/highQuality/стринг → legacy image → default
@@ -165,566 +152,486 @@ const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) 
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.2); opacity: 0.7; }
         }
-      </style>
-    `,
+      </style>`,
     iconSize: [56, 70],
     iconAnchor: [28, 70],
     popupAnchor: [0, -70]
   });
 };
 
-function FlyToOnChange({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!center) return;
-    map.flyTo(center, 14, { animate: true });
-  }, [center, map]);
-  return null;
-}
-
-// Map click блоклох component - цэвэрлэсэн хувилбар
-function MapClickBlocker({ canViewDetails, showToast, getSubscriptionMessage }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (canViewDetails) {
-      // Эрхтэй хэрэглэгчдэд listener хэрэггүй — marker-ууд чөлөөтэй ажиллана
-      return undefined;
-    }
-
-    const handleMarkerClick = (e) => {
-      if (canViewDetails) return;
-      const clickedElement = e.originalEvent?.target;
-      const isMarkerClick = clickedElement && (
-        clickedElement.closest('.custom-marker') ||
-        clickedElement.closest('.leaflet-marker-icon') ||
-        clickedElement.classList?.contains('marker-body') ||
-        clickedElement.tagName === 'IMG'
-      );
-
-      if (isMarkerClick) {
-        e.originalEvent?.preventDefault();
-        e.originalEvent?.stopPropagation();
-        e.originalEvent?.stopImmediatePropagation();
-
-        if (showToast) {
-          showToast(getSubscriptionMessage(), "warning");
-        }
-      }
-    };
-
-    map.on('click', handleMarkerClick);
-    map.on('dblclick', handleMarkerClick);
-
-    return () => {
-      map.off('click', handleMarkerClick);
-      map.off('dblclick', handleMarkerClick);
-    };
-  }, [map, canViewDetails, showToast, getSubscriptionMessage]);
-
-  return null;
-}
-
-export default function MapCenters({ query = "", mapStyle = "osm", showToast }) {
+export default function MapCenters({ selectedCategory, searchQuery = "", filters = {}, onMarkerClick, onCentersUpdate, onCategoriesUpdate }) {
   const [centers, setCenters] = useState([]);
-  const [focus, setFocus] = useState(null);
-  const { canViewDetails, subscription, plan } = useSubscription();
-  const { isAuthenticated } = useAuth();
-  
-  // Subscription мэдээлэл notification-д ашиглах
-  const getSubscriptionMessage = () => {
-    if (!isAuthenticated) return "Нэвтэрч байж үзнэ үү";
-    const normalizedPlan = (plan || subscription?.plan || '').toString().toLowerCase();
-    if (!subscription || !normalizedPlan || normalizedPlan === 'free') {
-      return "Дэлгэрэнгүй мэдээлэл харахын тулд планаа шинэчлэх шаардлагатай";
-    }
-    return "Энэ үйлдэл хийх эрх танд байхгүй байна";
-  };
   const [loading, setLoading] = useState(true);
+  const { canViewDetails: hasActiveSubscription } = useSubscription();
+  const { user } = useAuth();
+  const map = useMap();
+  const navigate = useNavigate();
 
-  const fetchCenters = useCallback(async (retryCount = 0) => {
+  const fetchCenters = useCallback(async () => {
     try {
       // Cache-аас эхлээд шалгах
-      const cached = cacheUtils.get('centers');
+      const cached = cacheUtils.get('map_centers');
       if (cached && Array.isArray(cached)) {
         setCenters(cached);
         setLoading(false);
+        // Background refresh
+        const res = await axios.get(`${API_BASE}/api/centers`);
+        const data = res.data?.centers || res.data;
+        if (Array.isArray(data)) {
+          setCenters(data);
+          cacheUtils.set('map_centers', data);
+        }
         return;
       }
 
       setLoading(true);
-      
-      // Axios timeout тохиргоо
-      const source = axios.CancelToken.source();
-      const timeout = setTimeout(() => {
-        source.cancel('Request timeout after 20 seconds');
-      }, 20000); // 20 секунд timeout
-      
-      const res = await axios.get(`${API_BASE}/api/centers?limit=50`, {
-        timeout: 30000, // 30 секунд timeout багасгалаа
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        validateStatus: (status) => status < 500 // 500+ алдааг л error гэж үзэх
-      });
-      
-      clearTimeout(timeout);
-      
-      // Handle both old and new API response formats
-      let centers;
-      if (res.data.centers && Array.isArray(res.data.centers)) {
-        centers = res.data.centers;
-      } else if (Array.isArray(res.data)) {
-        centers = res.data;
-      } else {
-        centers = [];
+      const res = await axios.get(`${API_BASE}/api/centers`);
+      const data = res.data?.centers || res.data;
+      if (Array.isArray(data)) {
+        setCenters(data);
+        cacheUtils.set('map_centers', data);
       }
-      
-      // Cache-д хадгалах (зөвхөн амжилттай бол)
-      if (centers.length > 0) {
-        cacheUtils.set('centers', centers);
-      }
-      
-      setCenters(centers);
-      setLoading(false);
-      
     } catch (err) {
-      console.error("fetch centers error:", err);
-      
-      // Timeout эсвэл network алдааны үед retry хийх
-      if ((err.code === 'ECONNABORTED' || err.message.includes('timeout') || err.message.includes('Network Error')) && retryCount < 2) {
-        setTimeout(() => {
-          fetchCenters(retryCount + 1);
-        }, 3000);
-        return;
-      }
-      
-      // Cache-аас аваад үзэх (алдаа гарсан үед)
-      const cached = cacheUtils.get('centers');
-      if (cached && Array.isArray(cached)) {
-        setCenters(cached);
-      } else {
-        setCenters([]);
-      }
-      
+      console.error("Error fetching centers:", err);
+    } finally {
       setLoading(false);
-      
-      // Toast notification харуулах
-      if (showToast) {
-        showToast("Серверээс мэдээлэл авахад асуудал гарлаа. Дахин оролдоно уу.", "error");
-      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     fetchCenters();
-    
+
     // Centers update event listener
-    const onUpdated = (e) => {
-      if (e?.detail && e.detail.lat != null && e.detail.lng != null) {
-        setFocus([Number(e.detail.lat), Number(e.detail.lng)]);
-      }
-      // Cache дахин ачаалах
+    const onUpdated = () => {
       fetchCenters();
     };
-    
+
     // Occupancy update event listener - ачаалал шинэчлэгдэхэд map дээр шууд харуулах
     const onOccupancyUpdated = (e) => {
       if (e?.detail) {
         const { centerId, occupancy } = e.detail;
-        setCenters(prevCenters => 
-          prevCenters.map(center => 
-            center._id === centerId 
-              ? { ...center, occupancy } 
+        setCenters(prevCenters =>
+          prevCenters.map(center =>
+            center._id === centerId
+              ? { ...center, occupancy }
               : center
           )
         );
-        console.log("Map occupancy updated:", centerId, occupancy);
       }
     };
-    
+
     window.addEventListener("centers:updated", onUpdated);
     window.addEventListener("occupancy:updated", onOccupancyUpdated);
-    
+
     return () => {
       window.removeEventListener("centers:updated", onUpdated);
       window.removeEventListener("occupancy:updated", onOccupancyUpdated);
     };
   }, [fetchCenters]);
 
-  // filter by query
-  const q = (query || "").trim().toLowerCase();
-  
-  // Ensure centers is always an array
-  const centersArray = Array.isArray(centers) ? centers : [];
-  
-  const visible = centersArray.filter((c) => {
-    if (!c || c.lat == null || c.lng == null) return false;
-    if (!q) return true;
-    // Бонусын агуулгыг нэгтгэж хайлтад хамруулна
-    const bonusBlob = Array.isArray(c.bonus)
-      ? c.bonus
-          .map(b => `${(b?.title || "")} ${(b?.text || b?.description || "")}`)
-          .join(" ")
-          .toLowerCase()
-      : "";
+  // Derive categories from centers and send up (guard against infinite update loops)
+  const prevCatsRef = useRef([]);
+  useEffect(() => {
+    if (!onCategoriesUpdate || !centers.length) return;
+    const rawCats = centers.map(c => (c.category || 'gaming').toLowerCase().trim());
+    const freqMap = rawCats.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {});
+    const unique = Array.from(new Set(rawCats)).sort((a, b) => (freqMap[b] || 0) - (freqMap[a] || 0));
+    const prev = prevCatsRef.current;
+    if (prev.length === unique.length && prev.every((v, i) => v === unique[i])) {
+      return; // No change; skip parent update
+    }
+    prevCatsRef.current = unique;
+    onCategoriesUpdate(unique);
+  }, [centers, onCategoriesUpdate]);
 
-    const includes = (v) => (v || "").toLowerCase().includes(q);
+  // Filter centers based on category + search
+  const filteredCenters = centers.filter(center => {
+    // Normalize stored category (fallback to 'gaming' default)
+    const rawCat = (center.category || 'gaming').toLowerCase();
 
-    return (
-      includes(c.name) ||
-      includes(c.address) ||
-      includes(c.category) ||
-      bonusBlob.includes(q)
+    // Category filter
+    let categoryMatch = true;
+    if (selectedCategory && selectedCategory !== 'all') {
+      const targetCat = selectedCategory.toLowerCase();
+      if (targetCat === 'gaming') {
+        categoryMatch = rawCat.includes('game') && !rawCat.includes('pc');
+      } else if (targetCat === 'pc-center') {
+        categoryMatch = rawCat.includes('pc') || rawCat.includes('computer');
+      } else if (targetCat === 'ps5') {
+        categoryMatch = rawCat.includes('ps') || rawCat.includes('playstation');
+      } else if (targetCat === 'billard') {
+        categoryMatch = rawCat.includes('billard') || rawCat.includes('billiard');
+      } else if (targetCat === 'vip') {
+        // VIP category: Show centers where owner has 'business_pro' plan
+        const plan = center.owner?.subscription?.plan;
+        categoryMatch = plan === 'business_pro';
+      } else {
+        categoryMatch = rawCat.includes(targetCat);
+      }
+    }
+
+    // Advanced Filters (Panel)
+    let filterMatch = true;
+    if (filters.onlyGreen) {
+      // Check if occupancy is low (<= 25%)
+      const occ = center.occupancy?.standard || center.occupancy?.vip || center.occupancy?.stage || 0;
+      if (occ > 25) filterMatch = false;
+    }
+    if (filters.onlyOrange) {
+      // Check if occupancy is medium (26-75%)
+      const occ = center.occupancy?.standard || center.occupancy?.vip || center.occupancy?.stage || 0;
+      if (occ <= 25 || occ > 75) filterMatch = false;
+    }
+    if (filters.priceRange && filters.priceRange !== 'all') {
+      // Parse price (assuming string like "3,000₮" or number)
+      let priceVal = 0;
+      const pStr = center.pricing?.standard || center.price || "0";
+      priceVal = parseInt(pStr.replace(/[^0-9]/g, ''), 10);
+      
+      if (filters.priceRange === 'low' && priceVal >= 3000) filterMatch = false;
+      if (filters.priceRange === 'medium' && (priceVal < 3000 || priceVal > 5000)) filterMatch = false;
+      if (filters.priceRange === 'high' && priceVal <= 5000) filterMatch = false;
+    }
+
+    // Search filter
+    const q = searchQuery.trim().toLowerCase();
+    const searchMatch = !q || (
+      (center.name && center.name.toLowerCase().includes(q)) ||
+      (center.address && center.address.toLowerCase().includes(q)) ||
+      (center.description && center.description.toLowerCase().includes(q))
     );
+
+    return categoryMatch && searchMatch && filterMatch;
   });
 
-
-
-  const initial = visible.length ? [Number(visible[0].lat), Number(visible[0].lng)] : [47.917, 106.917];
-
-  const tileUrl =
-    mapStyle === "sat"
-      ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-      : mapStyle === "carto"
-      ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-      : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-
-  const attribution =
-    mapStyle === "sat"
-      ? "&copy; Esri"
-      : mapStyle === "carto"
-      ? '&copy; CARTO'
-      : '&copy; OpenStreetMap contributors';
-
-  // Double click handler for marker
-  const handleMarkerDoubleClick = (center) => {
-    // Зөвхөн төлбөртэй хэрэглэгчид marker dblclick → дэлгэрэнгүй рүү
-    if (!canViewDetails) {
-      if (showToast) {
-        showToast(getSubscriptionMessage(), "warning");
-      }
-      return;
+  // Update parent with filtered centers
+  // Use JSON.stringify to avoid infinite loop if filteredCenters is a new array reference every render
+  useEffect(() => {
+    if (onCentersUpdate) {
+      onCentersUpdate(filteredCenters);
     }
-    // CenterDetail хуудас руу шилжих (popup-гүй ч нэвтрэхийг зөвшөөрнө)
-    window.location.href = `/center/${center._id || center.id}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filteredCenters), onCentersUpdate]);
+
+  const handleMarkerClick = (center) => {
+    if (onMarkerClick) {
+      onMarkerClick(center);
+    }
+    if (center?.location?.coordinates && Array.isArray(center.location.coordinates) && center.location.coordinates.length === 2) {
+      map.flyTo([center.location.coordinates[1], center.location.coordinates[0]], 15, {
+        animate: true,
+        duration: 1
+      });
+    }
   };
 
   return (
-    <div style={{ height: "100%", width: "100%", position: "relative" }}>
-      {/* Loading overlay */}
-      {loading && (
-        <div style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(255, 255, 255, 0.9)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 2000,
-          backdropFilter: "blur(2px)"
-        }}>
-          <div style={{
-            width: "50px",
-            height: "50px",
-            border: "4px solid #f3f3f3",
-            borderTop: "4px solid #1976d2",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            marginBottom: "16px"
-          }}></div>
-          <div style={{
-            color: "#333",
-            fontSize: "16px",
-            fontWeight: "500",
-            marginBottom: "8px"
-          }}>
-            Газрын зургийг ачааллаж байна...
-          </div>
-          <div style={{
-            color: "#666",
-            fontSize: "14px"
-          }}>
-            Marker-ууд удахгүй гарч ирнэ
-          </div>
-        </div>
-      )}
-      
-      <MapContainer center={initial} zoom={13} style={{ height: "100%", width: "100%" }}>
-        <TileLayer url={tileUrl} attribution={attribution} />
-        <MapClickBlocker 
-          canViewDetails={canViewDetails} 
-          showToast={showToast} 
-          getSubscriptionMessage={getSubscriptionMessage} 
-        />
-        {visible.map((c) => {
-          // Marker үүсгэх үед subscription эрх шалгах
-          const markerId = c._id ?? c.id;
-          const markerKey = `${markerId}-${canViewDetails ? '1' : '0'}`;
+    <>
+      {filteredCenters.map((c) => {
+        const markerKey = c._id || c.id;
+        const canViewDetails = hasActiveSubscription || user?.role === 'admin';
+        const canInteract = true; // Always interactive for now
 
-          
-          const canInteract = Boolean(canViewDetails);
-          const markerProps = {
-            position: [Number(c.lat), Number(c.lng)],
-            icon: createCustomIcon(c, canViewDetails, canInteract),
-            interactive: canInteract, // Зөвхөн төлбөртэй хэрэглэгч бол interactive
-            riseOnHover: canInteract,
-            riseOffset: canInteract ? 250 : 0,
-            bubblingMouseEvents: canInteract,
-            keyboard: canInteract,
-            opacity: 1
-          };
+        // Determine coordinates (fallback to legacy lat/lng if location missing)
+        const hasLocationArray = c.location && Array.isArray(c.location.coordinates) && c.location.coordinates.length === 2 && typeof c.location.coordinates[0] === 'number' && typeof c.location.coordinates[1] === 'number';
+        const lat = hasLocationArray ? c.location.coordinates[1] : (typeof c.lat === 'number' ? c.lat : 47.9188);
+        const lng = hasLocationArray ? c.location.coordinates[0] : (typeof c.lng === 'number' ? c.lng : 106.9176);
 
-          // Event handlers - цэвэрлэсэн хувилбар
-          if (canViewDetails) {
-            markerProps.eventHandlers = {
-              dblclick: () => handleMarkerDoubleClick(c)
-            };
+        // Skip invalid zero default [0,0] to avoid world map cluster at Gulf of Guinea
+        if (lat === 0 && lng === 0) return null;
+
+        const markerProps = {
+          position: [lat, lng],
+          icon: createCustomIcon(c, canViewDetails, canInteract),
+          eventHandlers: {
+            click: () => handleMarkerClick(c)
           }
+        };
 
-          return (
-            <Marker key={markerKey} {...markerProps}>
-            {/* Popup зөвхөн subscription эрхтэй хэрэглэгчдэд харуулах */}
-            {canViewDetails && (
-              <Popup>
-                <div style={{ minWidth: 220 }}>
-                  <strong style={{ fontSize: '16px', color: '#333' }}>{c.name}</strong>
-                  {/* Хаягийн оронд хамгийн сүүлийн бонусыг харуулна */}
-                  {(() => {
-                    const latest = getLatestBonus(c);
-                    if (latest) {
-                      return (
-                        <div style={{
-                          marginTop: 6,
-                          padding: '8px',
-                          background: '#fff8e1',
-                          borderRadius: '6px',
-                          border: '1px solid #ffe0b2'
-                        }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#e65100', marginBottom: 4 }}>🎁 News</div>
-                          <div style={{ fontSize: 13, color: '#5d4037' }}>{latest.title || 'Бонус'}</div>
-                          {(latest.standardFree || latest.vipFree || latest.stageFree) && (
-                            <div style={{ fontSize: 12, color: '#6d4c41', marginTop: 2 }}>
-                              {latest.standardFree ? `Энгийн: ${latest.standardFree} суудал сул` : ''}
-                              {latest.vipFree ? `${latest.standardFree ? ' • ' : ''}VIP: ${latest.vipFree} суудал сул` : ''}
-                              {latest.stageFree ? `${(latest.standardFree || latest.vipFree) ? ' • ' : ''}Stage: ${latest.stageFree} суудал сул` : ''}
-                            </div>
-                          )}
-                          {(latest.text || latest.description) && (
-                            <div style={{ fontSize: 12, color: '#6d4c41', marginTop: 4 }}>
-                              {snippet(latest.text || latest.description)}
-                            </div>
-                          )}
-                          {latest.expiresAt && (
-                            <div style={{ fontSize: 11, color: '#8d6e63', marginTop: 2 }}>
-                              Дуусах хугацаа: {new Date(latest.expiresAt).toLocaleString()}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                    // Бонус байхгүй бол хуучин байдлаар хаягийг харуулна
-                    return <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{c.address}</div>;
-                  })()}
-                  {c.phone && <div style={{ marginTop: 6, fontSize: 13 }}>📞 {c.phone}</div>}
-                
-                {/* Үнийн мэдээлэл */}
-                {(c.pricing || c.price) && (
-                  <div style={{ 
-                    marginTop: 8, 
-                    padding: '8px', 
-                    background: '#f8f9fa', 
-                    borderRadius: '6px',
-                    fontSize: 12
-                  }}>
-                    <div style={{ fontWeight: '600', color: '#333', marginBottom: 4 }}>💰 Үнэ:</div>
-                    {c.pricing?.standard && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        color: '#666'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: c.occupancy?.standard !== undefined 
-                              ? getOccupancyColor(c.occupancy.standard) 
-                              : '#ddd'
-                          }}></div>
-                          • Энгийн: {c.pricing.standard}
-                        </div>
-
-                      </div>
-                    )}
-                    {c.pricing?.vip && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        color: '#e91e63'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: c.occupancy?.vip !== undefined 
-                              ? getOccupancyColor(c.occupancy.vip) 
-                              : '#ddd'
-                          }}></div>
-                          • VIP: {c.pricing.vip}
-                        </div>
-
-                      </div>
-                    )}
-                    {c.pricing?.stage && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        color: '#9c27b0'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: c.occupancy?.stage !== undefined 
-                              ? getOccupancyColor(c.occupancy.stage) 
-                              : '#ddd'
-                          }}></div>
-                          • Stage: {c.pricing.stage}
-                        </div>
-
-                      </div>
-                    )}
-                    {c.price && !c.pricing && (
-                      <div style={{ color: '#666' }}>• {c.price}</div>
-                    )}
+        return (
+          <Marker key={markerKey} {...markerProps}>
+            <Popup className="custom-popup" minWidth={300} maxWidth={340}>
+              <div className="popup-card">
+                {/* Header Image */}
+                <div className="popup-image-container">
+                  <img 
+                    src={
+                      (c.images && c.images.length > 0 && typeof c.images[0] === 'object' && (c.images[0].thumbnail || c.images[0].highQuality)) || 
+                      (c.images && c.images.length > 0 && typeof c.images[0] === 'string' && c.images[0]) || 
+                      c.image || 
+                      "/logo192.png"
+                    } 
+                    alt={c.name} 
+                    className="popup-image"
+                    onError={(e) => {e.target.onerror=null; e.target.src="/logo192.png"}}
+                  />
+                  <div className="popup-rating-badge">
+                    <FaStar className="star-icon" /> {c.rating || 4.5}
                   </div>
-                )}
+                  {c.occupancy && (
+                    <div className={`popup-status-badge ${
+                      (c.occupancy.standard || 0) > 80 ? 'busy' : 
+                      (c.occupancy.standard || 0) > 50 ? 'moderate' : 'free'
+                    }`}>
+                      {(c.occupancy.standard || 0) > 80 ? 'Дүүрсэн' : 
+                       (c.occupancy.standard || 0) > 50 ? 'Дундаж' : 'Чөлөөтэй'}
+                    </div>
+                  )}
+                </div>
 
-                {/* Ачаалалын мэдээлэл - төлбөртэй хэрэглэгчдэд л харуулах */}
-                {canViewDetails && c.occupancy && (
-                  <div style={{ 
-                    marginTop: 8, 
-                    padding: '8px', 
-                    background: '#e8f5e8', 
-                    borderRadius: '6px',
-                    fontSize: 12,
-                    border: '1px solid #c8e6c9'
-                  }}>
-                    <div style={{ fontWeight: '600', color: '#2e7d32', marginBottom: 4 }}>📊 Бодит цагийн ачаалал:</div>
-                    {c.occupancy.standard !== undefined && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between',
-                        padding: '4px 8px',
-                        background: 'rgba(76, 175, 80, 0.1)',
-                        borderRadius: '4px',
-                        marginBottom: '4px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            background: getOccupancyColor(c.occupancy.standard)
-                          }}></div>
-                          <span style={{ fontWeight: '500' }}>Энгийн компьютер:</span>
+                <div className="popup-content-body">
+                  <h3 className="popup-title">{c.name}</h3>
+                  
+                  {canViewDetails ? (
+                    <>
+                      <div className="popup-info-grid">
+                        <div className="popup-info-item">
+                          <FaMapMarkerAlt className="info-icon" />
+                          <span>{c.address || 'Хаяг тодорхойгүй'}</span>
                         </div>
-                        <span style={{ 
-                          fontWeight: 'bold', 
-                          color: getOccupancyColor(c.occupancy.standard),
-                          fontSize: '14px'
-                        }}>{c.occupancy.standard}%</span>
-                      </div>
-                    )}
-                    {c.occupancy.vip !== undefined && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between',
-                        padding: '4px 8px',
-                        background: 'rgba(233, 30, 99, 0.1)',
-                        borderRadius: '4px',
-                        marginBottom: '4px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            background: getOccupancyColor(c.occupancy.vip)
-                          }}></div>
-                          <span style={{ fontWeight: '500' }}>VIP компьютер:</span>
+                        <div className="popup-info-item">
+                          <FaClock className="info-icon" />
+                          <span>{c.opening || '24/7'}</span>
                         </div>
-                        <span style={{ 
-                          fontWeight: 'bold', 
-                          color: getOccupancyColor(c.occupancy.vip),
-                          fontSize: '14px'
-                        }}>{c.occupancy.vip}%</span>
-                      </div>
-                    )}
-                    {c.occupancy.stage !== undefined && (
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between',
-                        padding: '4px 8px',
-                        background: 'rgba(156, 39, 176, 0.1)',
-                        borderRadius: '4px',
-                        marginBottom: '4px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            background: getOccupancyColor(c.occupancy.stage)
-                          }}></div>
-                          <span style={{ fontWeight: '500' }}>Stage компьютер:</span>
+                        <div className="popup-info-item">
+                          <FaPhone className="info-icon" />
+                          <a href={`tel:${c.phone}`} onClick={(e) => e.stopPropagation()}>{c.phone || '-'}</a>
                         </div>
-                        <span style={{ 
-                          fontWeight: 'bold', 
-                          color: getOccupancyColor(c.occupancy.stage),
-                          fontSize: '14px'
-                        }}>{c.occupancy.stage}%</span>
                       </div>
-                    )}
-                  </div>
-                )}
-                
-                <div style={{ 
-                  marginTop: 8, 
-                  padding: '6px 8px', 
-                  background: '#f0f8ff', 
-                  borderRadius: '4px',
-                  fontSize: 11,
-                  color: '#0066cc',
-                  textAlign: 'center',
-                  border: '1px solid #e0e8ff'
-                }}>
-                  💡 Marker дээр 2 удаа дарж дэлгэрэнгүй үзнэ үү
+
+                      {c.description && (
+                        <div className="popup-description">
+                          {c.description.length > 60 ? c.description.substring(0, 60) + '...' : c.description}
+                        </div>
+                      )}
+
+                      {/* Occupancy Details */}
+                      {c.occupancy && (
+                        <div className="popup-occupancy-grid">
+                          <div className="occupancy-item">
+                            <span className="occ-label">Заал</span>
+                            <div className="occ-bar">
+                              <div className="occ-fill" style={{width: `${c.occupancy.standard || 0}%`, background: getOccupancyColor(c.occupancy.standard || 0)}}></div>
+                            </div>
+                            <span className="occ-val">{c.occupancy.standard || 0}%</span>
+                          </div>
+                          <div className="occupancy-item">
+                            <span className="occ-label">VIP</span>
+                            <div className="occ-bar">
+                              <div className="occ-fill" style={{width: `${c.occupancy.vip || 0}%`, background: getOccupancyColor(c.occupancy.vip || 0)}}></div>
+                            </div>
+                            <span className="occ-val">{c.occupancy.vip || 0}%</span>
+                          </div>
+                          <div className="occupancy-item">
+                            <span className="occ-label">Stage</span>
+                            <div className="occ-bar">
+                              <div className="occ-fill" style={{width: `${c.occupancy.stage || 0}%`, background: getOccupancyColor(c.occupancy.stage || 0)}}></div>
+                            </div>
+                            <span className="occ-val">{c.occupancy.stage || 0}%</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="popup-pricing-box">
+                        <div className="price-row">
+                          <span className="price-label">Энгийн</span>
+                          <span className="price-value">{c.pricing?.standard || 3000}₮</span>
+                        </div>
+                        <div className="price-row">
+                          <span className="price-label">VIP</span>
+                          <span className="price-value">{c.pricing?.vip || 5000}₮</span>
+                        </div>
+                        <div className="price-row">
+                          <span className="price-label">Stage</span>
+                          <span className="price-value">{c.pricing?.stage || 6000}₮</span>
+                        </div>
+                        <div className="price-row">
+                          <span className="price-label">Хоног</span>
+                          <span className="price-value">{c.pricing?.overnight || 15000}₮</span>
+                        </div>
+                      </div>
+
+                      <div className="popup-actions">
+                        <button 
+                          className="popup-btn-primary"
+                          onClick={() => navigate(`/center/${c._id}`)}
+                        >
+                          Дэлгэрэнгүй
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="popup-locked-view">
+                      <div className="locked-icon-wrapper">
+                        <div className="locked-icon">🔒</div>
+                      </div>
+                      <p>Дэлгэрэнгүй мэдээлэл харахын тулд эрхээ идэвхжүүлнэ үү.</p>
+                      <button 
+                        className="popup-btn-upgrade"
+                        onClick={() => navigate('/profile')}
+                      >
+                        Эрх авах
+                      </button>
+                    </div>
+                  )}
                 </div>
-                </div>
-              </Popup>
-            )}
-            </Marker>
-          );
-        })}
-        {focus && <FlyToOnChange center={focus} />}
-      </MapContainer>
-    </div>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+      
+      <style jsx>{`
+        .popup-card {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .popup-image-container {
+          position: relative;
+          width: 100%;
+          padding-top: 56.25%; /* 16:9 Aspect Ratio */
+          overflow: hidden;
+        }
+        .popup-image {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-bottom: 2px solid #f3f4f6;
+        }
+        .popup-rating-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 12px;
+          padding: 4px 8px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #333;
+          font-weight: 500;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        .star-icon {
+          color: #f59e0b;
+          font-size: 14px;
+        }
+        .popup-status-badge {
+          position: absolute;
+          bottom: 8px;
+          left: 8px;
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 12px;
+          padding: 4px 8px;
+          font-size: 12px;
+          font-weight: 500;
+          color: #333;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        .popup-content-body {
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .popup-title {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #111;
+        }
+        .popup-info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        .popup-info-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #555;
+        }
+        .info-icon {
+          color: #2563eb;
+          font-size: 16px;
+        }
+        .popup-pricing-box {
+          background: #f9fafb;
+          border-radius: 8px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .price-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 16px;
+          color: #333;
+        }
+        .price-label {
+          font-weight: 500;
+        }
+        .price-value {
+          font-weight: 600;
+          color: #2563eb;
+        }
+        .popup-actions {
+          display: flex;
+          justify-content: flex-end;
+        }
+        .popup-btn-primary {
+          background: #2563eb;
+          color: white;
+          padding: 10px 16px;
+          border: none;
+          border-radius: 6px;
+          font-size: 16px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.3s;
+        }
+        .popup-btn-primary:hover {
+          background: #1d4ed8;
+        }
+        .popup-locked-view {
+          text-align: center;
+          padding: 16px 0;
+        }
+        .locked-icon-wrapper {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 8px;
+        }
+        .locked-icon {
+          font-size: 28px;
+          color: #f59e0b;
+        }
+        .popup-btn-upgrade {
+          background: #f59e0b;
+          color: white;
+          padding: 10px 16px;
+          border: none;
+          border-radius: 6px;
+          font-size: 16px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.3s;
+        }
+        .popup-btn-upgrade:hover {
+          background: #d97706;
+        }
+      `}</style>
+    </>
   );
 }

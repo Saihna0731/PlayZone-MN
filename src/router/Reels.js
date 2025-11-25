@@ -26,9 +26,8 @@ const EmbedIframe = React.memo(function EmbedIframe({ embedCode, fullscreen }) {
         isVertical = true;
         const plugin = new URL('https://www.facebook.com/plugins/video.php');
         plugin.searchParams.set('href', url.toString());
-        plugin.searchParams.set('autoplay', '1');
-        plugin.searchParams.set('mute', '1');
-        plugin.searchParams.set('muted', '1');
+        // Disable autoplay for Facebook to avoid layout/control issues on mobile
+        plugin.searchParams.set('autoplay', '0');
         plugin.searchParams.set('playsinline', '1');
         plugin.searchParams.set('show_text', '0');
         // width/height-ийг дараа нь бодитоор хэмжиж тохируулна
@@ -91,9 +90,8 @@ const EmbedIframe = React.memo(function EmbedIframe({ embedCode, fullscreen }) {
         }
       } else if (host.includes('facebook.com')) {
         // FB plugins/video.php
-        url.searchParams.set('autoplay', '1');
-        url.searchParams.set('mute', '1');
-        url.searchParams.set('muted', '1');
+        // Disable autoplay for Facebook embeds
+        url.searchParams.set('autoplay', '0');
         url.searchParams.set('playsinline', '1');
         // show-text байхгүй/эсвэл 0 бол илүү цэвэр харагдана
         if (!url.searchParams.has('show_text')) url.searchParams.set('show_text', '0');
@@ -166,6 +164,12 @@ const EmbedIframe = React.memo(function EmbedIframe({ embedCode, fullscreen }) {
       </div>
     );
   }
+  // Build provider-specific iframe allow list (no autoplay for Facebook)
+  const isFacebook = /facebook\.com/i.test(finalSrc || baseSrc || '');
+  const allowFeatures = isFacebook
+    ? 'clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen'
+    : 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen';
+
   return (
     <div ref={boxRef} className={`reels-embed-box ${fullscreen ? 'fullscreen' : ''} ${isVertical ? 'vertical' : ''}`}>
       <iframe
@@ -173,7 +177,7 @@ const EmbedIframe = React.memo(function EmbedIframe({ embedCode, fullscreen }) {
         src={finalSrc}
         title="Embedded Video"
         frameBorder="0"
-        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
+        allow={allowFeatures}
         referrerPolicy="no-referrer-when-downgrade"
         scrolling="no"
         allowFullScreen
@@ -282,8 +286,9 @@ export default function Reels() {
   const handleOwnerClick = (centerId) => {
     if (!canViewDetails) {
       window.dispatchEvent(new CustomEvent('toast:show', {
-        detail: { type: 'error', message: 'Дэлгэрэнгүй үзэхийн тулд төлбөртэй план авах шаардлагатай' }
+        detail: { type: 'warning', message: 'Дэлгэрэнгүй үзэхийн тулд эрх идэвхжүүлнэ үү' }
       }));
+      navigate('/profile');
       return;
     }
     navigate(`/center/${centerId}`);
@@ -456,9 +461,181 @@ export default function Reels() {
 
   if (loading) {
     return (
-      <div className="reels-loading">
-        <div className="reels-loading-spinner"></div>
-        <p className="reels-loading-text">Loading reels...</p>
+      <div className="reels-loading" style={{ background: '#0f172a' }}>
+        <div style={{
+          position: 'relative',
+          width: '80px',
+          height: '80px',
+          marginBottom: '24px'
+        }}>
+          {/* Christmas tree spinner */}
+          <div style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            animation: 'spin 2s linear infinite'
+          }}>
+            <div style={{
+              fontSize: '60px',
+              filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.6))'
+            }}>🎄</div>
+          </div>
+          <style>{`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+        <p className="reels-loading-text" style={{
+          background: 'linear-gradient(135deg, #ef4444, #22c55e)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          fontSize: '18px',
+          fontWeight: '700',
+          animation: 'pulse 1.5s ease-in-out infinite'
+        }}>
+          🎅 Loading Christmas Reels... 🎁
+        </p>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (!canViewDetails) {
+    return (
+      <div className="reels-container" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button className="reels-back-button" onClick={() => navigate(-1)} style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1000 }}>
+          <FaArrowLeft />
+        </button>
+        <div style={{
+          maxWidth: "400px",
+          width: "90%",
+          background: "rgba(15, 23, 42, 0.95)",
+          backdropFilter: "blur(20px)",
+          borderRadius: "24px",
+          padding: "40px 32px",
+          textAlign: "center",
+          color: "white",
+          border: "2px solid rgba(239, 68, 68, 0.3)",
+          boxShadow: '0 20px 60px rgba(239, 68, 68, 0.3)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Christmas decorations */}
+          <div style={{
+            position: 'absolute',
+            top: '-10px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '40px',
+            animation: 'swing 2s ease-in-out infinite'
+          }}>🎄</div>
+          <style>{`
+            @keyframes swing {
+              0%, 100% { transform: translateX(-50%) rotate(-5deg); }
+              50% { transform: translateX(-50%) rotate(5deg); }
+            }
+          `}</style>
+          
+          <div style={{ 
+            fontSize: "80px", 
+            marginBottom: "20px",
+            animation: 'bounce 1s ease-in-out infinite'
+          }}>🔒</div>
+          <style>{`
+            @keyframes bounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-10px); }
+            }
+          `}</style>
+          
+          <h2 style={{ 
+            margin: "0 0 12px 0", 
+            fontSize: "24px",
+            background: 'linear-gradient(135deg, #ef4444, #f97316)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontWeight: '800'
+          }}>
+            🎅 Эрх идэвхжүүлэх 🎁
+          </h2>
+          <p style={{ 
+            margin: "0 0 24px 0", 
+            color: "#cbd5e1", 
+            fontSize: "15px", 
+            lineHeight: "1.6" 
+          }}>
+            Reels үзэхийн тулд эрхээ идэвхжүүлнэ үү.
+          </p>
+          <button
+            onClick={() => navigate('/profile')}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              fontWeight: "700",
+              fontSize: "15px",
+              cursor: "pointer",
+              boxShadow: "0 4px 20px rgba(239, 68, 68, 0.5)",
+              transition: 'all 0.3s',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 6px 25px rgba(239, 68, 68, 0.6)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 20px rgba(239, 68, 68, 0.5)';
+            }}
+          >
+            ⭐ Эрх идэвхжүүлэх ⭐
+          </button>
+          
+          {/* Snowflakes */}
+          <div style={{
+            position: 'absolute',
+            top: '10%',
+            left: '10%',
+            fontSize: '20px',
+            animation: 'fall 3s linear infinite',
+            opacity: 0.7
+          }}>❄️</div>
+          <div style={{
+            position: 'absolute',
+            top: '20%',
+            right: '15%',
+            fontSize: '16px',
+            animation: 'fall 4s linear infinite 0.5s',
+            opacity: 0.6
+          }}>❄️</div>
+          <div style={{
+            position: 'absolute',
+            top: '5%',
+            right: '25%',
+            fontSize: '18px',
+            animation: 'fall 3.5s linear infinite 1s',
+            opacity: 0.5
+          }}>❄️</div>
+          <style>{`
+            @keyframes fall {
+              0% { transform: translateY(0) rotate(0deg); }
+              100% { transform: translateY(300px) rotate(360deg); }
+            }
+          `}</style>
+        </div>
       </div>
     );
   }

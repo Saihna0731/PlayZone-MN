@@ -74,9 +74,9 @@ export default function List() {
     setFormOpen(false);
     // show toast AFTER panel closes
     setTimeout(() => {
-      setToast({ type: 'success', message: saved?._id ? 'PC Center амжилттай хадгалагдлаа' : 'PC Center амжилттай нэмэгдлээ' });
+      setToast({ type: 'success', message: saved?._id ? 'Game Center амжилттай хадгалагдлаа' : 'Game Center амжилттай нэмэгдлээ' });
       // Also broadcast globally for other pages if needed
-      window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: 'PC Center амжилттай нэмэгдлээ' } }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: 'Game Center амжилттай нэмэгдлээ' } }));
     }, 50);
   };
 
@@ -91,7 +91,7 @@ export default function List() {
       const token = localStorage.getItem('token');
       await axios.delete(`${API_BASE}/api/centers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       window.dispatchEvent(new CustomEvent("centers:updated"));
-      setToast({ type: 'info', message: 'PC Center устгагдлаа' });
+      setToast({ type: 'info', message: 'Game Center устгагдлаа' });
     } catch (err) {
       console.error("delete:", err);
       setToast({ type: 'error', message: err.response?.data?.message || 'Устгах үед алдаа гарлаа' });
@@ -361,6 +361,11 @@ export default function List() {
             >
               Playstation
             </button>
+            <button
+            type="button"
+            onClick={() => setCategory('Pc gaming')}
+            className={`category-chip ${category === 'Pc gaming' ? 'active' : ''}`}
+            ></button>
             <button
               type="button"
               onClick={() => setCategory('Billard')}

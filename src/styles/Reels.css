@@ -1,4 +1,4 @@
-/* Reels.css - Загварлаг Reels хуудас */
+/* Reels.css - Eveno Clean Reels Page */
 
 .reels-container {
   position: fixed;
@@ -12,7 +12,6 @@
   background: #000;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  /* Reserve a virtual height for embed player controls so overlays don't cover them */
   --player-controls-height: 84px;
 }
 

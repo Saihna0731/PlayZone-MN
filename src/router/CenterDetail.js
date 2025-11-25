@@ -1,25 +1,398 @@
-
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { FaPhone, FaMapMarkerAlt, FaClock, FaGlobe, FaEnvelope, FaStar, FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaPlay, FaBell } from "react-icons/fa";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { FaPhone, FaMapMarkerAlt, FaClock, FaGlobe, FaEnvelope, FaStar, FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaBell, FaLock, FaGift } from "react-icons/fa";
 import axios from "axios";
 import { API_BASE } from "../config";
 import "../styles/CenterDetail.css";
+import BookingModal from "../components/LittleComponents/BookingModal";
+import { useAuth } from "../contexts/AuthContext";
+import { useSubscription } from "../hooks/useSubscription";
+import Toast from "../components/LittleComponents/Toast";
 
-// Текстийг товчлох helper
-const snippet = (s, max = 140) => {
-  if (!s || typeof s !== 'string') return '';
-  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
-};
+// Текстийг товчлох helper (unused) — устгав
 
 export default function CenterDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
+  const { canViewDetails, loading: subLoading } = useSubscription();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [centerData, setCenterData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [videoModal, setVideoModal] = useState({ isOpen: false, content: null, title: "" });
   const [bonusPanelOpen, setBonusPanelOpen] = useState(false);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const handleBookingConfirm = async (bookingData) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setToast({ message: "Та эхлээд нэвтэрнэ үү", type: "error", id: Date.now() });
+        return;
+      }
+
+      await axios.post(`${API_BASE}/api/bookings`, { 
+        centerId: id, 
+        ...bookingData 
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setBookingModalOpen(false);
+      setToast({ message: "Захиалга амжилттай илгээгдлээ! Эзэмшигч баталгаажуулахыг хүлээнэ үү.", type: "success", id: Date.now() });
+    } catch (error) {
+      console.error("Booking error:", error);
+      setToast({ message: "Захиалга өгөхөд алдаа гарлаа", type: "error", id: Date.now() });
+    }
+  };
+
+  // Helper: Get high quality image
+  const getHighQualityImage = (img) => {
+    if (!img) return "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&h=900&fit=crop&q=90&auto=format";
+    let src = img;
+    if (typeof img === 'object' && img.highQuality) {
+      src = img.highQuality;
+    } else if (typeof img === 'object' && img.url) {
+      src = img.url;
+    }
+    
+    // Enhance Unsplash quality if detected
+    if (typeof src === 'string' && src.includes('images.unsplash.com')) {
+       // Ensure high quality params
+       if (!src.includes('q=')) src += '&q=100';
+       else src = src.replace(/q=\d+/, 'q=100');
+    }
+    return src;
+  };
+
+  // Helper: responsive iframe renderer with provider-specific tweaks
+  const ResponsiveEmbed = ({ src, title = 'Embedded Video' }) => {
+    try {
+      const u = new URL(src, window.location.href);
+      const host = u.hostname || '';
+      let isVertical = false;
+
+      if (host.includes('youtube.com') || host.includes('youtu.be')) {
+        if (/\/shorts\//i.test(u.pathname)) isVertical = true;
+      }
+      if (host.includes('facebook.com')) {
+        // Normalize to plugins/video.php if a plain video/reel URL is provided
+        if (!/\/plugins\/video\.php/i.test(u.pathname)) {
+          const plugin = new URL('https://www.facebook.com/plugins/video.php');
+          plugin.searchParams.set('href', u.toString());
+          plugin.searchParams.set('show_text', '0');
+          plugin.searchParams.set('playsinline', '1');
+          plugin.searchParams.set('autoplay', '0');
+          src = plugin.toString();
+        } else {
+          // Ensure params for good UX
+          u.searchParams.set('show_text', u.searchParams.get('show_text') ?? '0');
+          u.searchParams.set('playsinline', '1');
+          u.searchParams.set('autoplay', '0');
+          src = u.toString();
+        }
+        const href = new URL(src, window.location.href).searchParams.get('href') || '';
+        if (/\/reel(s)?\//i.test(href)) isVertical = true;
+      }
+
+      const boxStyle = {
+        position: 'relative',
+        width: '100%',
+        paddingTop: isVertical ? '150%' : '56.25%', // бага зэрэг томруулна
+        borderRadius: '12px',
+        overflow: 'hidden',
+        background: '#000'
+      };
+      const iframeStyle = {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        border: 0,
+        overflow: 'hidden'
+      };
+      const isFB = /facebook\.com/i.test(src);
+      const allow = isFB
+        ? 'clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen'
+        : 'autoplay; encrypted-media; picture-in-picture; web-share; fullscreen';
+      return (
+        <div style={boxStyle} onClick={(e) => { e.stopPropagation(); setVideoModal({ isOpen: true, content: (
+          <iframe src={src} title={title} allow={allow} allowFullScreen style={{ width:'100%', height:'100%', border:0 }} />
+        ), title }); }}>
+          <iframe src={src} title={title} allow={allow} allowFullScreen style={iframeStyle} />
+        </div>
+      );
+    } catch {
+      // Fallback simple iframe
+      return (
+        <div style={{ position:'relative', width:'100%', paddingTop:'56.25%', borderRadius:'12px', overflow:'hidden', background:'#000' }}>
+          <iframe src={src} title={title} allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen" allowFullScreen style={{ position:'absolute', inset:0, width:'100%', height:'100%', border:0 }} />
+        </div>
+      );
+    }
+  };
+
+  // Component: Video Card with Inline Play
+  const VideoCard = ({ embed, index }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const cleanEmbed = embed.trim();
+
+    // Extract dimensions
+    const widthMatch = /width="(\d+)"/i.exec(cleanEmbed);
+    const heightMatch = /height="(\d+)"/i.exec(cleanEmbed);
+    let embedWidth = widthMatch ? parseInt(widthMatch[1]) : null;
+    let embedHeight = heightMatch ? parseInt(heightMatch[1]) : null;
+
+    // Detect vertical orientation - most social media videos are vertical
+    let isVertical = /shorts\//i.test(cleanEmbed) || /reel(s)?\//i.test(cleanEmbed) || /instagram\.com\/p\//i.test(cleanEmbed) || /instagram\.com\/reel\//i.test(cleanEmbed) || /facebook\.com\//i.test(cleanEmbed) || /fb\.com\//i.test(cleanEmbed);
+    if (embedWidth && embedHeight && !isVertical) {
+        isVertical = embedHeight > embedWidth;
+    }
+
+    // Responsive video cards - mobile full width, desktop limited width
+    const cardStyle = {
+      position: 'relative',
+      width: '100%',
+      maxWidth: '500px', // Limit width on desktop
+      aspectRatio: '9/16', // Consistent vertical aspect ratio
+      borderRadius: 16,
+      overflow: 'hidden',
+      background: '#000',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxSizing: 'border-box',
+      border: '1px solid rgba(0,0,0,0.1)',
+      marginBottom: 12,
+      margin: '0 auto 12px auto' // Center on desktop
+    };
+
+    const expandButtonStyle = {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      zIndex: 10,
+      background: 'rgba(0,0,0,0.6)',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '50%',
+      width: 32,
+      height: 32,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      backdropFilter: 'blur(4px)'
+    };
+
+    // 1. Iframe Embeds
+    if (cleanEmbed.includes('<iframe')) {
+      const srcMatch = /src="([^"]+)"/i.exec(cleanEmbed);
+      let src = srcMatch ? srcMatch[1] : '';
+      
+      // Facebook Autoplay Fix
+      if (src && (src.includes('facebook.com') || src.includes('fb.com'))) {
+          if (!src.includes('autoplay=')) {
+               src += (src.includes('?') ? '&' : '?');//-autoplay && -mute
+          }
+      }
+
+      return (
+        <div style={cardStyle}>
+          <div style={{ width: '100%', height: '100%', pointerEvents: isPlaying ? 'auto' : 'none' }}>
+            <iframe
+              src={src}
+              title={`Preview ${index + 1}`}
+              allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
+              scrolling="no"
+              style={{ width:'100%', height:'100%', border:0, objectFit:'contain' }}
+            />
+          </div>
+          
+          {/* Inline Play Button */}
+          {!isPlaying && (
+            <div 
+              onClick={() => setIsPlaying(true)}
+              style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(transparent, rgba(0,0,0,0.35))', cursor: 'pointer'}}
+            > 
+              <div style={{background:'rgba(255,255,255,0.95)', width:48, height:48, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#e11d48', fontWeight:900, boxShadow: '0 4px 12px rgba(0,0,0,0.2)'}}>▶</div>
+            </div>
+          )}
+
+          {/* Expand Button */}
+          <button 
+            style={expandButtonStyle}
+            onClick={(e) => {
+              e.stopPropagation();
+              setVideoModal({ isOpen: true, content: (<ResponsiveEmbed src={src} title="" />), title: "" });
+            }}
+            title="Томруулах"
+          >
+            <FaExpand size={14} />
+          </button>
+        </div>
+      );
+    }
+
+    // 2. Video Tag
+    if (cleanEmbed.includes('<video')) {
+      return (
+        <div style={cardStyle}>
+           <div style={{position:'relative',width:'100%',height:'100%'}} dangerouslySetInnerHTML={{ __html: cleanEmbed.replace(/width="[^"]*"/g, '').replace(/height="[^"]*"/g, '').replace('<video','<video style="width:100%;height:100%;object-fit:cover;" ' + (isPlaying ? 'controls autoplay' : 'muted loop playsinline autoplay')) }} />
+          
+          {!isPlaying && (
+            <div 
+              onClick={() => setIsPlaying(true)}
+              style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(transparent, rgba(0,0,0,0.35))', cursor: 'pointer'}}
+            >
+               <div style={{background:'rgba(255,255,255,0.95)', width:48, height:48, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#e11d48', fontWeight:900, boxShadow: '0 4px 12px rgba(0,0,0,0.2)'}}>▶</div>
+            </div>
+          )}
+
+          <button 
+            style={expandButtonStyle}
+            onClick={(e) => {
+              e.stopPropagation();
+              setVideoModal({ isOpen: true, content: (<div style={{position:'relative',width:'100%',height:'100%'}} dangerouslySetInnerHTML={{ __html: cleanEmbed.replace(/width="[^"]*"/g, '').replace(/height="[^"]*"/g, '').replace('<video','<video style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;border:0;border-radius:12px;" controls autoplay') }} />), title: "" });
+            }}
+            title="Томруулах"
+          >
+            <FaExpand size={14} />
+          </button>
+        </div>
+      );
+    }
+
+    // 3. YouTube
+    if (cleanEmbed.includes('youtube.com/watch') || cleanEmbed.includes('youtu.be/')) {
+      const videoId = cleanEmbed.includes('youtu.be/') 
+        ? cleanEmbed.split('youtu.be/')[1].split('?')[0].split('&')[0]
+        : cleanEmbed.split('v=')[1]?.split('&')[0];
+      
+      if (videoId) {
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        return (
+          <div style={cardStyle}>
+            {isPlaying ? (
+               <iframe
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1&modestbranding=1&rel=0`}
+                title=""
+                allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
+                style={{width:'100%',height:'100%',border:0}}
+                allowFullScreen
+              />
+            ) : (
+              <>
+                <div style={{position:'absolute', inset:0, backgroundImage:`url(${thumbnailUrl})`, backgroundSize:'cover', backgroundPosition:'center'}} />
+                <div 
+                  onClick={() => setIsPlaying(true)}
+                  style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(transparent, rgba(0,0,0,0.35))', cursor: 'pointer'}}
+                > 
+                  <div style={{background:'rgba(255,255,255,0.95)', width:48, height:48, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#e11d48', fontWeight:900, boxShadow: '0 4px 12px rgba(0,0,0,0.2)'}}>▶</div>
+                </div>
+              </>
+            )}
+
+            <button 
+              style={expandButtonStyle}
+              onClick={(e) => {
+                e.stopPropagation();
+                setVideoModal({ isOpen: true, content: (
+                  <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <iframe
+                      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1&modestbranding=1&rel=0`}
+                      title=""
+                      allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
+                      style={{maxWidth:'100%',maxHeight:'100%',width:'100%',height:'100%',border:0}}
+                      allowFullScreen
+                    />
+                  </div>
+                ), title: "" });
+              }}
+              title="Томруулах"
+            >
+              <FaExpand size={14} />
+            </button>
+          </div>
+        );
+      }
+    }
+
+    // 4. Facebook
+    if (cleanEmbed.includes('facebook.com/') || cleanEmbed.includes('fb.com/')) {
+        let previewSrc = cleanEmbed;
+        try {
+            const u = new URL(cleanEmbed, window.location.href);
+            if (!/\/plugins\/video\.php/i.test(u.pathname)) {
+                const plugin = new URL('https://www.facebook.com/plugins/video.php');
+                plugin.searchParams.set('href', u.toString());
+                plugin.searchParams.set('show_text', '0');
+                plugin.searchParams.set('playsinline', '1');
+                plugin.searchParams.set('autoplay', isPlaying ? '1' : '0');
+                // plugin.searchParams.set('mute', '0'); 
+                previewSrc = plugin.toString();
+            } else {
+                u.searchParams.set('autoplay', isPlaying ? '1' : '0');
+                previewSrc = u.toString();
+            }
+        } catch {}
+
+        return (
+            <div style={cardStyle}>
+                <div style={{ width: '100%', height: '100%', pointerEvents: isPlaying ? 'auto' : 'none' }}>
+                    <iframe
+                        src={previewSrc}
+                        title=""
+                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
+                        scrolling="no"
+                        style={{ width:'100%', height:'100%', border:0, objectFit:'contain' }}
+                    />
+                </div>
+                
+                {!isPlaying && (
+                    <div 
+                        onClick={() => setIsPlaying(true)}
+                        style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(transparent, rgba(0,0,0,0.35))', cursor: 'pointer'}}
+                    >
+                        <div style={{background:'rgba(255,255,255,0.95)', width:48, height:48, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#e11d48', fontWeight:900, boxShadow: '0 4px 12px rgba(0,0,0,0.2)'}}>▶</div>
+                    </div>
+                )}
+                
+                <button 
+                    style={expandButtonStyle}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setVideoModal({ isOpen: true, content: (<ResponsiveEmbed src={cleanEmbed} title="" />), title: "" });
+                    }}
+                    title="Томруулах"
+                >
+                    <FaExpand size={14} />
+                </button>
+            </div>
+        );
+    }
+
+    // Default fallback for others
+    return (
+       <div style={cardStyle}>
+          <div style={{padding: 20, textAlign: 'center', color: '#fff'}}>
+             Video Preview
+          </div>
+          <button 
+            style={expandButtonStyle}
+            onClick={() => setVideoModal({ isOpen: true, content: (<ResponsiveEmbed src={cleanEmbed} title="" />), title: "" })}
+          >
+            <FaExpand size={14} />
+          </button>
+       </div>
+    );
+  };
+
+  // Helper: responsive iframe renderer with provider-specific tweaks
+
 
   useEffect(() => {
     const fetchCenter = async () => {
@@ -113,6 +486,121 @@ export default function CenterDetail() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (location.state?.openBonus) {
+      setBonusPanelOpen(true);
+      // Clear state so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
+  if (subLoading) {
+    return (
+      <div style={{ 
+        height: "100vh", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center",
+        background: "#f3f4f6"
+      }}>
+        <div className="loading-spinner" style={{
+          width: "40px",
+          height: "40px",
+          border: "3px solid #e5e7eb",
+          borderTopColor: "#2563eb",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite"
+        }} />
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (!canViewDetails) {
+    return (
+      <div style={{ 
+        height: "100vh", 
+        display: "flex", 
+        flexDirection: "column",
+        alignItems: "center", 
+        justifyContent: "center",
+        background: "#f3f4f6",
+        padding: "20px"
+      }}>
+        <div style={{
+          maxWidth: "400px",
+          width: "100%",
+          background: "white",
+          borderRadius: "24px",
+          padding: "40px 32px",
+          textAlign: "center",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.05)"
+        }}>
+          <div style={{ 
+            fontSize: "48px", 
+            marginBottom: "20px",
+            color: "#d97706",
+            background: "#fff7ed",
+            width: "96px",
+            height: "96px",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px auto"
+          }}>
+            <FaLock />
+          </div>
+          <h2 style={{ margin: "0 0 12px 0", fontSize: "24px", color: "#111" }}>
+            Дэлгэрэнгүй мэдээлэл хаалттай
+          </h2>
+          <p style={{ margin: "0 0 24px 0", color: "#6b7280", fontSize: "15px", lineHeight: "1.6" }}>
+            Та энэ төвийн дэлгэрэнгүй мэдээллийг үзэхийн тулд эрхээ идэвхжүүлнэ үү.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <button
+              onClick={() => navigate('/profile')}
+              style={{
+                width: "100%",
+                padding: "14px",
+                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                fontWeight: "700",
+                fontSize: "15px",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)"
+              }}
+            >
+              Эрх идэвхжүүлэх
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                width: "100%",
+                padding: "14px",
+                background: "transparent",
+                color: "#6b7280",
+                border: "none",
+                borderRadius: "12px",
+                fontWeight: "600",
+                fontSize: "15px",
+                cursor: "pointer"
+              }}
+            >
+              Буцах
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const nextImage = () => {
     if (!centerData || !centerData.images) return;
     setCurrentImageIndex((prev) => 
@@ -156,26 +644,40 @@ export default function CenterDetail() {
   return (
     <div className="center-detail-container">
       {/* Image carousel - Airbnb style */}
-      <div className="center-hero-carousel">
+      <div className="center-hero-carousel" style={{ background: '#000', position: 'relative', overflow: 'hidden' }}>
+        {/* Blurred Background for Ambiance */}
+        <div 
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${getHighQualityImage(centerData.images[currentImageIndex])})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(20px) brightness(0.6)',
+            transform: 'scale(1.1)', // Prevent blur edges
+            zIndex: 0
+          }}
+        />
+        
+        {/* Main Image - Contained */}
         <img
-          src={(() => {
-            const currentImage = centerData.images[currentImageIndex];
-            // Шинэ format: object with high quality
-            if (typeof currentImage === 'object' && currentImage.highQuality) {
-              return currentImage.highQuality;
-            }
-            // Хуучин format эсвэл URL зураг
-            return currentImage;
-          })()}
+          src={getHighQualityImage(centerData.images[currentImageIndex])}
           alt={centerData.name}
           className="center-carousel-image"
+          style={{ 
+            objectFit: 'contain', 
+            position: 'relative', 
+            zIndex: 1,
+            width: '100%',
+            height: '100%',
+            backdropFilter: 'none' // Reset any inherited filters
+          }}
           onError={(e) => {
-            // Зураг load болохгүй бол default зураг харуулах
             e.target.src = "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&h=900&fit=crop&q=90&auto=format";
           }}
         />
         {/* Доод градиент overlay – зураг дээрх текстийг тодруулна */}
-        <div className="center-carousel-gradient" />
+        <div className="center-carousel-gradient" style={{ zIndex: 2 }} />
         
         {/* Top overlay controls */}
         <div className="center-carousel-top-controls">
@@ -183,14 +685,14 @@ export default function CenterDetail() {
             <FaTimes />
           </button>
           
-          {/* Notification button with badge */}
+          {/* Bonus button with badge */}
           {centerData.bonus && centerData.bonus.length > 0 && (
             <button 
               onClick={() => setBonusPanelOpen(true)} 
               className="center-notification-btn"
-              aria-label="Бонус мэдэгдэл"
+              aria-label="Бонус"
             >
-              <FaBell />
+              <FaGift />
               <span className="center-notification-badge">{centerData.bonus.length}</span>
             </button>
           )}
@@ -365,492 +867,22 @@ export default function CenterDetail() {
           )}
         </div>
 
-        {/* Embed Videos */}
-        {centerData.embedVideos && centerData.embedVideos.length > 0 && (
+        {/* Embed Videos — Full width vertical layout like Facebook Reels */}
+        {Array.isArray(centerData.embedVideos) && centerData.embedVideos.length > 0 && (
           <div style={{
             background: "#fff",
-            borderRadius: "12px",
+            borderRadius: "16px",
             padding: "20px",
             marginBottom: "20px",
             boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
           }}>
-            <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: "600" }}>
+            <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: "700", color: "#111827" }}>
               🎬 Видео
             </h3>
-            <div style={{ display: "grid", gap: "20px" }}>
-              {centerData.embedVideos.map((embed, index) => {
-                // Clean up the embed string
-                const cleanEmbed = embed.trim();
-                
-                // Check if it's a direct iframe/video embed
-                if (cleanEmbed.includes('<iframe') || cleanEmbed.includes('<video')) {
-                  return (
-                    <div 
-                      key={index}
-                      style={{ 
-                        borderRadius: "12px", 
-                        overflow: "hidden",
-                        background: "#f8f9fa",
-                        border: "1px solid #e9ecef"
-                      }}
-                    >
-                      <div 
-                        dangerouslySetInnerHTML={{ 
-                          __html: cleanEmbed.replace(/width="[^"]*"/g, 'width="100%"').replace(/height="[^"]*"/g, 'height="315"')
-                        }}
-                      />
-                    </div>
-                  );
-                }
-                
-                // YouTube URL processing with enhanced player
-                if (cleanEmbed.includes('youtube.com/watch') || cleanEmbed.includes('youtu.be/')) {
-                  const videoId = cleanEmbed.includes('youtu.be/') 
-                    ? cleanEmbed.split('youtu.be/')[1].split('?')[0].split('&')[0]
-                    : cleanEmbed.split('v=')[1]?.split('&')[0];
-                  
-                  if (videoId) {
-                    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-                    return (
-                      <div key={index} style={{ position: "relative" }}>
-                        {/* YouTube Thumbnail with Play Button */}
-                        <div 
-                          onClick={() => setVideoModal({
-                            isOpen: true,
-                            content: (
-                              <iframe
-                                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&controls=1&fs=1&cc_load_policy=0&iv_load_policy=3&showinfo=1&quality=hd1080`}
-                                width="100%"
-                                height="100%"
-                                frameBorder="0"
-                                allowFullScreen
-                                allow="autoplay; encrypted-media; fullscreen"
-                                title={`YouTube Video ${index + 1}`}
-                                style={{ borderRadius: "12px" }}
-                              />
-                            ),
-                            title: `YouTube Video ${index + 1}`
-                          })}
-                          style={{ 
-                            position: "relative",
-                            borderRadius: "12px", 
-                            overflow: "hidden",
-                            background: "#000",
-                            cursor: "pointer",
-                            backgroundImage: `url(${thumbnailUrl})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            height: "315px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            transition: "transform 0.2s ease, box-shadow 0.2s ease"
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.transform = "scale(1.02)";
-                            e.target.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.transform = "scale(1)";
-                            e.target.style.boxShadow = "none";
-                          }}
-                        >
-                          {/* Dark overlay */}
-                          <div style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            background: "rgba(0,0,0,0.4)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            transition: "background 0.3s ease"
-                          }}>
-                            {/* Large play button */}
-                            <div style={{
-                              background: "rgba(255,255,255,0.95)",
-                              borderRadius: "50%",
-                              width: "80px",
-                              height: "80px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "28px",
-                              color: "#ff0000",
-                              boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
-                              transition: "transform 0.2s ease"
-                            }}>
-                              <FaPlay style={{ marginLeft: "6px" }} />
-                            </div>
-                          </div>
-                          
-                          {/* Quality badge */}
-                          <div style={{
-                            position: "absolute",
-                            top: "12px",
-                            left: "12px",
-                            background: "rgba(255,0,0,0.9)",
-                            color: "white",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            fontSize: "12px",
-                            fontWeight: "600"
-                          }}>
-                            HD
-                          </div>
-                          
-                          {/* Expand button */}
-                          <button
-                            style={{
-                              position: "absolute",
-                              top: "12px",
-                              right: "12px",
-                              background: "rgba(0,0,0,0.8)",
-                              border: "none",
-                              color: "white",
-                              padding: "8px",
-                              borderRadius: "8px",
-                              cursor: "pointer",
-                              fontSize: "14px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              transition: "background 0.2s ease"
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setVideoModal({
-                                isOpen: true,
-                                content: (
-                                  <iframe
-                                    src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&controls=1&fs=1&cc_load_policy=0&iv_load_policy=3&showinfo=1&quality=hd1080`}
-                                    width="100%"
-                                    height="100%"
-                                    frameBorder="0"
-                                    allowFullScreen
-                                    allow="autoplay; encrypted-media; fullscreen"
-                                    title={`YouTube Video ${index + 1}`}
-                                    style={{ borderRadius: "12px" }}
-                                  />
-                                ),
-                                title: `YouTube Video ${index + 1}`
-                              });
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.background = "rgba(0,0,0,0.9)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.background = "rgba(0,0,0,0.8)";
-                            }}
-                          >
-                            <FaExpand />
-                            <span style={{ fontSize: "12px" }}>Томруулах</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
-                }
-                
-                // Facebook video processing with enhanced display
-                if (cleanEmbed.includes('facebook.com/') || cleanEmbed.includes('fb.com/')) {
-                  return (
-                    <div key={index} style={{ position: "relative" }}>
-                      <div style={{ 
-                        borderRadius: "12px", 
-                        overflow: "hidden",
-                        background: "#1877f2",
-                        minHeight: "314px",
-                        position: "relative"
-                      }}>
-                        <iframe
-                          src={`https://www.facebook.com/plugins/video.php?height=314&href=${encodeURIComponent(cleanEmbed)}&show_text=false&width=560&t=0`}
-                          width="100%"
-                          height="314"
-                          style={{ border: "none", overflow: "hidden" }}
-                          scrolling="no"
-                          frameBorder="0"
-                          allowFullScreen={true}
-                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                          title={`Facebook Video ${index + 1}`}
-                        />
-                        
-                        {/* Quality badge */}
-                        <div style={{
-                          position: "absolute",
-                          top: "12px",
-                          left: "12px",
-                          background: "rgba(24,119,242,0.9)",
-                          color: "white",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "12px",
-                          fontWeight: "600"
-                        }}>
-                          FB
-                        </div>
-                        
-                        {/* Expand button */}
-                        <button
-                          style={{
-                            position: "absolute",
-                            top: "12px",
-                            right: "12px",
-                            background: "rgba(0,0,0,0.8)",
-                            border: "none",
-                            color: "white",
-                            padding: "8px",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            fontSize: "14px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px"
-                          }}
-                          onClick={() => setVideoModal({
-                            isOpen: true,
-                            content: (
-                              <iframe
-                                src={`https://www.facebook.com/plugins/video.php?height=600&href=${encodeURIComponent(cleanEmbed)}&show_text=false&width=800&t=0`}
-                                width="100%"
-                                height="100%"
-                                style={{ border: "none", overflow: "hidden" }}
-                                scrolling="no"
-                                frameBorder="0"
-                                allowFullScreen={true}
-                                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                                title={`Facebook Video ${index + 1}`}
-                              />
-                            ),
-                            title: `Facebook Video ${index + 1}`
-                          })}
-                        >
-                          <FaExpand />
-                          <span style={{ fontSize: "12px" }}>Томруулах</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }
-                
-                // Instagram processing with enhanced display
-                if (cleanEmbed.includes('instagram.com/')) {
-                  const postId = cleanEmbed.split('/p/')[1]?.split('/')[0] || cleanEmbed.split('/reel/')[1]?.split('/')[0];
-                  if (postId) {
-                    return (
-                      <div key={index} style={{ position: "relative" }}>
-                        <div style={{ 
-                          display: "flex", 
-                          justifyContent: "center",
-                          background: "linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)",
-                          borderRadius: "12px",
-                          padding: "20px",
-                          position: "relative"
-                        }}>
-                          <iframe
-                            src={`https://www.instagram.com/p/${postId}/embed/captioned/`}
-                            width="400"
-                            height="500"
-                            frameBorder="0"
-                            scrolling="no"
-                            allowTransparency="true"
-                            style={{ 
-                              borderRadius: "8px",
-                              maxWidth: "100%",
-                              background: "#fff"
-                            }}
-                            title={`Instagram Post ${index + 1}`}
-                          />
-                          
-                          {/* Instagram badge */}
-                          <div style={{
-                            position: "absolute",
-                            top: "12px",
-                            left: "12px",
-                            background: "rgba(0,0,0,0.8)",
-                            color: "white",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            fontSize: "12px",
-                            fontWeight: "600"
-                          }}>
-                            IG
-                          </div>
-                          
-                          {/* Expand button */}
-                          <button
-                            style={{
-                              position: "absolute",
-                              top: "12px",
-                              right: "12px",
-                              background: "rgba(0,0,0,0.8)",
-                              border: "none",
-                              color: "white",
-                              padding: "8px",
-                              borderRadius: "8px",
-                              cursor: "pointer",
-                              fontSize: "14px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px"
-                            }}
-                            onClick={() => setVideoModal({
-                              isOpen: true,
-                              content: (
-                                <div style={{
-                                  display: "flex",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                  height: "100%",
-                                  background: "#000"
-                                }}>
-                                  <iframe
-                                    src={`https://www.instagram.com/p/${postId}/embed/captioned/`}
-                                    width="600"
-                                    height="700"
-                                    frameBorder="0"
-                                    scrolling="no"
-                                    allowTransparency="true"
-                                    style={{ 
-                                      borderRadius: "8px",
-                                      maxWidth: "100%",
-                                      maxHeight: "100%"
-                                    }}
-                                    title={`Instagram Post ${index + 1}`}
-                                  />
-                                </div>
-                              ),
-                              title: `Instagram Post ${index + 1}`
-                            })}
-                          >
-                            <FaExpand />
-                            <span style={{ fontSize: "12px" }}>Томруулах</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
-                }
-                
-                // Vimeo processing with enhanced display and HD quality
-                if (cleanEmbed.includes('vimeo.com/')) {
-                  const videoId = cleanEmbed.split('vimeo.com/')[1]?.split('?')[0];
-                  if (videoId && !isNaN(videoId)) {
-                    return (
-                      <div key={index} style={{ position: "relative" }}>
-                        <div style={{ 
-                          borderRadius: "12px", 
-                          overflow: "hidden",
-                          background: "#00adef",
-                          position: "relative"
-                        }}>
-                          <iframe
-                            src={`https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479&controls=1&portrait=0&title=0&byline=0&quality=auto`}
-                            width="100%"
-                            height="315"
-                            frameBorder="0"
-                            allowFullScreen
-                            allow="autoplay; fullscreen; picture-in-picture"
-                            title={`Vimeo Video ${index + 1}`}
-                          />
-                          
-                          {/* Quality badge */}
-                          <div style={{
-                            position: "absolute",
-                            top: "12px",
-                            left: "12px",
-                            background: "rgba(0,173,239,0.9)",
-                            color: "white",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            fontSize: "12px",
-                            fontWeight: "600"
-                          }}>
-                            HD
-                          </div>
-                          
-                          {/* Expand button */}
-                          <button
-                            style={{
-                              position: "absolute",
-                              top: "12px",
-                              right: "12px",
-                              background: "rgba(0,0,0,0.8)",
-                              border: "none",
-                              color: "white",
-                              padding: "8px",
-                              borderRadius: "8px",
-                              cursor: "pointer",
-                              fontSize: "14px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px"
-                            }}
-                            onClick={() => setVideoModal({
-                              isOpen: true,
-                              content: (
-                                <iframe
-                                  src={`https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479&controls=1&portrait=0&title=0&byline=0&autoplay=1&quality=auto`}
-                                  width="100%"
-                                  height="100%"
-                                  frameBorder="0"
-                                  allowFullScreen
-                                  allow="autoplay; fullscreen; picture-in-picture"
-                                  title={`Vimeo Video ${index + 1}`}
-                                />
-                              ),
-                              title: `Vimeo Video ${index + 1}`
-                            })}
-                          >
-                            <FaExpand />
-                            <span style={{ fontSize: "12px" }}>Томруулах</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
-                }
-                
-                // Fallback: display as styled link
-                return (
-                  <div key={index} style={{
-                    padding: "20px",
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    borderRadius: "12px",
-                    textAlign: "center"
-                  }}>
-                    <div style={{ 
-                      fontSize: "32px", 
-                      marginBottom: "12px" 
-                    }}>
-                      🎥
-                    </div>
-                    <a 
-                      href={cleanEmbed} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      style={{ 
-                        color: "#fff", 
-                        textDecoration: "none",
-                        fontWeight: "600",
-                        fontSize: "16px"
-                      }}
-                    >
-                      Видео харах
-                    </a>
-                    <div style={{
-                      fontSize: "12px",
-                      color: "rgba(255,255,255,0.8)",
-                      marginTop: "8px",
-                      wordBreak: "break-all"
-                    }}>
-                      {cleanEmbed.length > 50 ? cleanEmbed.substring(0, 50) + "..." : cleanEmbed}
-                    </div>
-                  </div>
-                );
-              })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {[...centerData.embedVideos].slice().reverse().map((embed, index) => (
+                <VideoCard key={index} embed={embed} index={index} />
+              ))}
             </div>
           </div>
         )}
@@ -870,7 +902,7 @@ export default function CenterDetail() {
       </div>
 
       {/* Sticky booking footer - Airbnb style */}
-      <div className="center-booking-footer">
+      <div className="center-booking-footer" style={{ zIndex: 10000 }}>
         <div className="center-booking-info">
           <div className="center-booking-price">
             {centerData.pricing?.standard ? (
@@ -888,10 +920,54 @@ export default function CenterDetail() {
             </div>
           )}
         </div>
-        <button className="center-booking-btn">
+        <button 
+          className="center-booking-btn"
+          onClick={() => {
+            if (!isAuthenticated) {
+              navigate('/login');
+              return;
+            }
+            if (user?.accountType === 'centerOwner') {
+              setToast({ message: "Та өөрийн төвд захиалга хийх боломжгүй", type: "error", id: Date.now() });
+              return;
+            }
+            setBookingModalOpen(true);
+          }}
+          style={{
+            background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
+            color: 'white',
+            border: 'none',
+            padding: '14px 32px',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+          }}
+        >
           Захиалах
         </button>
       </div>
+
+      {/* Booking Modal */}
+      <BookingModal 
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        center={centerData}
+        onConfirm={handleBookingConfirm}
+      />
+
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* Video Modal */}
       {videoModal.isOpen && (
@@ -904,9 +980,11 @@ export default function CenterDetail() {
               <FaTimes />
             </button>
             
-            <div className="center-video-modal-title">
-              {videoModal.title}
-            </div>
+            {videoModal.title && (
+              <div className="center-video-modal-title">
+                {videoModal.title}
+              </div>
+            )}
             
             <div className="center-video-modal-wrapper">
               {videoModal.content}
@@ -947,33 +1025,246 @@ export default function CenterDetail() {
                     const active = centerData.bonus.filter(b => !b?.expiresAt || new Date(b.expiresAt).getTime() > now);
                     const toShow = active.length ? active : centerData.bonus;
                     return toShow.map((b, idx) => (
-                      <div key={b._id || idx} className="bonus-panel-item">
-                        <div className="bonus-panel-item-header">
-                          <div className="bonus-panel-item-title">{b.title || 'Бонус'}</div>
-                          {b.expiresAt && (
-                            <div className="bonus-panel-item-expiry">
-                              {new Date(b.expiresAt).toLocaleDateString('mn-MN', { month: 'short', day: 'numeric' })}
+                      <div key={b._id || idx} style={{
+                        background: '#fff',
+                        borderRadius: '16px',
+                        padding: '20px',
+                        marginBottom: '16px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        border: '2px solid #f59e0b'
+                      }}>
+                        {/* Gift icon and title */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          marginBottom: '16px'
+                        }}>
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px'
+                          }}>
+                            🎁
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{
+                              fontSize: '18px',
+                              fontWeight: '700',
+                              color: '#1f2937',
+                              marginBottom: '4px'
+                            }}>
+                              {b.title || 'Бонус'}
                             </div>
-                          )}
+                            {b.expiresAt && (
+                              <div style={{
+                                fontSize: '13px',
+                                color: '#ef4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <span>⏰</span>
+                                <span>Дуусах: {new Date(b.expiresAt).toLocaleDateString('mn-MN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
-                        {(b.standardFree || b.vipFree || b.stageFree) && (
-                          <div className="bonus-panel-item-seats">
-                            {b.standardFree && (
-                              <span className="bonus-seat-chip standard">Энгийн: {b.standardFree}</span>
-                            )}
-                            {b.vipFree && (
-                              <span className="bonus-seat-chip vip">VIP: {b.vipFree}</span>
-                            )}
-                            {b.stageFree && (
-                              <span className="bonus-seat-chip stage">Stage: {b.stageFree}</span>
-                            )}
+                        {/* Description section */}
+                        {b.text && (
+                          <div style={{
+                            background: '#f9fafb',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            marginBottom: '16px'
+                          }}>
+                            <div style={{
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              color: '#6b7280',
+                              marginBottom: '8px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}>
+                              📝 Тайлбар
+                            </div>
+                            <div style={{
+                              fontSize: '15px',
+                              color: '#374151',
+                              lineHeight: '1.6'
+                            }}>
+                              {b.text}
+                            </div>
                           </div>
                         )}
                         
-                        {b.text && (
-                          <div className="bonus-panel-item-text">{b.text}</div>
+                        {/* Available seats section */}
+                        {(b.standardFree > 0 || b.vipFree > 0 || b.stageFree > 0) && (
+                          <div style={{
+                            background: '#f0fdf4',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            marginBottom: '16px',
+                            border: '1px solid #86efac'
+                          }}>
+                            <div style={{
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              color: '#15803d',
+                              marginBottom: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <span>✅</span>
+                              <span>СУЛ СУУДАЛ</span>
+                            </div>
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '10px'
+                            }}>
+                              {b.standardFree > 0 && (
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '10px 14px',
+                                  background: '#fff',
+                                  borderRadius: '8px',
+                                  border: '1px solid #e5e7eb'
+                                }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}>
+                                    <span style={{ fontSize: '18px' }}>🎮</span>
+                                    <span style={{
+                                      fontSize: '15px',
+                                      fontWeight: '600',
+                                      color: '#374151'
+                                    }}>Заал</span>
+                                  </div>
+                                  <span style={{
+                                    fontSize: '16px',
+                                    fontWeight: '700',
+                                    color: '#16a34a'
+                                  }}>
+                                    {b.standardFree} суудал
+                                  </span>
+                                </div>
+                              )}
+                              {b.vipFree > 0 && (
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '10px 14px',
+                                  background: '#fff',
+                                  borderRadius: '8px',
+                                  border: '1px solid #e5e7eb'
+                                }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}>
+                                    <span style={{ fontSize: '18px' }}>👑</span>
+                                    <span style={{
+                                      fontSize: '15px',
+                                      fontWeight: '600',
+                                      color: '#374151'
+                                    }}>VIP өрөө</span>
+                                  </div>
+                                  <span style={{
+                                    fontSize: '16px',
+                                    fontWeight: '700',
+                                    color: '#16a34a'
+                                  }}>
+                                    {b.vipFree} суудал
+                                  </span>
+                                </div>
+                              )}
+                              {b.stageFree > 0 && (
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '10px 14px',
+                                  background: '#fff',
+                                  borderRadius: '8px',
+                                  border: '1px solid #e5e7eb'
+                                }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}>
+                                    <span style={{ fontSize: '18px' }}>🎭</span>
+                                    <span style={{
+                                      fontSize: '15px',
+                                      fontWeight: '600',
+                                      color: '#374151'
+                                    }}>Stage өрөө</span>
+                                  </div>
+                                  <span style={{
+                                    fontSize: '16px',
+                                    fontWeight: '700',
+                                    color: '#16a34a'
+                                  }}>
+                                    {b.stageFree} суудал
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         )}
+                        
+                        {/* Call to action button */}
+                        <button 
+                          onClick={() => {
+                            if (centerData.phone) {
+                              window.location.href = `tel:${centerData.phone}`;
+                            } else {
+                              setToast({ message: "Утасны дугаар олдсонгүй", type: "error", id: Date.now() });
+                            }
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "14px",
+                            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "12px",
+                            fontSize: "16px",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.4)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
+                          }}
+                        >
+                          <FaPhone style={{ fontSize: '18px' }} />
+                          <span>Захиалах (Залгах)</span>
+                        </button>
                       </div>
                     ));
                   })()}

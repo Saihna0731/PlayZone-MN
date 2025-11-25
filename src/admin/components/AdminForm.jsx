@@ -16,6 +16,7 @@ const emptyForm = {
   website: "",
   opening: "",
   price: "",
+  description: "",
   pricing: {
     standard: "",
     vip: "",
@@ -52,9 +53,54 @@ const emptyForm = {
 
   useEffect(() => {
     if (editingItem) {
+      const imageLinks = Array.isArray(editingItem.images)
+        ? editingItem.images.filter((img) => typeof img === 'string').join('\n')
+        : '';
+      // Embed линкүүдийг илүү уян хатан байдлаар унших (array, string, object)
+      let embedLinks = '';
+      if (Array.isArray(editingItem.embedVideos)) {
+        embedLinks = editingItem.embedVideos.map(s => typeof s === 'string' ? s.trim() : '').filter(Boolean).join('\n');
+      } else if (typeof editingItem.embedVideos === 'string') {
+        embedLinks = editingItem.embedVideos.trim();
+      } else if (editingItem.embedVideos && typeof editingItem.embedVideos === 'object') {
+        // Object хэлбэртэй бол бүх string value-уудыг цуглуулна (жишээ нь {youtube: '...', facebook: '...'} )
+        embedLinks = Object.values(editingItem.embedVideos)
+          .map(v => typeof v === 'string' ? v.trim() : '')
+          .filter(v => v && (v.includes('http') || v.includes('<iframe')))
+          .join('\n');
+      }
+      // Backward-compatible fallback: if embedVideos хоосон бол videos-с link/iframe-уудыг хөрвүүлж урьдчилан бөглөнө
+      if (!embedLinks && Array.isArray(editingItem.videos) && editingItem.videos.length) {
+        const derived = editingItem.videos
+          .map(v => {
+            if (typeof v === 'string') return v.trim();
+            if (v && typeof v === 'object') {
+              // object доторх бол боломжит талбаруудыг шалгана
+              const candidate = v.url || v.src || v.link || v.embed || v.iframe || v.path || '';
+              if (typeof candidate === 'string') return candidate.trim();
+            }
+            return '';
+          })
+          .filter(s => s && (s.includes('http') || s.includes('<iframe')));
+        embedLinks = derived.join('\n');
+      }
+      // Placeholder-ийн эх сурвалж тэмдэглэл бүхий мөрүүд ("YouTube:" зэрэг)-ыг өгөгдөлд орсон байвал шүүж хаяна
+      if (embedLinks) {
+        embedLinks = embedLinks
+          .split('\n')
+          .map(l => l.trim())
+          .filter(l => l 
+            && !/^YouTube:$/i.test(l) 
+            && !/^Facebook:$/i.test(l) 
+            && !/^Instagram:$/i.test(l) 
+            && !/^Vimeo:$/i.test(l)
+            && !/VIDEO_ID/i.test(l) // placeholder sample line
+          )
+          .join('\n');
+      }
       setForm({
         name: editingItem.name || "",
-        category: editingItem.category || "gaming",
+        category: editingItem.category || "Pc gaming",
         address: editingItem.address || "",
         phone: editingItem.phone || "",
         email: editingItem.email || "",
@@ -69,9 +115,9 @@ const emptyForm = {
         },
         rating: editingItem.rating || "",
         logo: editingItem.logo || "",
-        images: editingItem.images ? editingItem.images.join('\n') : "",
-        videos: editingItem.videos ? editingItem.videos.join('\n') : "",
-        embedVideos: editingItem.embedVideos ? editingItem.embedVideos.join('\n') : "",
+        images: imageLinks,
+        videos: "",
+        embedVideos: embedLinks,
         facilities: editingItem.facilities ? editingItem.facilities.join('\n') : "",
         lat: editingItem.lat ?? "",
         lng: editingItem.lng ?? ""
@@ -80,8 +126,8 @@ const emptyForm = {
       setUploadedImages([]);
       setUploadedVideos([]);
       // Хуучин зураг, видеог тусдаа state-д хадгалах
-      setExistingImages(editingItem.images || []);
-      setExistingVideos(editingItem.videos || []);
+      setExistingImages(Array.isArray(editingItem.images) ? editingItem.images : []);
+      setExistingVideos(Array.isArray(editingItem.videos) ? editingItem.videos : []);
     } else {
       setForm(emptyForm);
       setUploadedImages([]);
@@ -210,12 +256,30 @@ const emptyForm = {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const removeExistingImage = (index) => {
-    setExistingImages(prev => prev.filter((_, i) => i !== index));
+  const removeExistingImage = (targetSrcOrIndex) => {
+    // Support old calls by index, new calls by resolved src
+    let removedSrc = null;
+    setExistingImages(prev => {
+      const next = prev.filter((img, i) => {
+        const src = typeof img === 'object' ? (img.thumbnail || img.highQuality || img.url) : img;
+        const match = typeof targetSrcOrIndex === 'number' ? (i === targetSrcOrIndex) : (src === targetSrcOrIndex);
+        if (match) removedSrc = src || null;
+        return !match;
+      });
+      return next;
+    });
+
+    // If textarea-д string URL байгаа бол мөн хамт цэвэрлэнэ
+    if (removedSrc && form.images) {
+      const newUrls = form.images
+        .split('\n')
+        .filter((url) => url.trim() && url.trim() !== removedSrc.trim());
+      setForm(prev => ({ ...prev, images: newUrls.join('\n') }));
+    }
   };
 
-  // Video функцууд - сайжруулсан compression
-  const handleVideoUpload = (e) => {
+  // Video функцууд - хэмжээ/үргэлжлэх хугацааны шалгалт
+  const handleVideoUpload = async (e) => {
     if (!canUploadVideo) {
       setToast({ type: 'error', message: 'Видео оруулахын тулд Business Pro план шаардлагатай' });
       e.target.value = '';
@@ -228,29 +292,38 @@ const emptyForm = {
       setToast({ type: 'error', message: 'Зөвхөн video файл upload хийж болно!' });
       return;
     }
+    // Helper: уншилтаас өмнө үргэлжлэх хугацааг шалгах
+    const getDuration = (file) => new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(v.duration || 0);
+      };
+      v.onerror = () => { URL.revokeObjectURL(url); resolve(0); };
+      v.src = url;
+    });
 
-    videoFiles.forEach(file => {
-      // Video file хэмжээг шалгах - ямар ч хэмжээ хүлээж авна
-      console.log(`Processing video: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-      
+    for (const file of videoFiles) {
+      const sizeMB = file.size / 1024 / 1024;
+      if (sizeMB > 50) {
+        setToast({ type: 'error', message: `${file.name}: 50MB-с их байна. Видео-г шахаж эсвэл богиноруулна уу.` });
+        continue;
+      }
+      const duration = await getDuration(file);
+      if (duration > 180) {
+        setToast({ type: 'error', message: `${file.name}: 3 минутаас урт байна (${Math.round(duration)} сек).` });
+        continue;
+      }
+      console.log(`Processing video: ${file.name}, size: ${sizeMB.toFixed(2)}MB, duration: ${Math.round(duration)}s`);
       const reader = new FileReader();
       reader.onload = (event) => {
-        // Video мэдээлэл object болгон хадгалах
-        const videoData = {
-          data: event.target.result,
-          name: file.name,
-          size: file.size,
-          type: file.type
-        };
-        
-        // TODO: Video compression энд нэмж болно (FFmpeg.js ашиглан)
-        // Одоохондоо шууд хадгална
+        const videoData = { data: event.target.result, name: file.name, size: file.size, type: file.type };
         setUploadedVideos(prev => [...prev, videoData]);
-        
-        console.log(`Video processed: ${file.name}, stored size: ${(event.target.result.length / 1024 / 1024).toFixed(2)}MB`);
       };
       reader.readAsDataURL(file);
-    });
+    }
     e.target.value = '';
   };
 
@@ -383,7 +456,11 @@ const emptyForm = {
       // Embed Videos array бэлтгэх
       let finalEmbedVideos = [];
       if (form.embedVideos && form.embedVideos.trim()) {
-        finalEmbedVideos = form.embedVideos.split('\n').filter(embed => embed.trim());
+        finalEmbedVideos = form.embedVideos
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean)
+          .slice(0, 10); // аюулгүй дээд 10
       }
 
       const payload = { 
@@ -416,9 +493,9 @@ const emptyForm = {
         finalEmbedVideos = [];
       }
 
-      // Аюулгүй хэмжээ: 20MB (high quality + thumbnail зургуудад хангалттай)
-      if (payloadSize > 20 * 1024 * 1024) { 
-        setToast({ type: 'error', message: `Нийт мэдээлэл хэт том байна (${payloadSizeMB}MB). Цөөн зураг оруулна уу эсвэл зургуудыг багцлан нэмнэ үү.` });
+      // Аюулгүй хэмжээ: 50MB нийт payload
+      if (payloadSize > 50 * 1024 * 1024) { 
+        setToast({ type: 'error', message: `Нийт мэдээлэл хэт том байна (${payloadSizeMB}MB). Зураг/видео тоо эсвэл хэмжээг багасгана уу.` });
         return;
       }
       let res;
@@ -431,10 +508,10 @@ const emptyForm = {
       
       if (editingItem && (editingItem._id || editingItem.id)) {
         res = await axios.put(`${API_BASE}/api/centers/${editingItem._id ?? editingItem.id}`, payload, config);
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'PC Center амжилттай шинэчлэгдлээ' } }));
+        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'Game Center амжилттай шинэчлэгдлээ' } }));
       } else {
         res = await axios.post(`${API_BASE}/api/centers`, payload, config);
-        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'PC Center амжилттай нэмэгдлээ' } }));
+        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'Game Center амжилттай нэмэгдлээ' } }));
       }
       window.dispatchEvent(new CustomEvent("centers:updated", { detail: res.data }));
       onSaved && onSaved(res.data);
@@ -461,66 +538,80 @@ const emptyForm = {
     }
   };
 
+  const hasVideoPreview = existingVideos.length > 0 || uploadedVideos.length > 0;
+
   if (!isOpen) return null;
 
   return (
     <div style={{
       position: "fixed",
       inset: 0,
-      background: "rgba(0,0,0,0.6)",
+      background: "rgba(0,0,0,0.5)",
+      backdropFilter: "blur(8px)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       zIndex: 2000,
-      padding: "20px"
+      padding: "20px",
+      animation: "fadeIn 0.2s ease-out"
     }}>
       <Toast toast={toast} onClose={() => setToast(null)} />
       <div style={{
         background: "#fff",
-        borderRadius: "16px",
+        borderRadius: "24px",
         width: "100%",
-        maxWidth: "600px",
+        maxWidth: "700px",
         maxHeight: "90vh",
         overflow: "hidden",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.15)"
+        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        display: "flex",
+        flexDirection: "column"
       }}>
         {/* Header */}
         <div style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "24px 24px 0 24px",
-          marginBottom: "24px"
+          padding: "20px 24px",
+          background: "#f8fafc",
+          borderBottom: "1px solid #e2e8f0"
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div style={{
-              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
               borderRadius: "12px",
-              padding: "12px",
-              color: "#fff"
+              padding: "10px",
+              color: "#fff",
+              boxShadow: "0 4px 6px -1px rgba(59, 130, 246, 0.5)"
             }}>
-              <FaGamepad size={24} />
+              <FaGamepad size={20} />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "700", color: "#1a1a1a" }}>
-                {editingItem ? "PC Center засах" : "Шинэ PC Center нэмэх"}
+              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "700", color: "#0f172a" }}>
+                {editingItem ? "Game Center засах" : "Шинэ Game Center нэмэх"}
               </h2>
-              <p style={{ margin: "4px 0 0 0", color: "#666", fontSize: "14px" }}>
-                {editingItem ? "Центрийн мэдээллийг шинэчлэх" : "Шинэ тоглоомын газрын мэдээлэл оруулах"}
+              <p style={{ margin: "2px 0 0 0", color: "#64748b", fontSize: "13px" }}>
+                {editingItem ? "Мэдээллийг шинэчлэх" : "Шинэ тоглоомын газар бүртгэх"}
               </p>
             </div>
           </div>
           <button
             onClick={onCancel}
             style={{
-              background: "none",
-              border: "none",
-              color: "#666",
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              color: "#64748b",
               cursor: "pointer",
               padding: "8px",
-              borderRadius: "8px",
-              fontSize: "20px"
+              borderRadius: "10px",
+              fontSize: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s"
             }}
+            onMouseOver={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#0f172a"; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "#64748b"; }}
           >
             <FaTimes />
           </button>
@@ -528,11 +619,12 @@ const emptyForm = {
 
         {/* Form Content */}
         <div style={{ 
-          padding: "0 24px 24px 24px", 
-          maxHeight: "calc(90vh - 120px)", 
-          overflowY: "auto" 
+          padding: "24px", 
+          overflowY: "auto",
+          flex: 1,
+          background: "#fff"
         }}>
-          <form onSubmit={handleSubmit}>
+          <form id="admin-form" onSubmit={handleSubmit}>
             {/* Basic Info */}
             <div style={{ marginBottom: "32px" }}>
               <h3 style={{ 
@@ -593,11 +685,11 @@ const emptyForm = {
                     onFocus={(e) => e.target.style.borderColor = "#1976d2"}
                     onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
                   >
-                    <option value="gaming">Gaming Center</option>
-                    <option value="internet">Internet Cafe</option>
-                    <option value="console">Console Gaming</option>
-                    <option value="vr">VR Gaming</option>
-                    <option value="shop">Game Shop</option>
+                    <option value="game-center">Gaming Center</option>
+                    <option value="ps5">PlayStation</option>
+                    <option value="pc-center">PC Gaming</option>
+                    <option value="billard">Billard</option>
+                    <option value="vip">VIP Rooms</option>
                   </select>
                 </div>
               </div>
@@ -1211,7 +1303,7 @@ const emptyForm = {
                           gap: "12px" 
                         }}>
                           {existingImages.map((img, index) => {
-                            const src = typeof img === 'object' ? (img.thumbnail || img.highQuality) : img;
+                            const src = typeof img === 'object' ? (img.thumbnail || img.highQuality || img.url) : img;
                             const title = typeof img === 'object' ? (img.originalName || 'Existing image') : `Existing ${index + 1}`;
                             return (
                               <div key={`existing-${index}`} style={{ position: "relative" }}>
@@ -1245,7 +1337,7 @@ const emptyForm = {
                                 )}
                                 <button
                                   type="button"
-                                  onClick={() => removeExistingImage(index)}
+                                  onClick={() => removeExistingImage(src)}
                                   style={{
                                     position: "absolute",
                                     top: "4px",
@@ -1357,9 +1449,7 @@ const emptyForm = {
 
               {/* Video Upload Section */}
               <div style={{ marginBottom: "24px" }}>
-                <label style={{ display: "block", marginBottom: "16px", fontWeight: "600", color: "#333", fontSize: "18px" }}>
-                  🎬 Видео оруулах
-                </label>
+                {/* Title intentionally removed by request */}
 
                 {/* Video File Upload */}
                 <div style={{ 
@@ -1404,7 +1494,7 @@ const emptyForm = {
                 </div>
 
                 {/* Video Preview */}
-                {canUploadVideo && (existingVideos.length > 0 || uploadedVideos.length > 0) && (
+                {hasVideoPreview && (
                   <div style={{ marginBottom: "16px" }}>
                     {/* Existing Videos */}
                     {existingVideos.length > 0 && (
@@ -1414,22 +1504,66 @@ const emptyForm = {
                         </p>
                         <div style={{ 
                           display: "grid", 
-                          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
+                          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", 
                           gap: "12px" 
                         }}>
-                          {existingVideos.map((video, index) => (
-                            <div key={`existing-video-${index}`} style={{ position: "relative" }}>
-                              <video
-                                src={video}
-                                controls
-                                style={{
-                                  width: "100%",
-                                  height: "120px",
-                                  objectFit: "cover",
-                                  borderRadius: "8px",
-                                  border: "2px solid #2196F3"
-                                }}
-                              />
+                          {existingVideos.map((video, index) => {
+                            const resolvedSrc = typeof video === 'object'
+                              ? (video.url || video.path || video.data || '')
+                              : video;
+                            return (
+                              <div key={`existing-video-${index}`} style={{ position: "relative" }}>
+                                {resolvedSrc ? (
+                                  <video
+                                    src={resolvedSrc}
+                                    controls
+                                    style={{
+                                      width: "100%",
+                                      height: "120px",
+                                      objectFit: "cover",
+                                      borderRadius: "8px",
+                                      border: "2px solid #2196F3",
+                                      backgroundColor: "#000"
+                                    }}
+                                  />
+                                ) : (
+                                  <div style={{
+                                    width: "100%",
+                                    height: "120px",
+                                    borderRadius: "8px",
+                                    border: "2px dashed #94a3b8",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "#94a3b8",
+                                    fontSize: "13px",
+                                    fontWeight: 600
+                                  }}>
+                                    Видео файлын холбоос олдсонгүй
+                                  </div>
+                                )}
+                                {/* URL editor */}
+                                <input
+                                  type="text"
+                                  placeholder="Видео холбоос"
+                                  value={resolvedSrc}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setExistingVideos(prev => prev.map((v, i) => {
+                                      if (i !== index) return v;
+                                      if (typeof v === 'object') return { ...v, url: val };
+                                      return val;
+                                    }));
+                                  }}
+                                  style={{
+                                    marginTop: 6,
+                                    width: '100%',
+                                    padding: '8px 10px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: 8,
+                                    fontSize: 12
+                                  }}
+                                />
                               <button
                                 type="button"
                                 onClick={() => removeExistingVideo(index)}
@@ -1453,7 +1587,8 @@ const emptyForm = {
                                 <FaTrash />
                               </button>
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1515,8 +1650,7 @@ const emptyForm = {
 
                 {/* Видео холбоосоор нэмэхийг хассан - зөвхөн upload эсвэл embed */}
 
-                {/* Embed Video Input */}
-                {canUploadVideo && (
+                {/* Embed Video Input — always visible for management */}
                 <div style={{ marginBottom: "16px" }}>
                   <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
                     Embed видео (YouTube, Vimeo, etc) - iframe эсвэл холбоос
@@ -1541,11 +1675,25 @@ const emptyForm = {
                     onFocus={(e) => e.target.style.borderColor = "#1976d2"}
                     onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
                   />
-                  <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#666" }}>
-                    {canUploadVideo ? 'YouTube, Facebook, Instagram, Vimeo холбоос эсвэл бүрэн iframe embed code оруулж болно' : 'Видео линк/эмбед хийх боломжгүй (Business Pro шаардлагатай)'}
+                  <p style={{ margin: "8px 0 8px 0", fontSize: "12px", color: "#666" }}>
+                    Шинэ мөр тус бүрд нэг embed холбоос эсвэл iframe оруулна. Одоо байгаа кодууд доор харагдана, устгаж болно.
                   </p>
+                  {/* Quick list + remove */}
+                  {((form.embedVideos || '').trim().length > 0) && (
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                      {form.embedVideos.split('\n').map(s=>s.trim()).filter(Boolean).map((line, idx) => (
+                        <div key={idx} style={{ display:'flex', alignItems:'center', gap:6, background:'#f1f5f9', border:'1px solid #e2e8f0', padding:'6px 10px', borderRadius:8, maxWidth:'100%' }}>
+                          <span style={{ fontSize:12, color:'#334155', maxWidth:300, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{line}</span>
+                          <button type="button" onClick={() => {
+                            const arr = form.embedVideos.split('\n').map(s=>s.trim()).filter(Boolean);
+                            arr.splice(idx,1);
+                            setForm(prev => ({ ...prev, embedVideos: arr.join('\n') }));
+                          }} style={{ background:'#ef4444', color:'#fff', border:'none', borderRadius:6, padding:'2px 6px', cursor:'pointer', fontSize:12 }}>x</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                )}
               </div>
 
               <div>
@@ -1573,74 +1721,110 @@ const emptyForm = {
                   onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
                 />
               </div>
+
+              {/* Description Field - New */}
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#333" }}>
+                  Тайлбар
+                </label>
+                <textarea
+                  placeholder="Тоглоомын төвийн тухай дэлгэрэнгүй тайлбар..."
+                  value={form.description || ""}
+                  onChange={onChange("description")}
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    border: "2px solid #e0e0e0",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    outline: "none",
+                    transition: "border-color 0.2s",
+                    boxSizing: "border-box",
+                    resize: "vertical",
+                    fontFamily: "inherit"
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = "#1976d2"}
+                  onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                />
+              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{ 
-              display: "flex", 
-              gap: "12px", 
-              paddingTop: "24px",
-              borderTop: "1px solid #e0e0e0"
-            }}>
-              <button
-                type="button"
-                onClick={onCancel}
-                style={{
-                  flex: 1,
-                  padding: "14px 24px",
-                  border: "2px solid #e0e0e0",
-                  borderRadius: "8px",
-                  background: "#fff",
-                  color: "#666",
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                Цуцлах
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                style={{
-                  flex: 2,
-                  padding: "14px 24px",
-                  border: "none",
-                  borderRadius: "8px",
-                  background: saving ? "#ccc" : "linear-gradient(135deg, #1976d2, #42a5f5)",
-                  color: "#fff",
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  cursor: saving ? "not-allowed" : "pointer",
-                  transition: "all 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px"
-                }}
-              >
-                {saving ? (
-                  <>
-                    <div style={{
-                      width: "16px",
-                      height: "16px",
-                      border: "2px solid transparent",
-                      borderTop: "2px solid #fff",
-                      borderRadius: "50%",
-                      animation: "spin 1s linear infinite"
-                    }}></div>
-                    Хадгалж байна...
-                  </>
-                ) : (
-                  <>
-                    <FaSave />
-                    {editingItem ? "Өөрчлөлт хадгалах" : "PC Center нэмэх"}
-                  </>
-                )}
-              </button>
-            </div>
           </form>
+        </div>
+        
+        {/* Footer Actions */}
+        <div style={{ 
+          padding: "20px 24px",
+          background: "#f8fafc",
+          borderTop: "1px solid #e2e8f0",
+          display: "flex", 
+          gap: "12px" 
+        }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              padding: "12px 24px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "10px",
+              background: "#fff",
+              color: "#475569",
+              fontSize: "15px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.borderColor = "#94a3b8"; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+          >
+            Цуцлах
+          </button>
+          <button
+            type="submit"
+            form="admin-form"
+            disabled={saving}
+            style={{
+              flex: 2,
+              padding: "12px 24px",
+              border: "none",
+              borderRadius: "10px",
+              background: saving ? "#94a3b8" : "linear-gradient(135deg, #3b82f6, #2563eb)",
+              color: "#fff",
+              fontSize: "15px",
+              fontWeight: "600",
+              cursor: saving ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              boxShadow: "0 4px 6px -1px rgba(59, 130, 246, 0.5)"
+            }}
+            onMouseOver={(e) => { if(!saving) e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseOut={(e) => { if(!saving) e.currentTarget.style.transform = "translateY(0)"; }}
+          >
+            {saving ? (
+              <>
+                <div style={{
+                  width: "16px",
+                  height: "16px",
+                  border: "2px solid transparent",
+                  borderTop: "2px solid #fff",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite"
+                }}></div>
+                Хадгалж байна...
+              </>
+            ) : (
+              <>
+                <FaSave />
+                {editingItem ? "Өөрчлөлт хадгалах" : "Game Center нэмэх"}
+              </>
+            )}
+          </button>
         </div>
       </div>
       

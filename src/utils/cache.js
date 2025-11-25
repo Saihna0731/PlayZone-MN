@@ -9,11 +9,22 @@ const PREFIX = 'pcmap:';
 
 const now = () => Math.floor(Date.now() / 1000);
 
+// Memory cache for ultra-fast access
+const memCache = new Map();
+
 function readRaw(key) {
+	// Check memory cache first
+	const memKey = PREFIX + key;
+	if (memCache.has(memKey)) {
+		return memCache.get(memKey);
+	}
+	
 	try {
 		const k = PREFIX + key;
 		const raw = localStorage.getItem(k);
-		return raw ? JSON.parse(raw) : null;
+		const data = raw ? JSON.parse(raw) : null;
+		if (data) memCache.set(memKey, data);
+		return data;
 	} catch (e) {
 		return null;
 	}
@@ -22,6 +33,7 @@ function readRaw(key) {
 function writeRaw(key, obj) {
 	try {
 		const k = PREFIX + key;
+		memCache.set(k, obj); // Update memory cache
 		localStorage.setItem(k, JSON.stringify(obj));
 	} catch (e) {
 		// ignore quota errors
@@ -50,12 +62,17 @@ export const cacheUtils = {
 
 	remove(key) {
 		try {
-			localStorage.removeItem(PREFIX + key);
+			const k = PREFIX + key;
+			memCache.delete(k); // Remove from memory cache
+			localStorage.removeItem(k);
 		} catch (_) {}
 	},
 
 	clear(prefix = '') {
 		try {
+			if (!prefix) {
+				memCache.clear(); // Clear all memory cache
+			}
 			const p = PREFIX + prefix;
 			const keys = [];
 			for (let i = 0; i < localStorage.length; i++) {

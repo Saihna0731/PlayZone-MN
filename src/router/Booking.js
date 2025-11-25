@@ -268,7 +268,7 @@ function OccupancyModal({ center, isOpen, onClose, onUpdate }) {
 
 export default function Booking() {
   const { user, isAuthenticated, isCenterOwner } = useAuth();
-  const { subscription, isPremiumUser } = useSubscription();
+  const { subscription, isPremiumUser, loading: subLoading } = useSubscription();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCenter, setEditingCenter] = useState(null);
@@ -283,6 +283,7 @@ export default function Booking() {
   const [bonusModalOpen, setBonusModalOpen] = useState(false);
   const [manageModalCenter, setManageModalCenter] = useState(null);
   const [manageModalOpen, setManageModalOpen] = useState(false);
+  const [bonusManageMode, setBonusManageMode] = useState("edit");
 
   const fetchData = useCallback(async () => {
     try {
@@ -290,9 +291,13 @@ export default function Booking() {
       
       // Бүх төвийг авах
       const centersRes = await axios.get(`${API_BASE}/api/centers`);
-      const allCenters = centersRes.data || [];
+      const allCenters = Array.isArray(centersRes.data?.centers) 
+        ? centersRes.data.centers 
+        : Array.isArray(centersRes.data) 
+        ? centersRes.data 
+        : [];
       
-      // PC төвүүдийг шүүх (PC center эзэмшигчдийн оруулсан)
+      // Game Center-уудыг шүүх (Game center эзэмшигчдийн оруулсан)
       const pcCenters = allCenters.filter(center => 
         center.category === "pc" || 
         center.category === "gaming" || 
@@ -307,13 +312,26 @@ export default function Booking() {
         ))
       );
       
-      // Эзэмшигч бол зөвхөн өөрийн төвүүдийг харуулна, эс бөгөөс бүх PC төвүүд
-      const visible = (isCenterOwner && user?._id)
-        ? pcCenters.filter(c => {
+      // Эзэмшигч бол зөвхөн өөрийн төвүүдийг харуулна, эс бөгөөс бүх Gaming төвүүд
+      let visible = [];
+      
+      if (user?.role === 'admin') {
+          visible = allCenters;
+      } else if (isCenterOwner && user?._id) {
+          // If owner, show ALL their centers regardless of category
+          visible = allCenters.filter(c => {
             const ownerId = (c && typeof c.owner === 'object' && c.owner !== null) ? (c.owner._id || c.owner.id) : c.owner;
             return String(ownerId) === String(user._id);
-          })
-        : pcCenters;
+          });
+      } else {
+          // If regular user, show only FAVORITE centers
+          if (user?.favorites && Array.isArray(user.favorites)) {
+            const favIds = user.favorites.map(f => (f._id || f).toString());
+            visible = allCenters.filter(c => favIds.includes(c._id.toString()));
+          } else {
+            visible = [];
+          }
+      }
 
       // Харагдах жагсаалт болгон байршуулна
       setFavorites(visible);
@@ -489,60 +507,82 @@ export default function Booking() {
             Нэвтрэх шаардлагатай
           </h2>
           <p style={{ margin: "0 0 24px 0", color: "#666", fontSize: "15px", lineHeight: "1.6" }}>
-            Захиалга болон дуртай төвүүдийг харахын тулд эхлээд нэвтэрнэ үү
+            Захиалга өгөхийн тулд системд нэвтэрнэ үү.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <Link
-              to="/login"
-              style={{
-                display: "block",
-                padding: "14px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                color: "white",
-                textDecoration: "none",
-                borderRadius: "12px",
-                fontWeight: "700",
-                fontSize: "15px",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
-              }}
-            >
-              🚀 Нэвтрэх
-            </Link>
-            <Link
-              to="/register"
-              style={{
-                display: "block",
-                padding: "14px",
-                background: "linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)",
-                color: "#667eea",
-                textDecoration: "none",
-                borderRadius: "12px",
-                fontWeight: "700",
-                fontSize: "15px"
-              }}
-            >
-              🎉 Бүртгүүлэх
-            </Link>
-            <Link
-              to="/map"
-              style={{
-                display: "block",
-                padding: "10px",
-                color: "#666",
-                textDecoration: "none",
-                fontSize: "14px"
-              }}
-            >
-              ← Нүүр хуудас руу буцах
-            </Link>
-          </div>
+          <Link
+            to="/login"
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "14px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "12px",
+              fontWeight: "600",
+              fontSize: "16px",
+              boxShadow: "0 4px 12px rgba(118, 75, 162, 0.3)"
+            }}
+          >
+            Нэвтрэх
+          </Link>
         </div>
+        <BottomNav />
       </div>
     );
   }
 
   // Free user/owner хязгаарлалт
   const canAccessBooking = (isCenterOwner && subscription?.plan !== 'free') || isPremiumUser;
+
+  // Loading state for subscription
+  if (subLoading) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        gap: "24px"
+      }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "20px"
+        }}>
+          <div style={{ animation: "spin 2s linear infinite" }}>
+            <div style={{ fontSize: "60px" }}>🎄</div>
+          </div>
+          <p style={{
+            fontSize: "20px",
+            fontWeight: "700",
+            background: "linear-gradient(135deg, #ef4444, #22c55e)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            animation: "pulse 1.5s ease-in-out infinite",
+            margin: 0
+          }}>
+            🎅 Loading Christmas Bookings... 🎁
+          </p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
+        <BottomNav />
+      </div>
+    );
+  }
   
   if (isAuthenticated && !canAccessBooking) {
     return (
@@ -570,7 +610,7 @@ export default function Booking() {
             Энгийн план шаардлагатай
           </h2>
           <p style={{ margin: "0 0 24px 0", color: "#666", fontSize: "15px", lineHeight: "1.6" }}>
-            PC төвүүдийг захиалахын тулд төлбөртэй план авах хэрэгтэй.
+            Gaming төвүүдийг захиалахын тулд төлбөртэй план авах хэрэгтэй.
           </p>
           
           <div style={{ 
@@ -643,12 +683,43 @@ export default function Booking() {
         flexDirection: "column", 
         alignItems: "center", 
         justifyContent: "center", 
-        height: "calc(100vh - 60px)",
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         textAlign: "center",
         padding: 20 
       }}>
-        <div style={{ fontSize: "24px", marginBottom: 16 }}>⏳</div>
-        <p style={{ color: "#666" }}>Мэдээлэл ачааллаж байна...</p>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "20px"
+        }}>
+          <div style={{ animation: "spin 2s linear infinite" }}>
+            <div style={{ fontSize: "60px" }}>🎄</div>
+          </div>
+          <p style={{
+            fontSize: "20px",
+            fontWeight: "700",
+            background: "linear-gradient(135deg, #ef4444, #22c55e)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            animation: "pulse 1.5s ease-in-out infinite",
+            margin: 0
+          }}>
+            🎅 Loading Gaming Centers... 🎁
+          </p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
         <BottomNav />
       </div>
     );
@@ -662,18 +733,65 @@ export default function Booking() {
     <div style={{ 
       paddingBottom: 80,
       minHeight: "100vh",
-      background: "#f8f9fa"
+      background: "#f3f4f6"
     }}>
-      {/* Header */}
+      {/* Modern Header */}
       <div style={{
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        color: "white",
-        padding: "20px 16px",
-        textAlign: "center"
+        background: "#ffffff",
+        padding: "24px 20px 20px 20px",
+        borderBottom: "1px solid #f0f0f0"
       }}>
-        <h1 style={{ fontSize: "24px", margin: 0, fontWeight: "600" }}>💻 PC төвүүд</h1>
-        <p style={{ margin: "8px 0 0 0", opacity: 0.9, fontSize: "14px" }}>
-          PC center эзэмшигчдийн оруулсан төвүүд
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "12px"
+        }}>
+          <div>
+            <div style={{
+              fontSize: "12px",
+              color: "#6b7280",
+              fontWeight: "500",
+              marginBottom: "4px",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px"
+            }}>
+              {isCenterOwner ? "Management" : "My Bookings"}
+            </div>
+            <h1 style={{ 
+              fontSize: "24px", 
+              margin: 0, 
+              fontWeight: "800",
+              color: "#1f2937",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              {isCenterOwner ? "💻 Game Centers" : "📅 Захиалгууд"}
+            </h1>
+          </div>
+          <div style={{
+            width: "48px",
+            height: "48px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            fontSize: "20px",
+            boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)"
+          }}>
+            {isCenterOwner ? "🎮" : "👤"}
+          </div>
+        </div>
+        <p style={{ 
+          margin: 0, 
+          color: "#6b7280", 
+          fontSize: "14px",
+          lineHeight: "1.5"
+        }}>
+          {isCenterOwner ? "Бүх төвүүдээ удирдах, бонус нэмэх, ачаалал шинэчлэх" : "Таны дуртай төвүүд болон захиалгын түүх"}
         </p>
       </div>
 
@@ -697,30 +815,33 @@ export default function Booking() {
         onUpdate={updateOccupancy}
       />
 
-      <div style={{ padding: "16px" }}>
+      <div style={{ padding: "20px" }}>
         {/* PC Centers Section */}
-        <div style={{ marginBottom: "32px" }}>
+        <div style={{ marginBottom: "24px" }}>
           <div style={{ 
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
-            marginBottom: "16px" 
+            marginBottom: "20px" 
           }}>
             <h2 style={{ 
-              fontSize: "18px", 
-              color: "#333", 
+              fontSize: "20px", 
+              color: "#1f2937", 
               margin: 0,
+              fontWeight: "700",
               display: "flex",
               alignItems: "center",
-              gap: "8px"
+              gap: "10px"
             }}>
-              💻 PC төвүүд
+              💻 Gaming төвүүд
               <span style={{ 
-                background: "#e3f2fd", 
-                color: "#1976d2", 
-                padding: "2px 8px", 
-                borderRadius: "12px", 
-                fontSize: "12px" 
+                background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", 
+                color: "white", 
+                padding: "4px 12px", 
+                borderRadius: "20px", 
+                fontSize: "13px",
+                fontWeight: "700",
+                boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)"
               }}>
                 {favorites.length}
               </span>
@@ -733,29 +854,44 @@ export default function Booking() {
                   setFormOpen(true);
                 }}
                 style={{
-                  background: "linear-gradient(45deg, #4caf50, #66bb6a)",
+                  background: "linear-gradient(135deg, #10b981, #059669)",
                   color: "white",
                   border: "none",
-                  borderRadius: "8px",
-                  padding: "8px 16px",
-                  fontSize: "12px",
-                  fontWeight: "500",
+                  borderRadius: "12px",
+                  padding: "10px 20px",
+                  fontSize: "13px",
+                  fontWeight: "700",
                   cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(76, 175, 80, 0.3)"
+                  boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  transition: "all 0.2s"
                 }}
+                onMouseOver={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
+                onMouseOut={(e) => e.currentTarget.style.transform = "translateY(0)"}
               >
-                + Шинэ төв нэмэх
+                <span style={{ fontSize: "16px" }}>+</span> Шинэ төв
               </button>
             )}
           </div>
           
           {favorites.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {favorites.map((center, index) => {
                 const ownerId = (center && typeof center.owner === 'object' && center.owner !== null) ? (center.owner._id || center.owner.id) : center.owner;
                 const isOwner = isCenterOwner && ownerId && String(ownerId) === String(user?._id);
                 return (
-                  <div key={center._id || center.id} style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  <div key={center._id || center.id} style={{ 
+                    background: "#ffffff",
+                    borderRadius: "16px",
+                    padding: "16px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                    border: "1px solid #f0f0f0",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px"
+                  }}>
                     <CenterCard 
                       item={center}
                       expanded={expandedIndex === index}
@@ -766,20 +902,103 @@ export default function Booking() {
                       isBookingMode={true}
                       onOccupancyUpdate={handleOccupancyUpdate}
                     />
-                    {isOwner && subscription?.plan === 'business_pro' && (
-                      <div style={{ display:'flex', gap:8, alignSelf:'flex-end' }}>
+                    {isOwner && (
+                      <div style={{ 
+                        display: "flex", 
+                        flexWrap: "wrap", 
+                        gap: "10px",
+                        paddingTop: "12px",
+                        borderTop: "1px solid #f0f0f0"
+                      }}>
                         <button
                           onClick={() => handleOccupancyUpdate(center)}
-                          style={{ padding:'8px 12px', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:800, cursor:'pointer', boxShadow:'0 4px 12px rgba(5,150,105,.35)' }}
-                        >Ачаалал</button>
+                          style={{ 
+                            padding: "10px 16px",
+                            background: "linear-gradient(135deg, #10b981, #059669)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "12px",
+                            fontSize: "13px",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          📊 Ачаалал
+                        </button>
                         <button
                           onClick={() => { setBonusModalCenter(center); setBonusModalOpen(true); }}
-                          style={{ padding:'8px 12px', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:800, cursor:'pointer', boxShadow:'0 4px 12px rgba(5,150,105,.35)' }}
-                        >+ Бонус</button>
-                        <button
-                          onClick={() => { setManageModalCenter(center); setManageModalOpen(true); }}
-                          style={{ padding:'8px 12px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', border:'none', borderRadius:10, fontSize:12, fontWeight:800, cursor:'pointer', boxShadow:'0 4px 12px rgba(99,102,241,.35)' }}
-                        >Засах/Устгах</button>
+                          style={{ 
+                            padding: "10px 16px",
+                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "12px",
+                            fontSize: "13px",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          🎁 Бонус
+                        </button>
+                        <div style={{ 
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "8px 14px",
+                          background: "#f9fafb",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "12px",
+                          flex: 1,
+                          minWidth: "fit-content"
+                        }}>
+                          <span style={{ fontSize: "12px", fontWeight: "600", color: "#6b7280" }}>
+                            Bonus:
+                          </span>
+                          <button
+                            onClick={() => { setManageModalCenter(center); setBonusManageMode('edit'); setManageModalOpen(true); }}
+                            style={{ 
+                              padding: "6px 12px",
+                              borderRadius: "10px",
+                              border: "none",
+                              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                              color: "#fff",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              boxShadow: "0 2px 8px rgba(99, 102, 241, 0.3)",
+                              transition: "all 0.2s"
+                            }}
+                          >
+                            ✏️ Засах
+                          </button>
+                          <button
+                            onClick={() => { setManageModalCenter(center); setBonusManageMode('delete'); setManageModalOpen(true); }}
+                            style={{ 
+                              padding: "6px 12px",
+                              borderRadius: "10px",
+                              border: "none",
+                              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                              color: "#fff",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
+                              transition: "all 0.2s"
+                            }}
+                          >
+                            🗑️ Устгах
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -788,19 +1007,105 @@ export default function Booking() {
             </div>
           ) : (
             <div style={{
-              background: "white",
-              padding: "32px 20px",
-              borderRadius: "12px",
+              background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+              padding: "48px 24px",
+              borderRadius: "20px",
               textAlign: "center",
-              border: "1px solid #e0e0e0"
+              boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+              border: "2px solid #fbbf24"
             }}>
-              <div style={{ fontSize: "48px", marginBottom: "16px" }}>�</div>
-              <p style={{ color: "#666", margin: 0 }}>
-                PC төв олдсонгүй
+              <div style={{ 
+                fontSize: "64px", 
+                marginBottom: "20px",
+                animation: "bounce 2s ease-in-out infinite"
+              }}>
+                🎮
+              </div>
+              <h3 style={{ 
+                margin: "0 0 12px 0", 
+                color: "#92400e", 
+                fontSize: "20px", 
+                fontWeight: "800"
+              }}>
+                {isCenterOwner ? "Төв бүртгээгүй байна" : "Дуртай төв алга"}
+              </h3>
+              <p style={{ 
+                color: "#b45309", 
+                fontSize: "14px", 
+                lineHeight: "1.6",
+                maxWidth: "320px",
+                margin: "0 auto"
+              }}>
+                {isCenterOwner 
+                  ? "Эхлээд төвөө бүртгэж, gaming төвүүдээ удирдаарай"
+                  : "Map эсвэл List хуудаснаас дуртай төвүүдээ нэмээрэй"
+                }
               </p>
+              <style>{`
+                @keyframes bounce {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-10px); }
+                }
+              `}</style>
             </div>
           )}
         </div>
+
+        {/* Booking History Section */}
+        {!isCenterOwner && (
+          <div style={{ marginBottom: "24px" }}>
+            <h2 style={{ 
+              fontSize: "20px", 
+              color: "#1f2937", 
+              margin: "0 0 20px 0",
+              fontWeight: "700",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px"
+            }}>
+              📜 Захиалгын түүх
+            </h2>
+            
+            <div style={{
+              background: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)",
+              padding: "40px 20px",
+              borderRadius: "20px",
+              textAlign: "center",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+              border: "2px solid #818cf8"
+            }}>
+              <div style={{ 
+                fontSize: "48px", 
+                marginBottom: "16px",
+                animation: "pulse 2s ease-in-out infinite"
+              }}>
+                📅
+              </div>
+              <h3 style={{
+                margin: "0 0 8px 0",
+                color: "#3730a3",
+                fontSize: "18px",
+                fontWeight: "700"
+              }}>
+                Захиалга байхгүй байна
+              </h3>
+              <p style={{ 
+                color: "#4338ca", 
+                margin: 0, 
+                fontSize: "14px",
+                lineHeight: "1.6"
+              }}>
+                Gaming төвүүд дээрээ дарж захиалга үүсгэнэ үү
+              </p>
+              <style>{`
+                @keyframes pulse {
+                  0%, 100% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.8; transform: scale(0.95); }
+                }
+              `}</style>
+            </div>
+          </div>
+        )}
 
         {/* Login prompt for non-authenticated users */}
         {!user && (
@@ -813,10 +1118,10 @@ export default function Booking() {
           }}>
             <div style={{ fontSize: "32px", marginBottom: "12px" }}>👋</div>
             <h3 style={{ color: "#d84315", marginBottom: "8px", fontSize: "16px" }}>
-              Нэвтэрч PC төвүүдээ харъаарай!
+              Нэвтэрч Gaming төвүүдээ харъаарай!
             </h3>
             <p style={{ color: "#bf360c", margin: "0 0 16px 0", fontSize: "14px" }}>
-              Нэвтэрснээр PC төвүүдийн мэдээллийг харж, захиалга өгч болно
+              Нэвтэрснээр Gaming төвүүдийн мэдээллийг харж, захиалга өгч болно
             </p>
             <button
               onClick={() => window.location.href = '/login'}
@@ -866,7 +1171,12 @@ export default function Booking() {
       <BonusManageModal
         center={manageModalCenter}
         isOpen={manageModalOpen}
-        onClose={() => { setManageModalOpen(false); setManageModalCenter(null); }}
+        mode={bonusManageMode}
+        onClose={() => { 
+          setManageModalOpen(false); 
+          setManageModalCenter(null); 
+          setBonusManageMode('edit');
+        }}
         onUpdated={(updatedCenter) => {
           if (updatedCenter?._id) {
             setFavorites(prev => prev.map(c => c._id === updatedCenter._id ? updatedCenter : c));
@@ -915,9 +1225,9 @@ function AddBonusModal({ center, isOpen, onClose, onAdded }) {
           <input name="title" placeholder="Гарчиг" value={form.title} onChange={change} style={inputStyle} />
           <textarea name="text" placeholder="Тайлбар (сонголттой)" value={form.text} onChange={change} style={{ ...inputStyle, minHeight:80 }} />
           <div style={{ display:'flex', gap:8 }}>
-            <input name="standardFree" placeholder="STD" value={form.standardFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+            <input name="standardFree" placeholder="Заал" value={form.standardFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
             <input name="vipFree" placeholder="VIP" value={form.vipFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
-            <input name="stageFree" placeholder="STG" value={form.stageFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
+            <input name="stageFree" placeholder="Stage" value={form.stageFree} onChange={change} style={{ ...inputStyle, flex:1 }} />
           </div>
           <button disabled={saving} onClick={submit} style={btnPrimary}>{saving ? '🔄 Хадгалж байна...' : '✅ Хадгалах'}</button>
         </div>
@@ -930,11 +1240,12 @@ const inputStyle = { width:'100%', padding:'10px 14px', border:'2px solid #e5e7e
 const btnPrimary = { padding:'12px 18px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', border:'none', borderRadius:12, fontWeight:700, cursor:'pointer', fontSize:14, boxShadow:'0 4px 14px rgba(99,102,241,.35)' };
 
 // Бонус засах/устгах Modal (орчин үеийн загвар)
-function BonusManageModal({ center, isOpen, onClose, onUpdated }) {
+function BonusManageModal({ center, isOpen, onClose, onUpdated, mode = 'edit' }) {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ title:'', text:'', standardFree:'', vipFree:'', stageFree:'' });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const isDeleteMode = mode === 'delete';
   if (!isOpen || !center) return null;
 
   const startEdit = (b) => {
@@ -1002,7 +1313,12 @@ function BonusManageModal({ center, isOpen, onClose, onUpdated }) {
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ background:'#fff', width:'100%', maxWidth:520, borderRadius:16, padding:24, boxShadow:'0 10px 32px rgba(0,0,0,.25)', position:'relative' }}>
         <button onClick={onClose} style={{ position:'absolute', top:12, right:12, background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#666' }}>✕</button>
-        <h3 style={{ margin:0, marginBottom:12, fontSize:18, fontWeight:800, display:'flex', alignItems:'center', gap:8 }}>🎛️ Бонус засах / устгах</h3>
+        <h3 style={{ margin:0, marginBottom:4, fontSize:18, fontWeight:800, display:'flex', alignItems:'center', gap:8 }}>
+          {isDeleteMode ? '🗑️ Бонус устгах' : '🎛️ Бонус засах'}
+        </h3>
+        <p style={{ margin:'0 0 12px 0', fontSize:12, color:'#64748b' }}>
+          {isDeleteMode ? 'Устгах бонусоо сонгоно уу' : 'Засах бонусоо сонгохдоо жагсаалтаас сонгоно уу'}
+        </p>
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           {bonuses.length === 0 && <div style={{ color:'#666', fontSize:14 }}>Бонус одоогоор байхгүй</div>}
           {bonuses.map(b => (

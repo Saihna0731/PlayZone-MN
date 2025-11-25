@@ -136,9 +136,18 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    // Increment token version to invalidate previous sessions
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+
     // JWT token үүсгэх
     const token = jwt.sign(
-      { userId: user._id, accountType: user.accountType, role: user.role },
+      { 
+        userId: user._id, 
+        accountType: user.accountType, 
+        role: user.role,
+        tokenVersion: user.tokenVersion 
+      },
       process.env.JWT_SECRET || "fallback_secret_key",
       { expiresIn: "7d" }
     );
@@ -394,6 +403,49 @@ router.get("/followers", auth, async (req, res) => {
       message: "Followers жагсаалт авахад алдаа гарлаа",
       error: error.message 
     });
+  }
+});
+
+// Send verification code
+router.post('/send-verification', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.emailVerificationCode = code;
+    user.emailVerificationExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    // Mock sending email (In production, use nodemailer)
+    console.log(`Verification code for ${user.email}: ${code}`);
+
+    res.json({ message: 'Verification code sent' });
+  } catch (error) {
+    console.error("Send verification error:", error);
+    res.status(500).json({ message: 'Error sending verification code' });
+  }
+});
+
+// Verify email
+router.post('/verify-email', auth, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findById(req.userId);
+    
+    if (!user || user.emailVerificationCode !== code || user.emailVerificationExpires < Date.now()) {
+      return res.status(400).json({ message: 'Invalid or expired code' });
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationCode = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Email verified successfully', user });
+  } catch (error) {
+    console.error("Verify email error:", error);
+    res.status(500).json({ message: 'Error verifying email' });
   }
 });
 

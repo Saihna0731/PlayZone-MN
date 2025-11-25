@@ -843,7 +843,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
           }}>
             <PlanBadge owner={typeof item.owner === 'object' ? item.owner : undefined} />
             
-            {((canEdit) || userIsAdmin) && (
+            {((canEdit) || userIsAdmin) && !isBookingMode && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
                 <button
                   className="card-action-btn card-action-btn-edit"
@@ -929,20 +929,71 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
 
         {/* Category tag */}
         {item.category && (
-          <span style={{
-            display: "inline-block",
-            background: "#e3f2fd",
-            color: "#1976d2",
-            padding: "4px 12px",
-            borderRadius: 16,
-            fontSize: 12,
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            marginBottom: 12
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            marginBottom: 12,
+            flexWrap: "wrap"
           }}>
-            {item.category}
-          </span>
+            <span style={{
+              display: "inline-block",
+              background: "#e3f2fd",
+              color: "#1976d2",
+              padding: "4px 12px",
+              borderRadius: 16,
+              fontSize: 12,
+              fontWeight: "600",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px"
+            }}>
+              {item.category}
+            </span>
+
+            {isBookingMode && ((canEdit) || userIsAdmin) && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button
+                  onClick={(e) => handleActionClick(e, onEdit)}
+                  style={{
+                    background: "linear-gradient(135deg,#14b8a6,#0d9488)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 999,
+                    padding: "6px 12px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 3px 8px rgba(13,148,136,0.3)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}
+                >
+                  Засах
+                </button>
+                <button
+                  onClick={(e) => handleActionClick(e, () => onDelete && onDelete(item._id ?? item.id))}
+                  style={{
+                    background: "linear-gradient(135deg,#f43f5e,#e11d48)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 999,
+                    padding: "6px 12px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 3px 8px rgba(225,29,72,0.3)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}
+                >
+                  Устгах
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Occupancy Display */}

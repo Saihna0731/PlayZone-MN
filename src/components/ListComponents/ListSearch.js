@@ -15,7 +15,7 @@ export default function ListSearch({ value, onChange }) {
     }}>
       <input
         type="text"
-        placeholder="PC Center хайх... (нэр, хаяг)"
+        placeholder="Game Center хайх... (нэр, хаяг)"
         value={value || ""}
         onChange={(e) => onChange && onChange(e.target.value)}
         style={{

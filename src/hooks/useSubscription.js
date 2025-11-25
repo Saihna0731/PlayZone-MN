@@ -9,17 +9,20 @@ const API_URL = `${API_BASE}/api`;
 export function useSubscription() {
 	const { user, isAdmin, isCenterOwner } = useAuth();
 	const [subscription, setSubscription] = useState(null);
-	const [loading, setLoading] = useState(false);
+	const [loading, setLoading] = useState(true); // Start loading true to prevent flash of "locked" state
 
 	// Subscription мэдээлэл татах
 	const fetchSubscription = useCallback(async () => {
-		if (!user) return;
+		if (!user) {
+            setLoading(false);
+            return;
+        }
 
 		setLoading(true);
 		try {
 			const token = localStorage.getItem('token');
-			const response = await axios.get(`${API_URL}/subscription/me`, {//Database-с subscription мэдээлэл авах
-				headers: { Authorization: `Bearer ${token}` }//Эндпоинт рүү илгээх токен
+			const response = await axios.get(`${API_URL}/subscription/me`, {
+				headers: { Authorization: `Bearer ${token}` }
 			});
 			
 			if (response.data.success) {
