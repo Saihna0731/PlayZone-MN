@@ -20,7 +20,8 @@
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "latest"
+    "mongoose": "latest",
+    "nodemailer": "^7.0.11"
   },
   "devDependencies": {
     "nodemon": "latest"

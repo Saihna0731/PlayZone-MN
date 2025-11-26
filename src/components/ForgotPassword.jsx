@@ -6,8 +6,8 @@ import '../styles/Auth.css';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Phone, 2: Code, 3: New Password
-  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState(1); // 1: Email/Phone, 2: Code, 3: New Password
+  const [emailOrPhone, setEmailOrPhone] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,30 +17,34 @@ const ForgotPassword = () => {
   const [resetToken, setResetToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [devCode, setDevCode] = useState(''); // DEV only
+  const [resetMethod, setResetMethod] = useState(''); // 'email' or 'sms'
 
-  // Step 1: Утасны дугаар оруулах, SMS код авах
+  // Step 1: Имэйл эсвэл утасны дугаар оруулах, код авах
   const handleRequestCode = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setMessage('');
 
-    if (!phone) {
-      setError('Утасны дугаараа оруулна уу');
+    if (!emailOrPhone) {
+      setError('Имэйл эсвэл утасны дугаараа оруулна уу');
       setLoading(false);
       return;
     }
 
-    const phoneRegex = /^[0-9]{8}$/;
-    if (!phoneRegex.test(phone)) {
-      setError('Утасны дугаар 8 оронтой тоо байх ёстой');
+    const isEmail = emailOrPhone.includes('@');
+    const isPhone = /^[0-9]{8}$/.test(emailOrPhone);
+
+    if (!isEmail && !isPhone) {
+      setError('Зөв имэйл эсвэл 8 оронтой утасны дугаар оруулна уу');
       setLoading(false);
       return;
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/api/auth/forgot-password`, { phone });
-      setMessage('SMS код илгээгдлээ. 10 минутын дотор ашиглана уу.');
+      const response = await axios.post(`${API_BASE}/api/auth/forgot-password`, { emailOrPhone });
+      setResetMethod(response.data.method);
+      setMessage(response.data.message);
       setStep(2);
       
       // DEV only: Show code in console/UI
@@ -69,7 +73,7 @@ const ForgotPassword = () => {
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/api/auth/verify-reset-code`, { phone, code });
+      const response = await axios.post(`${API_BASE}/api/auth/verify-reset-code`, { emailOrPhone, code });
       setResetToken(response.data.resetToken);
       setMessage('Код баталгаажлаа! Шинэ нууц үгээ оруулна уу.');
       setStep(3);
@@ -138,8 +142,9 @@ const ForgotPassword = () => {
             </div>
             <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1f2937', marginBottom: '8px' }}>🔑 Нууц үг сэргээх</h1>
             <p style={{ color: '#6b7280', fontSize: '14px' }}>
-              {step === 1 && 'Бүртгэлтэй утасны дугаараа оруулна уу'}
-              {step === 2 && 'Утасан дээр ирсэн 6 оронтой кодыг оруулна уу'}
+              {step === 1 && 'Бүртгэлтэй имэйл эсвэл утасны дугаараа оруулна уу'}
+              {step === 2 && resetMethod === 'email' && 'Имэйл хаягт ирсэн 6 оронтой кодыг оруулна уу'}
+              {step === 2 && resetMethod === 'sms' && 'Утасан дээр ирсэн 6 оронтой кодыг оруулна уу'}
               {step === 3 && 'Шинэ нууц үгээ оруулна уу'}
             </p>
           </div>
@@ -147,28 +152,27 @@ const ForgotPassword = () => {
           {error && <div className="error-message" style={{ marginBottom: '16px' }}><span>⚠️ {error}</span></div>}
           {message && <div className="success-message" style={{ marginBottom: '16px', background: '#d1fae5', color: '#065f46', padding: '12px', borderRadius: '8px', fontSize: '14px' }}><span>✅ {message}</span></div>}
 
-          {/* Step 1: Phone Number */}
+          {/* Step 1: Email or Phone */}
           {step === 1 && (
             <form onSubmit={handleRequestCode} className="auth-form">
               <div className="form-group">
-                <label htmlFor="phone">📱 Утасны дугаар</label>
+                <label htmlFor="emailOrPhone">📧 Имэйл эсвэл 📱 Утасны дугаар</label>
                 <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="99123456"
-                  maxLength="8"
+                  id="emailOrPhone"
+                  name="emailOrPhone"
+                  type="text"
+                  value={emailOrPhone}
+                  onChange={(e) => setEmailOrPhone(e.target.value)}
+                  placeholder="email@example.com эсвэл 99123456"
                   required
                 />
                 <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                  Бүртгэлтэй 8 оронтой утасны дугаараа оруулна уу
+                  📧 Бүртгэлтэй имэйл хаяг эсвэл 📱 8 оронтой утасны дугаар
                 </small>
               </div>
 
               <button type="submit" className={`auth-btn ${loading ? 'loading' : ''}`} disabled={loading}>
-                {loading ? '⏳ Илгээж байна...' : '📨 SMS код авах'}
+                {loading ? '⏳ Илгээж байна...' : '🔐 Код авах'}
               </button>
             </form>
           )}
@@ -182,7 +186,7 @@ const ForgotPassword = () => {
                 </div>
               )}
               <div className="form-group">
-                <label htmlFor="code">🔢 SMS Код</label>
+                <label htmlFor="code">🔢 {resetMethod === 'email' ? 'Email Код' : 'SMS Код'}</label>
                 <input
                   id="code"
                   name="code"

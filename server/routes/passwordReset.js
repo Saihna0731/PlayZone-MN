@@ -1,67 +1,99 @@
 const express = require('express');
 const User = require('../models/User');
 const PasswordReset = require('../models/PasswordReset');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 const router = express.Router();
 
 /**
- * Step 1: Утасны дугаараар SMS код илгээх хүсэлт
+ * Step 1: Email эсвэл утасны дугаараар код илгээх хүсэлт
  * POST /api/auth/forgot-password
  */
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { emailOrPhone } = req.body;
 
-    if (!phone) {
-      return res.status(400).json({ message: 'Утасны дугаар оруулна уу' });
+    if (!emailOrPhone) {
+      return res.status(400).json({ message: 'Имэйл эсвэл утасны дугаар оруулна уу' });
     }
 
-    // Phone format шалгах (8 оронтой)
-    const phoneRegex = /^[0-9]{8}$/;
-    if (!phoneRegex.test(phone)) {
-      return res.status(400).json({ message: 'Утасны дугаар 8 оронтой тоо байх ёстой' });
+    // Email эсвэл утас эсэхийг шалгах
+    const isEmail = emailOrPhone.includes('@');
+    const isPhone = /^[0-9]{8}$/.test(emailOrPhone);
+
+    if (!isEmail && !isPhone) {
+      return res.status(400).json({ message: 'Зөв имэйл эсвэл 8 оронтой утасны дугаар оруулна уу' });
     }
 
     // Хэрэглэгч олох
-    const user = await User.findOne({ phone });
+    const query = isEmail ? { email: emailOrPhone } : { phone: emailOrPhone };
+    const user = await User.findOne(query);
+    
     if (!user) {
-      return res.status(404).json({ message: 'Энэ утасны дугаартай хэрэглэгч олдсонгүй' });
+      return res.status(404).json({ 
+        message: isEmail 
+          ? 'Энэ имэйл хаягтай хэрэглэгч олдсонгүй' 
+          : 'Энэ утасны дугаартай хэрэглэгч олдсонгүй' 
+      });
     }
 
     // 6 оронтой санамсаргүй код үүсгэх
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Өмнөх кодуудыг идэвхгүй болгох
+    const resetQuery = isEmail ? { userId: user._id } : { phone: emailOrPhone };
     await PasswordReset.updateMany(
-      { phone, isUsed: false },
+      { ...resetQuery, isUsed: false },
       { isUsed: true }
     );
 
     // Шинэ код хадгалах
     const resetRequest = await PasswordReset.create({
-      phone,
+      phone: isPhone ? emailOrPhone : (user.phone || ''),
       code,
       userId: user._id,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 минут
     });
 
-    // 🔔 Бодит системд SMS илгээх (одоогоор console log)
-    console.log('📱 SMS CODE:', {
-      phone,
-      code,
-      message: `PlayZone MN: Таны нууц үг сэргээх код: ${code}. 10 минутын дотор ашиглана уу.`
-    });
+    // Email эсвэл SMS илгээх
+    if (isEmail) {
+      // Email илгээх
+      const emailResult = await sendPasswordResetEmail(emailOrPhone, code, user.username);
+      
+      if (!emailResult.success) {
+        console.error('❌ Email send failed:', emailResult.error);
+        return res.status(500).json({ 
+          message: 'Имэйл илгээхэд алдаа гарлаа. Дахин оролдоно уу.' 
+        });
+      }
 
-    // TODO: SMS API ашиглах (Twilio, MessageBird, etc.)
-    // await sendSMS(phone, `PlayZone MN: Таны код: ${code}`);
+      console.log('📧 Email sent successfully:', emailResult.messageId);
+      res.json({
+        success: true,
+        message: 'Таны имэйл хаяг руу код илгээгдлээ. 10 минутын дотор ашиглана уу.',
+        method: 'email',
+        expiresAt: resetRequest.expiresAt,
+        ...(process.env.NODE_ENV === 'development' && { devCode: code })
+      });
+    } else {
+      // SMS илгээх (одоогоор console log)
+      console.log('📱 SMS CODE:', {
+        phone: emailOrPhone,
+        code,
+        message: `PlayZone MN: Таны нууц үг сэргээх код: ${code}. 10 минутын дотор ашиглана уу.`
+      });
 
-    res.json({
-      success: true,
-      message: 'SMS код илгээгдлээ. 10 минутын дотор ашиглана уу.',
-      expiresAt: resetRequest.expiresAt,
-      // DEV ONLY: Production-д кодыг илгээхгүй!
-      ...(process.env.NODE_ENV === 'development' && { devCode: code })
-    });
+      // TODO: SMS API ашиглах (Twilio, MessageBird гэх мэт)
+      // await sendSMS(emailOrPhone, `PlayZone MN: Таны код: ${code}`);
+
+      res.json({
+        success: true,
+        message: 'SMS код илгээгдлээ. 10 минутын дотор ашиглана уу.',
+        method: 'sms',
+        expiresAt: resetRequest.expiresAt,
+        ...(process.env.NODE_ENV === 'development' && { devCode: code })
+      });
+    }
 
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -75,15 +107,24 @@ router.post('/forgot-password', async (req, res) => {
  */
 router.post('/verify-reset-code', async (req, res) => {
   try {
-    const { phone, code } = req.body;
+    const { emailOrPhone, code } = req.body;
 
-    if (!phone || !code) {
-      return res.status(400).json({ message: 'Утас болон кодыг оруулна уу' });
+    if (!emailOrPhone || !code) {
+      return res.status(400).json({ message: 'Имэйл/утас болон кодыг оруулна уу' });
+    }
+
+    // Хэрэглэгч олох
+    const isEmail = emailOrPhone.includes('@');
+    const query = isEmail ? { email: emailOrPhone } : { phone: emailOrPhone };
+    const user = await User.findOne(query);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Хэрэглэгч олдсонгүй' });
     }
 
     // Код олох
     const resetRequest = await PasswordReset.findOne({
-      phone,
+      userId: user._id,
       code,
       isUsed: false,
       expiresAt: { $gt: new Date() }
