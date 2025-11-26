@@ -25,8 +25,10 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ message: 'Зөв имэйл эсвэл 8 оронтой утасны дугаар оруулна уу' });
     }
 
-    // Хэрэглэгч олох
-    const query = isEmail ? { email: emailOrPhone } : { phone: emailOrPhone };
+    // Хэрэглэгч олох (email-ийг lowercase болгож шалгах)
+    const query = isEmail 
+      ? { email: emailOrPhone.trim().toLowerCase() } 
+      : { phone: emailOrPhone.trim() };
     const user = await User.findOne(query);
     
     if (!user) {
