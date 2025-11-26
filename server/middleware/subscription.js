@@ -18,6 +18,20 @@ const checkSubscription = (requiredPlan = 'normal') => {
 			// User subscription шалгах
 			if (user.accountType === 'user') {
 				const subscription = user.subscription;
+				const trial = user.trial;
+				const now = new Date();
+
+				// Trial идэвхтэй эсэхийг эхлээд шалгах
+				if (trial && trial.isActive && trial.endDate && now <= new Date(trial.endDate)) {
+					// Trial хугацаанд байгаа бол эрх олгох
+					return next();
+				}
+
+				// Trial дууссан бол идэвхгүй болгох
+				if (trial && trial.isActive && trial.endDate && now > new Date(trial.endDate)) {
+					user.trial.isActive = false;
+					await user.save();
+				}
 				
 				// Free plan хэрэглэгч бол хязгаарлах
 				if (!subscription || subscription.plan === 'free') {
@@ -74,6 +88,20 @@ const checkCenterOwnerPlan = (requiredFeature) => {
 			}
 
 			const subscription = user.subscription || {};
+			const trial = user.trial;
+			const now = new Date();
+
+			// Trial идэвхтэй эсэхийг эхлээд шалгах
+			if (trial && trial.isActive && trial.endDate && now <= new Date(trial.endDate)) {
+				// Trial хугацаанд байгаа бол эрх олгох
+				return next();
+			}
+
+			// Trial дууссан бол идэвхгүй болгох
+			if (trial && trial.isActive && trial.endDate && now > new Date(trial.endDate)) {
+				user.trial.isActive = false;
+				await user.save();
+			}
 
 			// Free plan бол хязгаарлах
 			if (!subscription || subscription.plan === 'free') {
@@ -159,21 +187,33 @@ const checkCenterLimit = async (req, res, next) => {
 		}
 
 		const subscription = user.subscription || {};
+		const trial = user.trial;
+		const now = new Date();
 		const currentCenterCount = await Center.countDocuments({ owner: user._id });
 
+		// Trial идэвхтэй эсэхийг шалгах
+		let effectivePlan = subscription.plan || 'free';
+		if (trial && trial.isActive && trial.endDate && now <= new Date(trial.endDate)) {
+			effectivePlan = trial.plan; // Trial plan-г ашиглах
+		} else if (trial && trial.isActive && trial.endDate && now > new Date(trial.endDate)) {
+			// Trial дууссан бол идэвхгүй болгох
+			user.trial.isActive = false;
+			await user.save();
+		}
+
 		// Free plan бол center нэмэх эрхгүй
-		if (!subscription || subscription.plan === 'free') {
+		if (effectivePlan === 'free') {
 			return res.status(403).json({ 
 				message: 'Game Center нэмэхийн тулд Business план авах шаардлагатай',
 				upgrade: true 
 			});
 		}
 
-			// Center тоо хязгаарлалт шалгах (use sensible defaults when not set)
+			// Center тоо хязгаарлалт шалгах (trial plan эсвэл subscription plan)
 				let maxCenters = 0;
-				if (subscription.plan === 'business_standard') {
+				if (effectivePlan === 'business_standard') {
 					maxCenters = Math.max(Number(subscription.maxCenters || 0), 1);
-				} else if (subscription.plan === 'business_pro') {
+				} else if (effectivePlan === 'business_pro') {
 					maxCenters = Math.max(Number(subscription.maxCenters || 0), 2);
 				} else {
 					maxCenters = Number(subscription.maxCenters || 0);

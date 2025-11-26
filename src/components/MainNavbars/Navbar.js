@@ -20,7 +20,9 @@ function Navbar(props) {
       boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
     }} className="navbar">
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <h2 style={{ margin: 0, fontSize: "1.5rem" }}>🎮 PC Center</h2>
+        <Link to="/map" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+          <img src="/playzone-logo.svg" alt="PlayZone MN" style={{ height: "36px", filter: "brightness(0) invert(1)" }} />
+        </Link>
         {isAdmin && (
           <span style={{ 
             background: "rgba(255,255,255,0.2)", 

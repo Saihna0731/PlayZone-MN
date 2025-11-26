@@ -67,17 +67,38 @@ router.post("/register", async (req, res) => {
       role: 'user'
     };
 
+    // Trial мэдээлэл тохируулах
+    const now = new Date();
+    let trialDays = 0;
+    let trialPlan = null;
+
     if (accountType === 'user') {
       userData.username = username;
       userData.fullName = fullName;
+      trialDays = 7; // Энгийн хэрэглэгчид 7 хоног
+      trialPlan = 'normal';
     } else if (accountType === 'centerOwner') {
       // centerOwner-д username оруулахгүй (undefined) - null биш
       userData.centerName = centerName;
       userData.fullName = centerName; // centerName-ийг fullName болгоно
       userData.isApproved = true; // Шууд идэвхжүүлэх
       userData.role = 'centerOwner';
+      trialDays = 10; // Center эзэмшигчидэд 10 хоног
+      trialPlan = 'business_standard';
       // username талбарыг огт оруулахгүй байх
     }
+
+    // Trial мэдээлэл оруулах
+    const trialEndDate = new Date(now);
+    trialEndDate.setDate(trialEndDate.getDate() + trialDays);
+    
+    userData.trial = {
+      isActive: true,
+      plan: trialPlan,
+      startDate: now,
+      endDate: trialEndDate,
+      hasUsed: true
+    };
 
     const user = new User(userData);
     await user.save();

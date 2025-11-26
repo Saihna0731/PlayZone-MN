@@ -70,6 +70,14 @@ app.use("/api/subscription", subscriptionRouter);
 const bookingsRouter = require("./routes/bookings");
 app.use("/api/bookings", bookingsRouter);
 
+// Mount payment routes (SMS verification)
+const paymentRouter = require("./routes/payment");
+app.use("/api/payment", paymentRouter);
+
+// Mount password reset routes
+const passwordResetRouter = require("./routes/passwordReset");
+app.use("/api/auth", passwordResetRouter);
+
 // Simple root and health endpoints to verify backend from phone/browser
 app.get('/', (req, res) => {
   res.send(

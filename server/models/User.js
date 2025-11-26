@@ -113,11 +113,16 @@ const userSchema = new mongoose.Schema({
       default: null
     }
   },
-  // Free trial tracking (эхний 5 хоног)
-  freeTrial: {
-    used: {
+  // Trial мэдээлэл - Шинэ хэрэглэгчдэд автоматаар олгогдоно
+  trial: {
+    isActive: {
       type: Boolean,
       default: false
+    },
+    plan: {
+      type: String,
+      enum: ['normal', 'business_standard'],
+      default: null
     },
     startDate: {
       type: Date,
@@ -126,6 +131,10 @@ const userSchema = new mongoose.Schema({
     endDate: {
       type: Date,
       default: null
+    },
+    hasUsed: {
+      type: Boolean,
+      default: false
     }
   },
   createdAt: {

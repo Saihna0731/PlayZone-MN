@@ -10,6 +10,11 @@ import SimpleCalendar from "../components/LittleComponents/SimpleCalendar.jsx";
 import { FaHistory, FaChartLine, FaUser, FaCalendarAlt, FaMoneyBillWave, FaClock, FaList, FaChevronRight, FaBell } from "react-icons/fa";
 import '../styles/Profile.css';
 
+// PlayZone MN Logo Component
+const PlayZoneLogo = ({ style }) => (
+  <img src="/playzone-logo.svg" alt="PlayZone MN" style={{ height: '32px', ...style }} />
+);
+
 // Menu Item Component
 function MenuItem({ icon, title, onClick, active, danger, badge }) {
   return (
@@ -150,6 +155,14 @@ export default function Profile() {
   // Pending booking requests for center owner (status === 'pending')
   const pendingRequests = ownerBookings.filter(b => b.status === 'pending');
   const pendingRequestCount = pendingRequests.length;
+
+  // Trial status calculation
+  const trial = user?.trial;
+  const isTrialActive = trial?.isActive && trial?.endDate && new Date() <= new Date(trial.endDate);
+  const trialDaysLeft = isTrialActive 
+    ? Math.ceil((new Date(trial.endDate) - new Date()) / (1000 * 60 * 60 * 24))
+    : 0;
+  const trialPlanName = trial?.plan === 'normal' ? 'Энгийн' : trial?.plan === 'business_standard' ? 'Бизнес Стандарт' : '';
 
   // Fetch bookings and centers
   useEffect(() => {
@@ -376,10 +389,10 @@ export default function Profile() {
             <p>Профайлаа харахын тулд нэвтэрнэ үү</p>
             
             <div className="auth-buttons">
-              <Link to="/login" className="btn btn-primary">
+              <Link to="/auth?mode=register" className="btn btn-primary">
                 🚀 Нэвтрэх
               </Link>
-              <Link to="/register" className="btn btn-secondary">
+              <Link to="/auth?mode=register" className="btn btn-secondary">
                 🎉 Бүртгүүлэх
               </Link>
             </div>
@@ -528,6 +541,37 @@ export default function Profile() {
                   {zahialgaCount}
                 </div>
                 <div style={{ fontSize: "14px", color: "#6b7280", fontWeight: "600" }}>Миний захиалга</div>
+              </div>
+            </div>
+          )}
+
+          {/* Trial Banner */}
+          {isTrialActive && (
+            <div style={{
+              margin: "20px 20px 0 20px",
+              padding: "16px 20px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              borderRadius: "16px",
+              color: "white",
+              boxShadow: "0 4px 12px rgba(102,126,234,0.3)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: "700", marginBottom: "4px" }}>
+                    🎁 {trialPlanName} Trial
+                  </div>
+                  <div style={{ fontSize: "12px", opacity: 0.9 }}>
+                    {trialDaysLeft} хоног үлдсэн
+                  </div>
+                </div>
+                <div style={{
+                  fontSize: "28px",
+                  fontWeight: "700",
+                  minWidth: "50px",
+                  textAlign: "center"
+                }}>
+                  {trialDaysLeft}
+                </div>
               </div>
             </div>
           )}

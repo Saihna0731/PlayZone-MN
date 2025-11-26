@@ -4,16 +4,16 @@ const User = require('./models/User');
 
 async function main() {
   const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/my-map-app';
-  const email = process.env.ADMIN_EMAIL || 'admin@example.com';
-  const password = process.env.ADMIN_PASSWORD || 'admin123';
-  const fullName = process.env.ADMIN_NAME || 'admin';
+  const email = process.env.ADMIN_EMAIL || '**********';
+  const password = process.env.ADMIN_PASSWORD || '**********';
+  const fullName = process.env.ADMIN_NAME || 'Bayr_Admin';
 
   try {
     await mongoose.connect(MONGO_URI);
     console.log('MongoDB connected!!!!!!!!!!!!!!!!!');
 
-    // Find by email OR default admin username to avoid duplicate username errors
-    let admin = await User.findOne({ $or: [{ email }, { username: 'admin' }] });
+    // Find by email OR admin username
+    let admin = await User.findOne({ $or: [{ email }, { username: 'Bayr_Admin' }, { username: 'admin' }] });
     if (admin) {
       console.log('Admin user already exists:', admin.email || email);
       // Update role if needed
@@ -22,14 +22,16 @@ async function main() {
         await admin.save();
         console.log('Admin role updated.');
       }
-      // Ensure username and fullName are set
-      if (!admin.username) admin.username = 'admin';
-      if (!admin.fullName) admin.fullName = fullName;
+      // Update username and fullName
+      admin.username = 'Bayr_Admin';
+      admin.fullName = fullName;
+      admin.password = password; // Will be hashed by pre-save hook
       await admin.save();
+      console.log('Admin credentials updated.');
     } else {
       admin = new User({
         email,
-        username: 'admin',
+        username: 'Bayr_Admin',
         fullName,
         password, // will be hashed by pre-save hook
         accountType: 'user',

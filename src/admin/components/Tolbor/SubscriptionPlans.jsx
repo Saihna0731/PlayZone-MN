@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useSubscription } from '../../../hooks/useSubscription';
 import Toast from '../../../components/LittleComponents/Toast';
+import axios from 'axios';
+import { API_BASE } from '../../../config';
 import './SubscriptionPlans.css';
 
 const SubscriptionPlans = ({ showModal, onClose }) => {
@@ -18,7 +20,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
     {
       id: 'business_standard',
       name: 'Бизнес Стандарт',
-      price: '29,900₮',
+      price: '19,900₮',
+      priceValue: 19900,
       monthly: true,
       popular: true,
       features: [
@@ -32,7 +35,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
     {
       id: 'business_pro',
       name: 'Бизнес Про',
-      price: '59,900₮',
+      price: '39,900₮',
+      priceValue: 39900,
       monthly: true,
       features: [
         '✅ Game Center эзэмшигч',
@@ -52,7 +56,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
     {
       id: 'normal',
       name: 'Энгийн',
-      price: '4,990₮',
+      price: '1,990₮',
+      priceValue: 1990,
       monthly: true,
       features: [
         '✅ Бүх төв харах',
@@ -69,85 +74,415 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
   // Одоогийн төрлөөс хамааран plans сонгох
   const plans = effectiveType === 'center' ? centerPlans : subscriptionPlans;
 
-  const handleUpgrade = async (planId, paymentMethod = 'mock') => {
-    setLoading(true);
+  // handleUpgrade removed - using bank transfer instead of mock payment
+
+  // Show bank transfer details and create pending payment
+  const handleInstantUpgrade = async (planId) => {
+    setSelectedPlan(planId);
+    
+    // Create pending payment
     try {
       const selectedPlanData = plans.find(p => p.id === planId);
-      const result = await upgradeToplan(selectedPlanData, paymentMethod);
-      if (result.success) {
-        // Subscription data шинэчлэх
-        await refreshSubscription();
-        setToast({ message: '🎉 Амжилттай төлбөр хийлээ! Таны эрх шинэчлэгдлээ.', type: 'success' });
-        setTimeout(() => {
-          onClose();
-        }, 2000);
-      } else {
-        setToast({ message: result.message || 'Төлбөр хийхэд алдаа гарлаа', type: 'error' });
-      }
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API_BASE}/api/payment/create-pending`,
+        { 
+          planId: planId,
+          amount: selectedPlanData.priceValue
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log('Pending payment created successfully');
     } catch (error) {
-      setToast({ message: 'Төлбөр хийхэд алдаа гарлаа', type: 'error' });
+      console.error('Error creating pending payment:', error);
     }
-    setLoading(false);
+    
+    setShowPayment(true);
   };
 
-  // Automatic payment function (immediate/mock)
-  const handleInstantUpgrade = (planId) => {
-    setSelectedPlan(planId);
-    // run mock upgrade
-    handleUpgrade(planId, 'mock');
-  };
+  const PaymentModal = () => {
+    const selectedPlanData = plans.find(p => p.id === selectedPlan);
+    const [copied, setCopied] = useState('');
+    const [paymentCode, setPaymentCode] = useState(null);
+    const [codeLoading, setCodeLoading] = useState(true);
 
-  const PaymentModal = () => (
-    <div className="payment-modal-overlay">
-      <div className="payment-modal">
-        <div className="payment-header">
-          <h3>{plans.find(p => p.id === selectedPlan)?.name} План</h3>
-          <button onClick={() => setShowPayment(false)}>×</button>
-        </div>
-        
-        <div className="payment-amount">
-          <span>Төлөх дүн: {plans.find(p => p.id === selectedPlan)?.price}</span>
-        </div>
+    // Код авах
+    React.useEffect(() => {
+      const fetchCode = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.post(
+            `${API_BASE}/api/payment/generate-code`,
+            { planId: selectedPlan },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setPaymentCode(response.data);
+        } catch (error) {
+          console.error('Error generating code:', error);
+          setToast({ type: 'error', message: 'Код үүсгэхэд алдаа гарлаа' });
+        } finally {
+          setCodeLoading(false);
+        }
+      };
+      fetchCode();
+    }, [selectedPlan]);
 
-        <div className="payment-methods">
-          <h4>Төлбөрийн арга сонгох:</h4>
-          
-          <button 
-            className="payment-btn qpay"
-            onClick={() => handleUpgrade(selectedPlan, 'qpay')}
-            disabled={loading}
-          >
-            <img src="/qpay-logo.png" alt="QPay" />
-            QPay-ээр төлөх
-          </button>
+    const copyToClipboard = (text, field) => {
+      navigator.clipboard.writeText(text);
+      setCopied(field);
+      setTimeout(() => setCopied(''), 2000);
+    };
 
-          <button 
-            className="payment-btn mostmoney"
-            onClick={() => handleUpgrade(selectedPlan, 'mostmoney')}
-            disabled={loading}
-          >
-            <img src="/mostmoney-logo.png" alt="MostMoney" />
-            MostMoney-ээр төлөх
-          </button>
-
-          <button 
-            className="payment-btn card"
-            onClick={() => handleUpgrade(selectedPlan, 'card')}
-            disabled={loading}
-          >
-            💳 Картаар төлөх
-          </button>
-        </div>
-
-        {loading && (
-          <div className="payment-loading">
-            <div className="spinner"></div>
-            <span>Төлбөр боловсруулж байна...</span>
+    return (
+      <div className="payment-modal-overlay" onClick={() => setShowPayment(false)}>
+        <div className="payment-modal" onClick={(e) => e.stopPropagation()} style={{
+          maxWidth: '500px',
+          background: 'white',
+          borderRadius: '20px',
+          padding: '0',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}>
+          {/* Header */}
+          <div style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            padding: '24px',
+            borderRadius: '20px 20px 0 0',
+            color: 'white',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setShowPayment(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                fontSize: '20px',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >×</button>
+            <div style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>
+              💳 Төлбөр төлөх
+            </div>
+            <div style={{ fontSize: '14px', opacity: 0.9 }}>
+              {selectedPlanData?.name} План
+            </div>
           </div>
-        )}
+
+          {/* Body */}
+          <div style={{ padding: '24px' }}>
+            {/* Amount */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              padding: '20px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              marginBottom: '24px',
+              color: 'white'
+            }}>
+              <div style={{ fontSize: '14px', marginBottom: '8px', opacity: 0.9 }}>
+                Шилжүүлэх дүн
+              </div>
+              <div style={{ fontSize: '36px', fontWeight: '700' }}>
+                {selectedPlanData?.price}
+              </div>
+            </div>
+
+            {/* Bank Details */}
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '16px',
+              marginBottom: '20px'
+            }}>
+              <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#1f2937' }}>
+                🏦 Дансны мэдээлэл
+              </h4>
+              
+              {/* Bank Name */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  Банк
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'white',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '2px solid #e5e7eb'
+                }}>
+                  <span style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>
+                    Хаан банк
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard('Хаан банк', 'bank')}
+                    style={{
+                      background: copied === 'bank' ? '#10b981' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {copied === 'bank' ? '✓ Хуулсан' : '📋 Хуулах'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Account Number */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  Дансны дугаар
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'white',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '2px solid #e5e7eb'
+                }}>
+                  <span style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937', fontFamily: 'monospace' }}>
+                    5119131966
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard('5119131966', 'account')}
+                    style={{
+                      background: copied === 'account' ? '#10b981' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {copied === 'account' ? '✓ Хуулсан' : '📋 Хуулах'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Account Name */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  Дансны нэр
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'white',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '2px solid #e5e7eb'
+                }}>
+                  <span style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>
+                    Б.Баярсайхан
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard('Б.Баярсайхан', 'name')}
+                    style={{
+                      background: copied === 'name' ? '#10b981' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {copied === 'name' ? '✓ Хуулсан' : '📋 Хуулах'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Phone Number */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  Утасны дугаар
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'white',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '2px solid #e5e7eb'
+                }}>
+                  <span style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937', fontFamily: 'monospace' }}>
+                    60643016
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard('60643016', 'phone')}
+                    style={{
+                      background: copied === 'phone' ? '#10b981' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {copied === 'phone' ? '✓ Хуулсан' : '📋 Хуулах'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 🆕 Payment Code */}
+              <div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  Гүйлгээний утга (CODE)
+                </div>
+                {codeLoading ? (
+                  <div style={{
+                    background: 'white',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: '2px solid #e5e7eb',
+                    textAlign: 'center',
+                    color: '#6b7280'
+                  }}>
+                    ⏳ Код үүсгэж байна...
+                  </div>
+                ) : paymentCode ? (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: '3px solid #fbbf24'
+                  }}>
+                    <span style={{ 
+                      fontSize: '24px', 
+                      fontWeight: '700', 
+                      color: '#92400e', 
+                      fontFamily: 'monospace',
+                      letterSpacing: '2px'
+                    }}>
+                      {paymentCode.code}
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(paymentCode.code, 'code')}
+                      style={{
+                        background: copied === 'code' ? '#10b981' : '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 16px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+                      }}
+                    >
+                      {copied === 'code' ? '✓ Хуулсан' : '📋 Хуулах'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{
+                    background: '#fee2e2',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    color: '#991b1b',
+                    fontSize: '13px',
+                    textAlign: 'center'
+                  }}>
+                    ⚠️ Код үүсгэхэд алдаа гарлаа
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div style={{
+              background: '#ede9fe',
+              padding: '20px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              border: '2px solid #8b5cf6'
+            }}>
+              <div style={{ fontSize: '14px', color: '#5b21b6', lineHeight: '1.8' }}>
+                <strong style={{ fontSize: '16px', display: 'block', marginBottom: '12px' }}>
+                  📌 Төлбөр төлөх заавар:
+                </strong>
+                <ol style={{ margin: '0', paddingLeft: '20px' }}>
+                  <li style={{ marginBottom: '8px' }}>
+                    <strong>Дансанд шилжүүлэг хийх:</strong> Дээрх дансны мэдээлэл ашиглана
+                  </li>
+                  <li style={{ marginBottom: '8px' }}>
+                    <strong style={{ color: '#f59e0b' }}>⚠️ ГҮЙЛГЭЭНИЙ УТГА дээр</strong> дээрх <strong style={{ fontFamily: 'monospace', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px' }}>{paymentCode?.code || 'PZ-XXXXXX'}</strong> кодыг бичнэ үү!
+                  </li>
+                  <li style={{ marginBottom: '8px' }}>
+                    Шилжүүлэг амжилттай хийгдсэний дараа таны утас дээр <strong>SMS ирнэ</strong>
+                  </li>
+                  <li>
+                    Систем <strong>автоматаар</strong> SMS-ийг уншиж, кодыг баталгаажуулаад эрхийг нээнэ ✅
+                  </li>
+                </ol>
+                <div style={{ 
+                  marginTop: '16px', 
+                  padding: '12px', 
+                  background: '#fef3c7', 
+                  borderRadius: '8px',
+                  border: '1px solid #fbbf24'
+                }}>
+                  <strong>💡 Анхааруулга:</strong> Гүйлгээний утга дээр <strong>кодыг заавал</strong> оруулна уу. Энэ кодоор таны төлбөрийг таних болно!
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={() => {
+                setShowPayment(false);
+                setToast({ 
+                  message: '💰 Шилжүүлэг хийсний дараа SMS баталгаажуулалт хүлээнэ үү', 
+                  type: 'info' 
+                });
+              }}
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(102,126,234,0.3)'
+              }}
+            >
+              ✅ Ойлголоо
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (!showModal) return null;
 

@@ -50,7 +50,9 @@ const Login = () => {
 					maxWidth: '440px'
 				}}>
 				<div className="auth-header" style={{ textAlign: 'center', marginBottom: '24px' }}>
-					<h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1f2937', marginBottom: '8px' }}>🎮 Game Center</h1>
+					<div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+						<img src="/playzone-logo.svg" alt="PlayZone MN" style={{ height: '50px' }} />
+					</div>
 					<h2 style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6', marginBottom: '6px' }}>
 						{accountType === 'centerOwner' ? '🏢 Эзэмшигч нэвтрэх' : accountType === 'admin' ? '👨‍💼 Админ нэвтрэх' : '👤 Хэрэглэгч нэвтрэх'}
 					</h2>

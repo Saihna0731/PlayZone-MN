@@ -284,10 +284,25 @@ export default function Booking() {
   const [manageModalCenter, setManageModalCenter] = useState(null);
   const [manageModalOpen, setManageModalOpen] = useState(false);
   const [bonusManageMode, setBonusManageMode] = useState("edit");
+  const [bookingHistory, setBookingHistory] = useState([]);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      
+      // Fetch user's booking history if not center owner
+      if (!isCenterOwner && isAuthenticated) {
+        try {
+          const token = localStorage.getItem('token');
+          const bookingsRes = await axios.get(`${API_BASE}/api/bookings/my`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setBookingHistory(bookingsRes.data || []);
+        } catch (err) {
+          console.error('Error fetching booking history:', err);
+          setBookingHistory([]);
+        }
+      }
       
       // Бүх төвийг авах
       const centersRes = await axios.get(`${API_BASE}/api/centers`);
@@ -1064,46 +1079,129 @@ export default function Booking() {
               gap: "10px"
             }}>
               📜 Захиалгын түүх
+              {bookingHistory.length > 0 && (
+                <span style={{ 
+                  background: "linear-gradient(135deg, #8b5cf6, #6366f1)", 
+                  color: "white", 
+                  padding: "4px 12px", 
+                  borderRadius: "20px", 
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  boxShadow: "0 2px 8px rgba(139, 92, 246, 0.3)"
+                }}>
+                  {bookingHistory.length}
+                </span>
+              )}
             </h2>
             
-            <div style={{
-              background: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)",
-              padding: "40px 20px",
-              borderRadius: "20px",
-              textAlign: "center",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-              border: "2px solid #818cf8"
-            }}>
-              <div style={{ 
-                fontSize: "48px", 
-                marginBottom: "16px",
-                animation: "pulse 2s ease-in-out infinite"
-              }}>
-                📅
+            {bookingHistory.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {bookingHistory.map((booking) => {
+                  const center = booking.center;
+                  const statusColors = {
+                    pending: { bg: "#fef3c7", text: "#92400e", icon: "⏳" },
+                    confirmed: { bg: "#d1fae5", text: "#065f46", icon: "✅" },
+                    cancelled: { bg: "#fee2e2", text: "#991b1b", icon: "❌" },
+                    completed: { bg: "#e0e7ff", text: "#3730a3", icon: "🎉" }
+                  };
+                  const statusStyle = statusColors[booking.status] || statusColors.pending;
+                  
+                  return (
+                    <div key={booking._id} style={{
+                      background: "#ffffff",
+                      borderRadius: "16px",
+                      padding: "16px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                      border: "1px solid #f0f0f0"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: "16px", fontWeight: "700", color: "#1f2937", marginBottom: "4px" }}>
+                            {center?.name || 'Тодорхойгүй төв'}
+                          </div>
+                          <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                            📅 {new Date(booking.date).toLocaleDateString('mn-MN')} | ⏰ {booking.time}
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: "6px 12px",
+                          borderRadius: "12px",
+                          background: statusStyle.bg,
+                          color: statusStyle.text,
+                          fontSize: "12px",
+                          fontWeight: "700",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px"
+                        }}>
+                          {statusStyle.icon} {booking.status === 'pending' ? 'Хүлээгдэж байна' : 
+                                              booking.status === 'confirmed' ? 'Баталгаажсан' :
+                                              booking.status === 'cancelled' ? 'Цуцлагдсан' : 'Дууссан'}
+                        </div>
+                      </div>
+                      
+                      {booking.type && (
+                        <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px" }}>
+                          🎮 {booking.type} {booking.seats && `• ${booking.seats} суудал`}
+                        </div>
+                      )}
+                      
+                      {booking.price && (
+                        <div style={{ 
+                          fontSize: "15px", 
+                          fontWeight: "700", 
+                          color: "#3b82f6",
+                          marginTop: "8px",
+                          paddingTop: "8px",
+                          borderTop: "1px solid #f0f0f0"
+                        }}>
+                          💰 {booking.price.toLocaleString()}₮
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <h3 style={{
-                margin: "0 0 8px 0",
-                color: "#3730a3",
-                fontSize: "18px",
-                fontWeight: "700"
+            ) : (
+              <div style={{
+                background: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)",
+                padding: "40px 20px",
+                borderRadius: "20px",
+                textAlign: "center",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+                border: "2px solid #818cf8"
               }}>
-                Захиалга байхгүй байна
-              </h3>
-              <p style={{ 
-                color: "#4338ca", 
-                margin: 0, 
-                fontSize: "14px",
-                lineHeight: "1.6"
-              }}>
-                Gaming төвүүд дээрээ дарж захиалга үүсгэнэ үү
-              </p>
-              <style>{`
-                @keyframes pulse {
-                  0%, 100% { opacity: 1; transform: scale(1); }
-                  50% { opacity: 0.8; transform: scale(0.95); }
-                }
-              `}</style>
-            </div>
+                <div style={{ 
+                  fontSize: "48px", 
+                  marginBottom: "16px",
+                  animation: "pulse 2s ease-in-out infinite"
+                }}>
+                  📅
+                </div>
+                <h3 style={{
+                  margin: "0 0 8px 0",
+                  color: "#3730a3",
+                  fontSize: "18px",
+                  fontWeight: "700"
+                }}>
+                  Захиалга байхгүй байна
+                </h3>
+                <p style={{ 
+                  color: "#4338ca", 
+                  margin: 0, 
+                  fontSize: "14px",
+                  lineHeight: "1.6"
+                }}>
+                  Gaming төвүүд дээрээ дарж захиалга үүсгэнэ үү
+                </p>
+                <style>{`
+                  @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.8; transform: scale(0.95); }
+                  }
+                `}</style>
+              </div>
+            )}
           </div>
         )}
 

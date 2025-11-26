@@ -58,17 +58,47 @@ const Register = () => {
       return 'Game Center-ийн нэрийг оруулна уу';
     }
 
+    // ✅ Имэйл шалгах
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      return 'Зөв имэйл хаяг оруулна уу';
+      return '⚠️ Зөв имэйл хаяг оруулна уу (жишээ: name@example.com)';
     }
 
-    if (formData.password.length < 6) {
-      return 'Нууц үг 6-аас дээш тэмдэгт байх ёстой';
+    // ✅ Утасны дугаар шалгах (Монгол)
+    if (formData.phone) {
+      const phoneRegex = /^[0-9]{8}$/;
+      if (!phoneRegex.test(formData.phone)) {
+        return '⚠️ Утасны дугаар 8 оронтой тоо байх ёстой (жишээ: 99123456)';
+      }
+    }
+
+    // ✅ Хүчтэй нууц үг шалгах
+    if (formData.password.length < 8) {
+      return '⚠️ Нууц үг 8-аас дээш тэмдэгт байх ёстой';
+    }
+
+    // Том үсэг шалгах
+    if (!/[A-Z]/.test(formData.password)) {
+      return '⚠️ Нууц үг дор хаяж 1 том үсэг агуулах ёстой (A-Z)';
+    }
+
+    // Жижиг үсэг шалгах
+    if (!/[a-z]/.test(formData.password)) {
+      return '⚠️ Нууц үг дор хаяж 1 жижиг үсэг агуулах ёстой (a-z)';
+    }
+
+    // Тоо шалгах
+    if (!/[0-9]/.test(formData.password)) {
+      return '⚠️ Нууц үг дор хаяж 1 тоо агуулах ёстой (0-9)';
+    }
+
+    // Тусгай тэмдэгт шалгах
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      return '⚠️ Нууц үг дор хаяж 1 тусгай тэмдэгт агуулах ёстой (!@#$%^&* гэх мэт)';
     }
 
     if (formData.password !== formData.confirmPassword) {
-      return 'Нууц үг таарахгүй байна';
+      return '⚠️ Нууц үг таарахгүй байна';
     }
 
     return null;
@@ -188,11 +218,14 @@ const Register = () => {
                 placeholder="example@email.com"
                 required
               />
+              <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                ⚠️ Үнэн зөв имэйл хаяг оруулна уу (нууц үг сэргээхэд ашиглагдана)
+              </small>
             </div>
 
             <div className="form-group">
               <label htmlFor="phone">
-                📱 Утасны дугаар
+                📱 Утасны дугаар *
               </label>
               <input
                 type="tel"
@@ -201,7 +234,11 @@ const Register = () => {
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="99123456"
+                required
               />
+              <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                ⚠️ 8 оронтой дугаар оруулна уу (нууц үг сэргээхэд SMS код ирнэ)
+              </small>
             </div>
 
             <div className="form-row">
@@ -216,8 +253,8 @@ const Register = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="6+ тэмдэгт"
-                    minLength="6"
+                    placeholder="8+ тэмдэгт, том үсэг, тоо, тусгай тэмдэгт"
+                    minLength="8"
                     required
                   />
                   <button
@@ -228,6 +265,9 @@ const Register = () => {
                     {showPassword ? '🙈' : '👁️'}
                   </button>
                 </div>
+                <small style={{ color: '#6b7280', fontSize: '11px', display: 'block', marginTop: '4px', lineHeight: '1.4' }}>
+                  💡 Хүчтэй нууц үг: 8+ тэмдэгт, том үсэг (A-Z), жижиг үсэг (a-z), тоо (0-9), тусгай тэмдэгт (!@#$)
+                </small>
               </div>
 
               <div className="form-group">

@@ -353,31 +353,7 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
             <Popup className="custom-popup" minWidth={300} maxWidth={340}>
               <div className="popup-card">
                 {/* Header Image */}
-                <div className="popup-image-container">
-                  <img 
-                    src={
-                      (c.images && c.images.length > 0 && typeof c.images[0] === 'object' && (c.images[0].thumbnail || c.images[0].highQuality)) || 
-                      (c.images && c.images.length > 0 && typeof c.images[0] === 'string' && c.images[0]) || 
-                      c.image || 
-                      "/logo192.png"
-                    } 
-                    alt={c.name} 
-                    className="popup-image"
-                    onError={(e) => {e.target.onerror=null; e.target.src="/logo192.png"}}
-                  />
-                  <div className="popup-rating-badge">
-                    <FaStar className="star-icon" /> {c.rating || 4.5}
-                  </div>
-                  {c.occupancy && (
-                    <div className={`popup-status-badge ${
-                      (c.occupancy.standard || 0) > 80 ? 'busy' : 
-                      (c.occupancy.standard || 0) > 50 ? 'moderate' : 'free'
-                    }`}>
-                      {(c.occupancy.standard || 0) > 80 ? 'Дүүрсэн' : 
-                       (c.occupancy.standard || 0) > 50 ? 'Дундаж' : 'Чөлөөтэй'}
-                    </div>
-                  )}
-                </div>
+                
 
                 <div className="popup-content-body">
                   <h3 className="popup-title">{c.name}</h3>

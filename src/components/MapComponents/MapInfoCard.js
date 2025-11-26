@@ -36,21 +36,6 @@ export default function MapInfoCard({ center, onClose }) {
         <button className="close-btn" onClick={onClose}>
           <FaTimes />
         </button>
-        
-        <div className="card-image-wrapper" onClick={handleCardClick}>
-          <img src={getImage(center)} alt={center.name} className="card-image" onError={(e) => e.target.src = "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80"} />
-          {center.rating && (
-            <div className="card-rating">
-              <FaStar className="star-icon" />
-              <span>{center.rating}</span>
-            </div>
-          )}
-          {!canViewDetails && (
-            <div className="lock-overlay">
-              <FaLock />
-            </div>
-          )}
-        </div>
 
         <div className="card-content" onClick={handleCardClick}>
           <div className="card-header">
@@ -116,9 +101,9 @@ export default function MapInfoCard({ center, onClose }) {
           border-radius: 20px;
           box-shadow: 0 10px 40px rgba(0,0,0,0.2);
           width: 90%;
-          max-width: 320px; /* Reduced width */
+          max-width: 320px;
           display: flex;
-          flex-direction: column; /* Stack vertically for mobile friendliness */
+          flex-direction: column;
           overflow: hidden;
           pointer-events: auto;
           position: relative;
@@ -145,46 +130,8 @@ export default function MapInfoCard({ center, onClose }) {
           z-index: 2;
           backdrop-filter: blur(4px);
         }
-        .card-image-wrapper {
-          width: 100%;
-          height: 140px;
-          position: relative;
-          cursor: pointer;
-        }
-        .card-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        .card-rating {
-          position: absolute;
-          bottom: 10px;
-          left: 10px;
-          background: rgba(255, 255, 255, 0.9);
-          padding: 4px 8px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          font-weight: 600;
-          color: #111;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .star-icon { color: #f59e0b; }
-        .lock-overlay {
-          position: absolute;
-          inset: 0;
-          background: rgba(0,0,0,0.4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 24px;
-          backdrop-filter: blur(2px);
-        }
         .card-content {
-          padding: 16px;
+          padding: 20px;
           display: flex;
           flex-direction: column;
           gap: 10px;
