@@ -16,6 +16,7 @@ const Register = () => {
     phone: '',
     centerName: ''
   });
+  const wantsTrial = true; // Автоматаар trial эрх олгох
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -117,7 +118,7 @@ const Register = () => {
     }
 
   const { confirmPassword, ...registrationData } = formData;
-  const payload = { ...registrationData, accountType };
+  const payload = { ...registrationData, accountType, wantsTrial };
   const result = await register(payload);
     
     if (result.success) {
@@ -293,6 +294,25 @@ const Register = () => {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Trial Subscription Сонголт */}
+            {/* Trial мэдээлэл */}
+            <div style={{ 
+              background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)', 
+              padding: '14px 16px', 
+              borderRadius: '10px', 
+              marginBottom: '16px',
+              color: 'white',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '4px' }}>🎁</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '4px' }}>
+                Үнэгүй 7 хоногийн Trial эрх
+              </div>
+              <small style={{ fontSize: '12px', opacity: 0.95, display: 'block' }}>
+                Бүртгүүлсний дараа автоматаар идэвхжинэ!
+              </small>
             </div>
 
             <button

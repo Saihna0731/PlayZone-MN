@@ -22,7 +22,7 @@ router.post('/email-exists', async (req, res) => {
 // Бүртгүүлэх
 router.post("/register", async (req, res) => {
   try {
-    const { username, email, password, fullName, phone, accountType, centerName } = req.body;
+    const { username, email, password, fullName, phone, accountType, centerName, wantsTrial } = req.body;
 
     // Validation
     if (!email || !password) {
@@ -88,17 +88,28 @@ router.post("/register", async (req, res) => {
       // username талбарыг огт оруулахгүй байх
     }
 
-    // Trial мэдээлэл оруулах
-    const trialEndDate = new Date(now);
-    trialEndDate.setDate(trialEndDate.getDate() + trialDays);
-    
-    userData.trial = {
-      isActive: true,
-      plan: trialPlan,
-      startDate: now,
-      endDate: trialEndDate,
-      hasUsed: true
-    };
+    // Trial мэдээлэл оруулах (хэрэв хэрэглэгч trial авахыг хүсвэл)
+    if (wantsTrial !== false && trialDays > 0) {
+      const trialEndDate = new Date(now);
+      trialEndDate.setDate(trialEndDate.getDate() + trialDays);
+      
+      userData.trial = {
+        isActive: true,
+        plan: trialPlan,
+        startDate: now,
+        endDate: trialEndDate,
+        hasUsed: true
+      };
+
+      console.log('✅ Trial created:', {
+        userId: email,
+        plan: trialPlan,
+        days: trialDays,
+        endDate: trialEndDate
+      });
+    } else {
+      console.log('ℹ️ User opted out of trial or no trial available');
+    }
 
     const user = new User(userData);
     await user.save();

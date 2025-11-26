@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaStar, FaClock, FaMapMarkerAlt, FaTimes, FaChevronRight, FaLock } from 'react-icons/fa';
+import { FaClock, FaMapMarkerAlt, FaTimes, FaChevronRight } from 'react-icons/fa';
 import { useSubscription } from '../../hooks/useSubscription';
 
 export default function MapInfoCard({ center, onClose }) {
@@ -8,19 +8,6 @@ export default function MapInfoCard({ center, onClose }) {
   const { canViewDetails } = useSubscription();
 
   if (!center) return null;
-
-  // Helper to get image
-  const getImage = (c) => {
-    if (c.images && c.images.length > 0) {
-        const img = c.images[0];
-        // Handle object structure (thumbnail/highQuality) or direct string
-        if (typeof img === 'object') {
-            return img.thumbnail || img.highQuality || img.url;
-        }
-        return img;
-    }
-    return c.image || c.logo || "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80";
-  };
 
   const handleCardClick = () => {
     if (canViewDetails) {
@@ -100,8 +87,10 @@ export default function MapInfoCard({ center, onClose }) {
           background: white;
           border-radius: 20px;
           box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-          width: 90%;
-          max-width: 320px;
+          width: 80%;
+          max-width: 220px;
+          min-height: 230px;
+          max-height: 320px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -131,11 +120,12 @@ export default function MapInfoCard({ center, onClose }) {
           backdrop-filter: blur(4px);
         }
         .card-content {
-          padding: 20px;
+          padding: 16px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
           cursor: pointer;
+          min-height: 180px;
         }
         .card-header {
           display: flex;
@@ -225,151 +215,6 @@ export default function MapInfoCard({ center, onClose }) {
         .view-btn:hover {
           transform: scale(1.05);
           background: #000;
-        }
-      `}</style>
-    </div>
-  );
-}
-          position: relative;
-          pointer-events: auto;
-          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .close-btn {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          background: rgba(0,0,0,0.5);
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          z-index: 10;
-        }
-        .card-image-wrapper {
-          width: 120px;
-          position: relative;
-          flex-shrink: 0;
-          cursor: pointer;
-        }
-        .card-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        .lock-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 24px;
-        }
-        .card-rating {
-          position: absolute;
-          bottom: 8px;
-          left: 8px;
-          background: rgba(0,0,0,0.7);
-          color: white;
-          padding: 2px 6px;
-          border-radius: 6px;
-          font-size: 10px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          backdrop-filter: blur(4px);
-        }
-        .star-icon { color: #fbbf24; }
-        
-        .card-content {
-          flex: 1;
-          padding: 12px 16px;
-          display: flex;
-          flex-direction: column;
-          cursor: pointer;
-        }
-        .card-header {
-          margin-bottom: 8px;
-        }
-        .card-title {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 700;
-          color: #111;
-          margin-bottom: 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .card-category {
-          font-size: 11px;
-          color: #6b7280;
-          text-transform: uppercase;
-          font-weight: 600;
-          letter-spacing: 0.5px;
-        }
-        .card-details {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          margin-bottom: 12px;
-        }
-        .detail-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          color: #4b5563;
-        }
-        .detail-icon {
-          color: #9ca3af;
-          font-size: 12px;
-        }
-        .card-footer {
-          margin-top: auto;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .price-tag {
-          font-size: 16px;
-          font-weight: 700;
-          color: #2563eb;
-        }
-        .unit {
-          font-size: 10px;
-          color: #6b7280;
-          font-weight: 400;
-        }
-        .view-btn {
-          background: #eff6ff;
-          color: #2563eb;
-          border: none;
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 12px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .view-btn:hover {
-          background: #dbeafe;
         }
       `}</style>
     </div>

@@ -184,6 +184,49 @@ export default function MapView() {
 
   return (
     <div className="map-view-container">
+      {/* Trial Banner */}
+      {user && user.subscription?.plan === 'trial' && user.subscription?.isActive && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10000,
+          background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '30px',
+          boxShadow: '0 8px 20px rgba(72,187,120,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          fontSize: '14px',
+          fontWeight: '600',
+          animation: 'slideDown 0.5s ease-out'
+        }}>
+          <span style={{ fontSize: '20px' }}>🎁</span>
+          <span>Trial эрх идэвхтэй - {user.subscription?.daysRemaining || 7} хоног үлдсэн</span>
+          <button
+            onClick={() => navigate('/profile#subscription')}
+            style={{
+              background: 'rgba(255,255,255,0.3)',
+              border: 'none',
+              padding: '6px 16px',
+              borderRadius: '20px',
+              color: 'white',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.background = 'rgba(255,255,255,0.4)'}
+            onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.3)'}
+          >
+            Эрх идэвхжүүлэх →
+          </button>
+        </div>
+      )}
+      
       {/* Snow Effect Overlay */}
       {showSnowEffect && (
         <div style={{
@@ -381,6 +424,17 @@ export default function MapView() {
         
         .filter-toggle-btn:active {
           transform: scale(0.95);
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
         }
 
         .profile-wrapper {
