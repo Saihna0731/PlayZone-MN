@@ -32,13 +32,11 @@ const passwordResetSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-    index: true
+    default: () => new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 });
 

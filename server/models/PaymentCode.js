@@ -34,16 +34,14 @@ const paymentCodeSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-    index: true
+    default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
   },
   usedAt: {
     type: Date
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 });
 

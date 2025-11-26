@@ -10,6 +10,9 @@ require("dotenv").config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 
+// Trust proxy for Railway/Vercel deployment
+app.set('trust proxy', 1);
+
 // Security: basic hardening
 app.disable('x-powered-by');
 app.use(helmet({
@@ -99,7 +102,7 @@ const { startCleanupJob } = require('./jobs/cleanupBookings');
 
 const PORT = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/my-map-app';
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 15000 })
+mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 15000 })
   .then(() => {
     console.log("MongoDB connected");
     

@@ -31,13 +31,11 @@ const pendingPaymentSchema = new mongoose.Schema({
   completedAt: Date,
   expiresAt: {
     type: Date,
-    default: () => new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
-    index: true
+    default: () => new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 });
 

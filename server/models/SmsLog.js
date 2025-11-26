@@ -41,8 +41,7 @@ const smsLogSchema = new mongoose.Schema({
   error: String,
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 });
 
