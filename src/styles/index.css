@@ -2,9 +2,24 @@
 html, body, #root {
   height: 100%;
   margin: 0;            /* remove default body margin that creates white edges */
+  width: 100%;
 }
-* { box-sizing: border-box; }
-body { overflow-x: hidden; }
+* { 
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+}
+body { 
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mobile viewport fix */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px; /* Slightly smaller base font on mobile */
+  }
+}
 
 /* Map container */
 .leaflet-container {
@@ -30,6 +45,18 @@ body { overflow-x: hidden; }
   outline: none;
   box-shadow: 0 4px 10px rgba(0,0,0,0.25);
   transition: all 0.2s ease;
+}
+
+@media (max-width: 640px) {
+  .leaflet-control-geosearch form input {
+    width: 220px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .leaflet-control-geosearch {
+    top: 10px !important;
+  }
 }
 
 .leaflet-control-geosearch form input:focus {
@@ -59,6 +86,20 @@ body { overflow-x: hidden; }
   display: flex !important;
   align-items: center;
   justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .leaflet-control-zoom a {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 16px !important;
+  }
+  
+  .leaflet-bottom .leaflet-control-zoom {
+    margin-bottom: 90px !important;
+    margin-right: 12px !important;
+  }
 }
 
 .leaflet-control-zoom a:first-child {

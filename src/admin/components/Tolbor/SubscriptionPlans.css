@@ -224,6 +224,8 @@
   justify-content: center;
   align-items: center;
   z-index: 11000;
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .payment-modal {
@@ -231,8 +233,23 @@
   border-radius: 16px;
   width: 100%;
   max-width: 400px;
-  margin: 20px;
+  margin: auto;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .payment-modal {
+    max-width: 100%;
+    border-radius: 12px;
+    margin: 8px;
+  }
+  
+  .payment-modal-overlay {
+    padding: 8px;
+  }
 }
 
 .payment-header {

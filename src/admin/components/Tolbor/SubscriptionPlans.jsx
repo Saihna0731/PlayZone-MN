@@ -329,10 +329,10 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
                   border: '2px solid #e5e7eb'
                 }}>
                   <span style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937', fontFamily: 'monospace' }}>
-                    60643016
+                    95520443
                   </span>
                   <button
-                    onClick={() => copyToClipboard('60643016', 'phone')}
+                    onClick={() => copyToClipboard('95520443', 'phone')}
                     style={{
                       background: copied === 'phone' ? '#10b981' : '#3b82f6',
                       color: 'white',

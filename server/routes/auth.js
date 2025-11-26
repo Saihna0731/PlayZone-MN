@@ -137,9 +137,10 @@ router.post("/login", async (req, res) => {
       { username: emailOrUsername }
     ];
 
+    // Admin хэрэглэгч user эрхээр нэвтрэх боломжтой
     const user = await User.findOne({
       $or: baseQuery,
-      ...(accountType === 'user' ? { role: 'user' } : {}),
+      ...(accountType === 'user' ? { role: { $in: ['user', 'admin'] } } : {}),
       ...(accountType === 'centerOwner' ? { role: 'centerOwner' } : {})
     });
 
