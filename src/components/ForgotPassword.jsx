@@ -199,7 +199,7 @@ const ForgotPassword = () => {
                   style={{ fontSize: '20px', fontWeight: '600', textAlign: 'center', letterSpacing: '4px' }}
                 />
                 <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                  {phone} дугаарт илгээсэн 6 оронтой кодыг оруулна уу
+                  {resetMethod === 'email' ? 'Имэйл хаягт илгээсэн' : 'Утасны дугаарт илгээсэн'} 6 оронтой кодыг оруулна уу
                 </small>
               </div>
 
