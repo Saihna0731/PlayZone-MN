@@ -142,7 +142,7 @@ const ForgotPassword = () => {
             </div>
             <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1f2937', marginBottom: '8px' }}>🔑 Нууц үг сэргээх</h1>
             <p style={{ color: '#6b7280', fontSize: '14px' }}>
-              {step === 1 && 'Бүртгэлтэй имэйл эсвэл утасны дугаараа оруулна уу'}
+              {step === 1 && 'Бүртгэлтэй имэйл хаягаа оруулна уу'}
               {step === 2 && resetMethod === 'email' && 'Имэйл хаягт ирсэн 6 оронтой кодыг оруулна уу'}
               {step === 2 && resetMethod === 'sms' && 'Утасан дээр ирсэн 6 оронтой кодыг оруулна уу'}
               {step === 3 && 'Шинэ нууц үгээ оруулна уу'}
@@ -156,18 +156,18 @@ const ForgotPassword = () => {
           {step === 1 && (
             <form onSubmit={handleRequestCode} className="auth-form">
               <div className="form-group">
-                <label htmlFor="emailOrPhone">📧 Имэйл эсвэл 📱 Утасны дугаар</label>
+                <label htmlFor="emailOrPhone">📧 Бүртгэлтэй имэйл хаяг</label>
                 <input
                   id="emailOrPhone"
                   name="emailOrPhone"
-                  type="text"
+                  type="email"
                   value={emailOrPhone}
                   onChange={(e) => setEmailOrPhone(e.target.value)}
-                  placeholder="email@example.com эсвэл 99123456"
+                  placeholder="email@example.com"
                   required
                 />
                 <small style={{ color: '#6b7280', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                  📧 Бүртгэлтэй имэйл хаяг эсвэл 📱 8 оронтой утасны дугаар
+                  📧 Бүртгэлтэй имэйл хаягаа оруулна уу, код илгээгдэнэ
                 </small>
               </div>
 
