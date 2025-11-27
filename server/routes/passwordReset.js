@@ -25,9 +25,9 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ message: 'Зөв имэйл эсвэл 8 оронтой утасны дугаар оруулна уу' });
     }
 
-    // Хэрэглэгч олох (email-ийг lowercase болгож шалгах)
+    // Хэрэглэгч олох (email-ийг case-insensitive шалгах)
     const query = isEmail 
-      ? { email: emailOrPhone.trim().toLowerCase() } 
+      ? { email: new RegExp(`^${emailOrPhone.trim()}$`, 'i') } 
       : { phone: emailOrPhone.trim() };
     const user = await User.findOne(query);
     
@@ -115,9 +115,11 @@ router.post('/verify-reset-code', async (req, res) => {
       return res.status(400).json({ message: 'Имэйл/утас болон кодыг оруулна уу' });
     }
 
-    // Хэрэглэгч олох
+    // Хэрэглэгч олох (case-insensitive)
     const isEmail = emailOrPhone.includes('@');
-    const query = isEmail ? { email: emailOrPhone } : { phone: emailOrPhone };
+    const query = isEmail 
+      ? { email: new RegExp(`^${emailOrPhone.trim()}$`, 'i') }
+      : { phone: emailOrPhone.trim() };
     const user = await User.findOne(query);
     
     if (!user) {

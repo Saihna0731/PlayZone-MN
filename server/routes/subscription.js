@@ -49,19 +49,47 @@ router.get('/me', auth, async (req, res) => {
 			return res.status(404).json({ message: 'Хэрэглэгч олдсонгүй' });
 		}
 
-	const plan = user.subscription?.plan || 'free';
+		// Trial эрх идэвхтэй эсэхийг эхлээд шалгах
+		const now = new Date();
+		let activePlan = 'free';
+		let isActive = false;
+		let startDate = null;
+		let endDate = null;
+		let daysRemaining = 0;
+
+		if (user.trial && user.trial.isActive && user.trial.endDate && now <= new Date(user.trial.endDate)) {
+			// Trial идэвхтэй байна
+			activePlan = user.trial.plan || 'trial';
+			isActive = true;
+			startDate = user.trial.startDate;
+			endDate = user.trial.endDate;
+			const millisecondsLeft = new Date(user.trial.endDate).getTime() - now.getTime();
+			daysRemaining = Math.ceil(millisecondsLeft / (1000 * 60 * 60 * 24));
+		} else if (user.subscription && user.subscription.plan && user.subscription.plan !== 'free') {
+			// Төлбөртэй subscription байна
+			activePlan = user.subscription.plan;
+			isActive = user.subscription.isActive || false;
+			startDate = user.subscription.startDate;
+			endDate = user.subscription.endDate;
+			if (endDate) {
+				const millisecondsLeft = new Date(endDate).getTime() - now.getTime();
+				daysRemaining = Math.ceil(millisecondsLeft / (1000 * 60 * 60 * 24));
+			}
+		}
+
 		// Default based on plan when not stored on user
 		const defaults = {
-			maxCenters: plan === 'business_standard' ? 1 : plan === 'business_pro' ? 3 : 0,
-			maxImages: plan === 'business_standard' ? 3 : plan === 'business_pro' ? PLAN_PRICES.business_pro.maxImages : 0,
-			canUploadVideo: plan === 'business_pro'
+			maxCenters: activePlan === 'business_standard' ? 1 : activePlan === 'business_pro' ? 3 : 0,
+			maxImages: activePlan === 'business_standard' ? 3 : activePlan === 'business_pro' ? PLAN_PRICES.business_pro.maxImages : (activePlan === 'trial' ? 10 : 0),
+			canUploadVideo: activePlan === 'business_pro' || activePlan === 'trial'
 		};
 
 		let subscriptionData = {
-			plan,
-			isActive: user.subscription?.isActive || false,
-			startDate: user.subscription?.startDate,
-			endDate: user.subscription?.endDate,
+			plan: activePlan,
+			isActive,
+			startDate,
+			endDate,
+			daysRemaining,
 			autoRenew: user.subscription?.autoRenew || false,
 			accountType: user.accountType,
 			maxCenters: Math.max(Number(user.subscription?.maxCenters || 0), defaults.maxCenters),

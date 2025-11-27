@@ -76,7 +76,7 @@ router.post("/register", async (req, res) => {
       userData.username = username;
       userData.fullName = fullName;
       trialDays = 7; // Энгийн хэрэглэгчид 7 хоног
-      trialPlan = 'normal';
+      trialPlan = 'trial';
     } else if (accountType === 'centerOwner') {
       // centerOwner-д username оруулахгүй (undefined) - null биш
       userData.centerName = centerName;
@@ -84,7 +84,7 @@ router.post("/register", async (req, res) => {
       userData.isApproved = true; // Шууд идэвхжүүлэх
       userData.role = 'centerOwner';
       trialDays = 10; // Center эзэмшигчидэд 10 хоног
-      trialPlan = 'business_standard';
+      trialPlan = 'trial';
       // username талбарыг огт оруулахгүй байх
     }
 
@@ -199,20 +199,8 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Нууц үг сэргээх хүсэлт авах (stub) - Жинхэнэ хэрэгжилт дээр токен үүсгэж имэйлээр илгээнэ
-router.post('/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body || {};
-    if (!email) return res.status(400).json({ message: 'Имэйл шаардлагатай' });
-    // Хэрэглэгч байгаа эсэхийг шалгана (одоогоор токен хадгалахгүй)
-    const user = await User.findOne({ email }).select('_id');
-    // Enumeration багасгахын тулд үргэлж ижил success мессеж буцаана
-    return res.json({ message: 'Хэрэв энэхүү имэйл бүртгэлтэй бол сэргээх заавар илгээгдлээ' });
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    return res.status(500).json({ message: 'Серверийн алдаа' });
-  }
-});
+// Note: Password reset routes (/forgot-password, /verify-reset-code, /reset-password) 
+// are handled in passwordReset.js and mounted at /api/auth
 
 // Хэрэглэгчийн мэдээлэл авах
 router.get("/profile", auth, async (req, res) => {

@@ -144,7 +144,7 @@ export function useSubscription() {
 		// Нэмэлт идэвхтэй нөхцөлүүд: сервер статус идэвхтэй эсвэл хугацаа дуусаагүй, эсвэл isActive === true
 		const inferredActive = statusImpliesActive || (!statusRaw && notExpired) || subscription?.isActive === true;
 		const isActive = !explicitInactive && inferredActive;
-		// Төлбөртэй (free биш) болон хугацаа дуусаагүй бол төлбөртэй гэж үзнэ
+		// Төлбөртэй (free биш, trial БАГТАНА) болон хугацаа дуусаагүй бол төлбөртэй гэж үзнэ
 		const hasPaidPlan = (normalizedPlan !== 'free' && normalizedPlan !== '') && notExpired && !explicitInactive;
 
 		const role = user?.role || user?.accountType;
