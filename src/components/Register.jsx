@@ -138,7 +138,9 @@ const Register = () => {
           borderRadius: '20px',
           boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
           padding: '32px',
-          maxWidth: '540px'
+          maxWidth: '540px',
+          maxHeight: '160vh',
+          overflowY: 'auto'
         }}>
           <div className="auth-header" style={{ textAlign: 'center', marginBottom: '24px' }}>
             <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1f2937', marginBottom: '8px' }}>🎮 Game Center</h1>
