@@ -81,6 +81,10 @@ app.use("/api/payment", paymentRouter);
 const passwordResetRouter = require("./routes/passwordReset");
 app.use("/api/auth", passwordResetRouter);
 
+// Mount QPay routes
+const qpayRouter = require("./routes/qpay");
+app.use("/api/qpay", qpayRouter);
+
 // Simple root and health endpoints to verify backend from phone/browser
 app.get('/', (req, res) => {
   res.send(

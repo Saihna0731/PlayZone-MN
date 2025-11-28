@@ -11,6 +11,7 @@
     "cleanup-bookings": "node scripts/cleanupOldBookings.js"
   },
   "dependencies": {
+    "axios": "^1.6.0",
     "bcryptjs": "^3.0.2",
     "compression": "^1.7.4",
     "cors": "latest",
@@ -19,6 +20,7 @@
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
+    "https-proxy-agent": "^7.0.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "latest",
     "nodemailer": "^7.0.11"
