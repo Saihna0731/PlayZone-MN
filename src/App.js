@@ -9,6 +9,7 @@ import Bonuses from "./router/Bonuses";
 import AuthChoice from "./router/AuthChoice";
 import Reels from "./router/Reels";
 import Intro from "./router/Intro";
+import GameCenterControl from "./router/GameCenterControl";
 import BottomNav from "./components/MainNavbars/BottomNav";
 import Login from "./components/Login";
 import Register from "./components/Register";
@@ -24,7 +25,7 @@ function HomeRedirect() {
 
 function App() {
   const location = useLocation();
-  const hideNav = ["/login", "/register", "/auth", "/reels", "/"].includes(location.pathname) || location.pathname.startsWith('/center/');
+  const hideNav = ["/login", "/register", "/auth", "/reels", "/", "/game-center-control"].includes(location.pathname) || location.pathname.startsWith('/center/');
   const lockScroll = location.pathname === '/map' || location.pathname === '/reels';
   return (
     <AuthProvider>
@@ -43,6 +44,7 @@ function App() {
           <Route path="/auth" element={<AuthChoice />} />
           <Route path="/center/:id" element={<CenterDetail />} />
           <Route path="/bonuses" element={<Bonuses />} />
+          <Route path="/game-center-control" element={<GameCenterControl />} />
         </Routes>
         {!hideNav && <BottomNav />}
         <GlobalToast />

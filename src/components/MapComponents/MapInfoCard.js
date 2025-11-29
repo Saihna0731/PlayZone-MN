@@ -41,12 +41,12 @@ export default function MapInfoCard({ center, onClose }) {
             </div>
           </div>
 
-          {/* Occupancy Info */}
+          {/* Occupancy Info - percentage хэлбэрээр харуулна */}
           {canViewDetails && center.occupancy && (
             <div className="occupancy-info">
-              {center.occupancy.standard > 0 && <span className="badge std">Std: {center.occupancy.standard}</span>}
-              {center.occupancy.vip > 0 && <span className="badge vip">VIP: {center.occupancy.vip}</span>}
-              {center.occupancy.stage > 0 && <span className="badge stage">Stg: {center.occupancy.stage}</span>}
+              {center.occupancy.standard > 0 && <span className="badge std">Std: {center.occupancy.standard}%</span>}
+              {center.occupancy.vip > 0 && <span className="badge vip">VIP: {center.occupancy.vip}%</span>}
+              {center.occupancy.stage > 0 && <span className="badge stage">Stg: {center.occupancy.stage}%</span>}
             </div>
           )}
 

@@ -204,7 +204,7 @@ router.put("/:id", auth, ownerCanModifyCenter, async (req, res) => {
 });
 
 // PUT update occupancy (secured by API key or auth)
-router.put("/:id/occupancy", async (req, res) => {
+router.put("/:id/occupancy", auth, async (req, res) => {
   try {
     const { occupancy } = req.body;
     
@@ -212,28 +212,26 @@ router.put("/:id/occupancy", async (req, res) => {
       return res.status(400).json({ error: "Occupancy data required" });
     }
 
-    // Allow either a trusted device with API key or authenticated owner/admin
-    const apiKey = req.header('X-API-Key');
-    const allowedApiKey = process.env.OCCUPANCY_API_KEY || '';
-    if (apiKey !== allowedApiKey) {
-      // fallback to auth check via ownerCanModifyCenter
-      return ownerCanModifyCenter(req, res, async () => {
-        const center = await Center.findByIdAndUpdate(
-          req.params.id, 
-          { occupancy }, 
-          { new: true, runValidators: true }
-        ).lean();
-        if (!center) return res.status(404).json({ error: "Center not found" });
-        return res.json({ success: true, occupancy: center.occupancy });
-      });
+    // Check if user owns this center or is admin
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    const center = await Center.findByIdAndUpdate(
-      req.params.id, 
-      { occupancy }, 
-      { new: true, runValidators: true }
-    ).lean();
-    if (!center) return res.status(404).json({ error: "Center not found" });
+    const center = await Center.findById(req.params.id);
+    if (!center) {
+      return res.status(404).json({ error: "Center not found" });
+    }
+
+    // Admin or owner can update
+    if (user.role !== 'admin' && String(center.owner) !== String(user._id)) {
+      return res.status(403).json({ error: "Та зөвхөн өөрийн төвийн ачааллыг засах эрхтэй" });
+    }
+
+    // Update occupancy
+    center.occupancy = occupancy;
+    await center.save();
+    
     res.json({ success: true, occupancy: center.occupancy });
   } catch (err) {
     console.error("Error updating occupancy:", err);

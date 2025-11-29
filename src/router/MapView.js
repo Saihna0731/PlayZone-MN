@@ -10,7 +10,7 @@ import Toast from "../components/LittleComponents/Toast";
 import { cacheUtils } from "../utils/cache";
 import { useAuth } from "../contexts/AuthContext";
 import "leaflet/dist/leaflet.css";
-import { FaFilter, FaLock } from "react-icons/fa";
+import { FaFilter, FaLock, FaTimes } from "react-icons/fa";
 
 export default function MapView() {
   const [query, setQuery] = useState("");
@@ -26,10 +26,49 @@ export default function MapView() {
   const [userLocation, setUserLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSnowEffect, setShowSnowEffect] = useState(false);
+  const [showPromoPanel, setShowPromoPanel] = useState(false);
+  const [showTrialNotification, setShowTrialNotification] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const isRestricted = !user || (user.role !== 'admin' && (!user.subscription?.plan || user.subscription.plan === 'free'));
+  // Allow admin, trial users, and paid subscribers (normal, business_standard, business_pro) to use filters
+  const isRestricted = !user || (
+    user.role !== 'admin' && 
+    !user.trial?.isActive &&
+    (!user.subscription?.plan || user.subscription.plan === 'free')
+  );
+
+  // Check for first-time user and show promotional panel
+  useEffect(() => {
+    if (user) {
+      const promoKey = `playzone_promo_seen_${user._id}`;
+      const trialKey = `playzone_trial_notified_${user._id}`;
+      const hasSeenPromo = localStorage.getItem(promoKey);
+      const hasSeenTrialNotif = localStorage.getItem(trialKey);
+      
+      // Show promotional panel once for logged-in users who haven't seen it
+      if (!hasSeenPromo) {
+        setTimeout(() => setShowPromoPanel(true), 2000);
+      }
+      
+      // Show trial notification for new trial users
+      if (!hasSeenTrialNotif && user.subscription?.plan === 'trial' && user.subscription?.isActive) {
+        setTimeout(() => setShowTrialNotification(true), 500);
+        localStorage.setItem(trialKey, 'true');
+      }
+    }
+  }, [user]);
+
+  const handleClosePromo = () => {
+    if (user) {
+      localStorage.setItem(`playzone_promo_seen_${user._id}`, 'true');
+    }
+    setShowPromoPanel(false);
+  };
+
+  const handleCloseTrialNotif = () => {
+    setShowTrialNotification(false);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -184,6 +223,269 @@ export default function MapView() {
 
   return (
     <div className="map-view-container">
+      {/* Trial Activation Notification - For new trial users */}
+      {showTrialNotification && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          zIndex: 10002,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: '24px',
+            padding: '40px 32px',
+            maxWidth: '380px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 25px 60px rgba(16,185,129,0.4)',
+            animation: 'scaleIn 0.4s ease-out'
+          }}>
+            <div style={{ fontSize: '80px', marginBottom: '16px' }}>🎉</div>
+            <h2 style={{
+              color: 'white',
+              fontSize: '24px',
+              fontWeight: '700',
+              margin: '0 0 12px 0'
+            }}>
+              Trial эрх идэвхжлээ!
+            </h2>
+            <p style={{
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: '16px',
+              lineHeight: '1.6',
+              margin: '0 0 8px 0'
+            }}>
+              Танд 7 хоногийн турш бүх функцуудыг <strong>ҮНЭГҮЙ</strong> ашиглах боломжтой
+            </p>
+            <div style={{
+              background: 'rgba(255,255,255,0.15)',
+              borderRadius: '12px',
+              padding: '16px',
+              margin: '20px 0'
+            }}>
+              <p style={{ color: 'white', margin: '0 0 8px 0', fontSize: '14px' }}>✅ Газрын зураг filter</p>
+              <p style={{ color: 'white', margin: '0 0 8px 0', fontSize: '14px' }}>✅ Бүх төвүүдийн мэдээлэл</p>
+              <p style={{ color: 'white', margin: '0', fontSize: '14px' }}>✅ Захиалга өгөх</p>
+            </div>
+            <button
+              onClick={handleCloseTrialNotif}
+              style={{
+                background: 'white',
+                color: '#059669',
+                border: 'none',
+                padding: '14px 40px',
+                borderRadius: '30px',
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+              }}
+            >
+              Эхлүүлье! 🚀
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* New Year Promotional Panel - Shows once for logged-in users */}
+      {showPromoPanel && user && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          zIndex: 10001,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            borderRadius: '24px',
+            padding: '32px 24px',
+            maxWidth: '420px',
+            width: '90%',
+            position: 'relative',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+            border: '2px solid rgba(239,68,68,0.3)',
+            animation: 'scaleIn 0.4s ease-out'
+          }}>
+            <button
+              onClick={handleClosePromo}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white'
+              }}
+            >
+              <FaTimes />
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '50px', marginBottom: '8px' }}>🎄🎅🎁</div>
+              <h2 style={{
+                color: 'white',
+                fontSize: '22px',
+                fontWeight: '700',
+                margin: '0 0 8px 0'
+              }}>
+                Сайн байна уу!
+              </h2>
+              <p style={{
+                background: 'linear-gradient(135deg, #ef4444, #f59e0b)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontSize: '18px',
+                fontWeight: '700',
+                margin: 0
+              }}>
+                🎉 PlayZone Mongolia шинэ жилийн урамшуулал! 🎉
+              </p>
+            </div>
+
+            <div style={{
+              background: 'rgba(239,68,68,0.15)',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '16px'
+              }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  color: 'white',
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  fontSize: '20px',
+                  fontWeight: '800'
+                }}>
+                  50% ХЯМДРАЛ
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* User Plan */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: '0 0 4px 0' }}>Хэрэглэгчийн план</p>
+                    <p style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: 0 }}>User Plan</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'line-through', margin: '0 0 2px 0' }}>4,990₮</p>
+                    <p style={{ color: '#22c55e', fontSize: '18px', fontWeight: '700', margin: 0 }}>1,990₮</p>
+                  </div>
+                </div>
+
+                {/* Business Standard */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: '0 0 4px 0' }}>Эзэмшигч план</p>
+                    <p style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: 0 }}>Business Standard</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'line-through', margin: '0 0 2px 0' }}>29,900₮</p>
+                    <p style={{ color: '#22c55e', fontSize: '18px', fontWeight: '700', margin: 0 }}>19,900₮</p>
+                  </div>
+                </div>
+
+                {/* Business Pro */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: '0 0 4px 0' }}>Эзэмшигч Pro план</p>
+                    <p style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: 0 }}>Business Pro</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'line-through', margin: '0 0 2px 0' }}>59,900₮</p>
+                    <p style={{ color: '#22c55e', fontSize: '18px', fontWeight: '700', margin: 0 }}>39,900₮</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                handleClosePromo();
+                navigate('/profile#subscription');
+              }}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                color: 'white',
+                border: 'none',
+                padding: '16px',
+                borderRadius: '14px',
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(239,68,68,0.3)',
+                transition: 'transform 0.2s'
+              }}
+              onMouseEnter={(e) => e.target.style.transform = 'scale(1.02)'}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              Эрх идэвхжүүлэх 🎁
+            </button>
+
+            <p style={{
+              color: 'rgba(255,255,255,0.5)',
+              fontSize: '12px',
+              textAlign: 'center',
+              margin: '12px 0 0 0'
+            }}>
+              Урамшуулал хязгаартай хугацаанд хүчинтэй
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Trial Banner */}
       {user && user.subscription?.plan === 'trial' && user.subscription?.isActive && (
         <div style={{
@@ -434,6 +736,22 @@ export default function MapView() {
           to {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
+          }
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
           }
         }
 

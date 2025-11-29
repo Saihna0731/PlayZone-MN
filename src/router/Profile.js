@@ -16,7 +16,7 @@ const PlayZoneLogo = ({ style }) => (
 );
 
 // Menu Item Component
-function MenuItem({ icon, title, onClick, active, danger, badge }) {
+function MenuItem({ icon, title, onClick, active, danger, badge, highlight }) {
   return (
     <div
       onClick={onClick}
@@ -25,18 +25,19 @@ function MenuItem({ icon, title, onClick, active, danger, badge }) {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "16px 20px",
-        background: active ? "#f3f4f6" : "#ffffff",
+        background: highlight ? "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)" : active ? "#f3f4f6" : "#ffffff",
         marginBottom: "8px",
         borderRadius: "12px",
         cursor: "pointer",
         transition: "all 0.2s",
-        border: active ? "2px solid #3b82f6" : "1px solid #f0f0f0"
+        border: active ? "2px solid #3b82f6" : highlight ? "none" : "1px solid #f0f0f0",
+        boxShadow: highlight ? "0 4px 12px rgba(59, 130, 246, 0.3)" : "none"
       }}
       onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = "#f9fafb";
+        if (!active && !highlight) e.currentTarget.style.background = "#f9fafb";
       }}
       onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = "#ffffff";
+        if (!active && !highlight) e.currentTarget.style.background = "#ffffff";
       }}
     >
       <div style={{
@@ -48,7 +49,7 @@ function MenuItem({ icon, title, onClick, active, danger, badge }) {
           width: "40px",
           height: "40px",
           borderRadius: "12px",
-          background: danger ? "#fee2e2" : active ? "#dbeafe" : "#f3f4f6",
+          background: danger ? "#fee2e2" : highlight ? "rgba(255,255,255,0.2)" : active ? "#dbeafe" : "#f3f4f6",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -58,8 +59,8 @@ function MenuItem({ icon, title, onClick, active, danger, badge }) {
         </div>
         <span style={{
           fontSize: "15px",
-          fontWeight: "600",
-          color: danger ? "#ef4444" : "#1f2937"
+          fontWeight: highlight ? "700" : "600",
+          color: danger ? "#ef4444" : highlight ? "#ffffff" : "#1f2937"
         }}>
           {title}
         </span>
@@ -240,6 +241,14 @@ export default function Profile() {
 
     fetchBookings();
   }, [isAuthenticated, user, activeTab]);
+
+  // Auto-show upgrade modal for users without valid subscription
+  useEffect(() => {
+    if (user && !isTrialActive && !subscription?.isActive) {
+      // User has no active subscription - show upgrade modal
+      setShowUpgradeModal(true);
+    }
+  }, [user, isTrialActive, subscription]);
 
   const handleStatusUpdate = async (bookingId, newStatus) => {
     try {
@@ -643,6 +652,26 @@ export default function Profile() {
           </div>
         )}
 
+        {/* Center Owner specific menus - TOP PRIORITY */}
+        {user?.accountType === 'centerOwner' && (
+          <>
+            <MenuItem 
+              icon="🎮"
+              title="Game Center Удирдлага"
+              onClick={() => navigate('/game-center-control')}
+              active={false}
+              highlight={true}
+            />
+            <MenuItem 
+              icon="📅"
+              title="Захиалга удирдах"
+              onClick={() => navigate('/booking')}
+              active={false}
+              badge={pendingRequestCount > 0 ? pendingRequestCount : null}
+            />
+          </>
+        )}
+
         {/* Regular user menu - My Orders */}
         {user?.accountType !== 'centerOwner' && (
           <>
@@ -723,163 +752,6 @@ export default function Profile() {
           </>
         )}
 
-        {/* Center Owner specific menus - Manage & Confirm Bookings */}
-        {user?.accountType === 'centerOwner' && (
-          <>
-            <MenuItem 
-              icon="📅"
-              title="Захиалга удирдах"
-              onClick={() => {
-                setExpandedSection(prev => prev === 'manageBookings' ? '' : 'manageBookings');
-                setActiveTab('dashboard');
-                setViewMode('calendar');
-              }}
-              active={expandedSection === 'manageBookings'}
-            />
-            {expandedSection === 'manageBookings' && activeTab === 'dashboard' && (
-              <div style={{ marginTop: "-4px", marginBottom: "12px" }}>
-                {/* Calendar view panel - only view/delete/cancel */}
-                <div style={{ paddingTop: "8px" }}>
-                  {!hasCenters ? (
-                    <div className="no-centers-warning" style={{ padding: '20px', background: '#fff3cd', color: '#856404', borderRadius: '8px', marginBottom: '20px' }}>
-                      <p>⚠️ Та одоогоор ямар нэгэн төв эзэмшдэггүй байна. Хэрэв та төв нэмсэн бол админ эрхээр баталгаажуулахыг хүлээнэ үү эсвэл өгөгдлийн санд эзэмшигчээр бүртгэгдээгүй байж магадгүй.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <SimpleCalendar 
-                        bookings={ownerBookings.filter(b => b.status === 'confirmed' || b.status === 'pending')} 
-                        onDateClick={(date, bookingsForDate) => {
-                          setSelectedDate(date);
-                          setSelectedDateBookings(bookingsForDate);
-                        }} 
-                      />
-                      <div className="selected-date-bookings">
-                        <h4 style={{ margin: '12px 0', color: '#4b5563' }}>
-                          {selectedDate.toLocaleDateString('mn-MN')} - {selectedDateBookings.length > 0 ? `${selectedDateBookings.length} захиалга` : 'Захиалга байхгүй'}
-                        </h4>
-                        <div className="bookings-list">
-                          {(selectedDateBookings.length > 0 ? selectedDateBookings : []).map(booking => (
-                            <div key={booking._id} className={`booking-card ${booking.status}`}>
-                              <div className="booking-header">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <div style={{ 
-                                    width: '40px', height: '40px', borderRadius: '50%', 
-                                    background: '#e3f2fd', color: '#1976d2',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontWeight: 'bold'
-                                  }}>
-                                    {booking.user?.fullName?.charAt(0) || '?'}
-                                  </div>
-                                  <div>
-                                    <h4 style={{ margin: 0 }}>{booking.user?.fullName || 'Unknown'}</h4>
-                                    <span style={{ fontSize: '12px', color: '#666' }}>{booking.user?.phone}</span>
-                                  </div>
-                                </div>
-                                <span className={`status-badge ${booking.status}`}>
-                                  {booking.status === 'completed' ? 'Дууссан' : 
-                                   booking.status === 'confirmed' ? 'Баталгаажсан' :
-                                   booking.status === 'pending' ? 'Хүлээгдэж буй' : 'Цуцлагдсан'}
-                                </span>
-                              </div>
-                              <div className="booking-details" style={{ marginTop: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '8px' }}>
-                                <p><FaClock /> {booking.time}</p>
-                                <p><FaMoneyBillWave /> {booking.price}₮</p>
-                                <p>🎮 {booking.type === 'vip' ? 'VIP' : 'Энгийн'} - {booking.duration} цаг</p>
-                              </div>
-                              {/* Manage page: allow delete/cancel only */}
-                              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                                <button 
-                                  onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
-                                  style={{ 
-                                    flex: 1, padding: '8px', border: '1px solid #f44336', borderRadius: '6px', 
-                                    background: 'white', color: '#f44336', cursor: 'pointer' 
-                                  }}
-                                >
-                                  Цуцлах
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <MenuItem 
-              icon="✅"
-              title="Захиалга баталгаажуулах"
-              onClick={() => {
-                setExpandedSection(prev => prev === 'confirmBookings' ? '' : 'confirmBookings');
-                setActiveTab('confirm');
-              }}
-              active={expandedSection === 'confirmBookings'}
-              badge={pendingRequestCount}
-            />
-            {expandedSection === 'confirmBookings' && activeTab === 'confirm' && (
-              <div style={{ marginTop: "-4px", marginBottom: "12px" }}>
-                <div className="bookings-list" style={{ paddingTop: '8px' }}>
-                  {pendingRequests.length > 0 ? pendingRequests.map(booking => (
-                    <div key={booking._id} className={`booking-card ${booking.status}`}>
-                      <div className="booking-header">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ 
-                            width: '40px', height: '40px', borderRadius: '50%', 
-                            background: '#e3f2fd', color: '#1976d2',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 'bold'
-                          }}>
-                            {booking.user?.fullName?.charAt(0) || '?'}
-                          </div>
-                          <div>
-                            <h4 style={{ margin: 0 }}>{booking.user?.fullName || 'Unknown'}</h4>
-                            <span style={{ fontSize: '12px', color: '#666' }}>{booking.user?.phone}</span>
-                          </div>
-                        </div>
-                        <span className={`status-badge ${booking.status}`}>
-                          Хүсэлт
-                        </span>
-                      </div>
-                      <div className="booking-details" style={{ marginTop: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '8px' }}>
-                        <p><FaCalendarAlt /> {booking.date}</p>
-                        <p><FaClock /> {booking.time}</p>
-                        <p><FaMoneyBillWave /> {booking.price}₮</p>
-                        <p>🎮 {booking.type === 'vip' ? 'VIP' : 'Энгийн'} - {booking.duration} цаг</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                        <button 
-                          onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
-                          style={{ 
-                            flex: 1, padding: '8px', border: 'none', borderRadius: '6px', 
-                            background: '#4caf50', color: 'white', cursor: 'pointer' 
-                          }}
-                        >
-                          Зөвшөөрөх
-                        </button>
-                        <button 
-                          onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
-                          style={{ 
-                            flex: 1, padding: '8px', border: '1px solid #f44336', borderRadius: '6px', 
-                            background: 'white', color: '#f44336', cursor: 'pointer' 
-                          }}
-                        >
-                          Цуцлах
-                        </button>
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="no-bookings">
-                      <p>Баталгаажуулах шинэ захиалга алга байна.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
         {/* Common menu items */}
         <MenuItem 
           icon={<FaBell />}
@@ -901,15 +773,19 @@ export default function Profile() {
           </div>
         )}
 
-        <MenuItem 
-          icon="💎"
-          title="Эрх шинэчлэх"
-          onClick={() => {
-            setExpandedSection(prev => prev === 'payments' ? '' : 'payments');
-            setShowUpgradeModal(true);
-          }}
-          active={expandedSection === 'payments'}
-        />
+        {/* Show upgrade option only for users without active subscription */}
+        {(!isTrialActive && !subscription?.isActive) && (
+          <MenuItem 
+            icon="💎"
+            title="Эрх шинэчлэх"
+            onClick={() => {
+              setExpandedSection(prev => prev === 'payments' ? '' : 'payments');
+              setShowUpgradeModal(true);
+            }}
+            active={expandedSection === 'payments'}
+            highlight={true}
+          />
+        )}
 
         <MenuItem 
           icon="🔗"

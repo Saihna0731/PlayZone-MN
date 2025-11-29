@@ -121,7 +121,7 @@ const userSchema = new mongoose.Schema({
     },
     plan: {
       type: String,
-      enum: ['normal', 'business_standard'],
+      enum: ['trial', 'normal', 'business_standard'],
       default: null
     },
     startDate: {

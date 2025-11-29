@@ -105,6 +105,9 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
     const [copied, setCopied] = useState('');
     const [paymentCode, setPaymentCode] = useState(null);
     const [codeLoading, setCodeLoading] = useState(true);
+    const [paymentMethod, setPaymentMethod] = useState('bank'); // 'bank' or 'qpay'
+    const [qpayLoading, setQpayLoading] = useState(false);
+    const [qpayData, setQpayData] = useState(null);
 
     // Код авах
     React.useEffect(() => {
@@ -126,6 +129,35 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
       };
       fetchCode();
     }, [selectedPlan]);
+
+    // QPay invoice үүсгэх
+    const createQPayInvoice = async () => {
+      setQpayLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_BASE}/api/qpay/create-invoice`,
+          { 
+            planId: selectedPlan
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        if (response.data.success) {
+          setQpayData({
+            qr_image: response.data.data.qrImage,
+            qr_text: response.data.data.qrText,
+            urls: response.data.data.urls || response.data.data.deeplinks || [],
+            invoiceId: response.data.data.invoiceId
+          });
+        }
+      } catch (error) {
+        console.error('QPay error:', error);
+        setToast({ type: 'error', message: 'QPay төлбөр үүсгэхэд алдаа гарлаа. Банкны шилжүүлэг ашиглана уу.' });
+      } finally {
+        setQpayLoading(false);
+      }
+    };
 
     const copyToClipboard = (text, field) => {
       navigator.clipboard.writeText(text);
@@ -198,7 +230,170 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
               </div>
             </div>
 
-            {/* Bank Details */}
+            {/* Payment Method Tabs */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '20px'
+            }}>
+              <button
+                onClick={() => setPaymentMethod('bank')}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  border: paymentMethod === 'bank' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  background: paymentMethod === 'bank' ? '#eff6ff' : 'white',
+                  color: paymentMethod === 'bank' ? '#1d4ed8' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🏦 Банк шилжүүлэг
+              </button>
+              <button
+                onClick={() => {
+                  setPaymentMethod('qpay');
+                  if (!qpayData && !qpayLoading) {
+                    createQPayInvoice();
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  border: paymentMethod === 'qpay' ? '2px solid #00b14f' : '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  background: paymentMethod === 'qpay' ? '#ecfdf5' : 'white',
+                  color: paymentMethod === 'qpay' ? '#047857' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📱 QPay
+              </button>
+            </div>
+
+            {/* QPay Content */}
+            {paymentMethod === 'qpay' && (
+              <div style={{
+                background: '#f0fdf4',
+                padding: '20px',
+                borderRadius: '16px',
+                marginBottom: '20px',
+                border: '2px solid #22c55e'
+              }}>
+                {qpayLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '16px' }}>⏳</div>
+                    <p style={{ color: '#047857', fontWeight: '600' }}>QPay нэхэмжлэх үүсгэж байна...</p>
+                  </div>
+                ) : qpayData?.qr_image ? (
+                  <>
+                    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#047857' }}>📱 QPay QR Код</h4>
+                      <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 16px 0' }}>
+                        Банкны аппаар QR код уншуулна уу
+                      </p>
+                      <img 
+                        src={`data:image/png;base64,${qpayData.qr_image}`} 
+                        alt="QPay QR"
+                        style={{
+                          width: '200px',
+                          height: '200px',
+                          borderRadius: '12px',
+                          border: '4px solid #22c55e'
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Deep link buttons */}
+                    {qpayData.urls && qpayData.urls.length > 0 && (
+                      <div>
+                        <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#047857' }}>
+                          🏦 Банкны апп сонгох:
+                        </h4>
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: 'repeat(3, 1fr)', 
+                          gap: '8px' 
+                        }}>
+                          {qpayData.urls.slice(0, 6).map((bank, idx) => (
+                            <a
+                              key={idx}
+                              href={bank.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                padding: '10px 8px',
+                                background: 'white',
+                                borderRadius: '10px',
+                                border: '1px solid #e5e7eb',
+                                textDecoration: 'none',
+                                color: '#1f2937',
+                                fontSize: '11px',
+                                fontWeight: '500'
+                              }}
+                            >
+                              {bank.logo && (
+                                <img 
+                                  src={bank.logo} 
+                                  alt={bank.name}
+                                  style={{ width: '32px', height: '32px', marginBottom: '4px', borderRadius: '6px' }}
+                                />
+                              )}
+                              <span style={{ textAlign: 'center' }}>{bank.name}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ 
+                      marginTop: '16px', 
+                      padding: '12px', 
+                      background: '#fef3c7', 
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      color: '#92400e'
+                    }}>
+                      💡 Төлбөр амжилттай хийгдсэний дараа эрх автоматаар нээгдэнэ.
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
+                    <p style={{ color: '#dc2626', marginBottom: '16px' }}>
+                      QPay холболт одоогоор боломжгүй байна
+                    </p>
+                    <button
+                      onClick={() => setPaymentMethod('bank')}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                      }}
+                    >
+                      🏦 Банк шилжүүлэг ашиглах
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Bank Details - only show when bank method selected */}
+            {paymentMethod === 'bank' && (
+            <>
             <div style={{
               background: '#f8f9fa',
               padding: '20px',
@@ -416,7 +611,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
               </div>
             </div>
 
-            {/* Instructions */}
+            {/* Instructions - only for bank transfer */}
             <div style={{
               background: '#ede9fe',
               padding: '20px',
@@ -453,6 +648,8 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
                 </div>
               </div>
             </div>
+            </> 
+            )}
 
             {/* Action Button */}
             <button

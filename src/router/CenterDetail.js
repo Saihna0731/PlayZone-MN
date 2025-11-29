@@ -188,7 +188,7 @@ export default function CenterDetail() {
       backdropFilter: 'blur(4px)'
     };
 
-    // 1. Iframe Embeds
+    // 1. Iframe Embeds - шууд тоглуулна (embed өөрөө play товчтой)
     if (cleanEmbed.includes('<iframe')) {
       const srcMatch = /src="([^"]+)"/i.exec(cleanEmbed);
       let src = srcMatch ? srcMatch[1] : '';
@@ -196,31 +196,19 @@ export default function CenterDetail() {
       // Facebook Autoplay Fix
       if (src && (src.includes('facebook.com') || src.includes('fb.com'))) {
           if (!src.includes('autoplay=')) {
-               src += (src.includes('?') ? '&' : '?');//-autoplay && -mute
+               src += (src.includes('?') ? '&' : '?');
           }
       }
 
       return (
         <div style={cardStyle}>
-          <div style={{ width: '100%', height: '100%', pointerEvents: isPlaying ? 'auto' : 'none' }}>
-            <iframe
-              src={src}
-              title={`Preview ${index + 1}`}
-              allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
-              scrolling="no"
-              style={{ width:'100%', height:'100%', border:0, objectFit:'contain' }}
-            />
-          </div>
-          
-          {/* Inline Play Button */}
-          {!isPlaying && (
-            <div 
-              onClick={() => setIsPlaying(true)}
-              style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(transparent, rgba(0,0,0,0.35))', cursor: 'pointer'}}
-            > 
-              <div style={{background:'rgba(255,255,255,0.95)', width:48, height:48, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#e11d48', fontWeight:900, boxShadow: '0 4px 12px rgba(0,0,0,0.2)'}}>▶</div>
-            </div>
-          )}
+          <iframe
+            src={src}
+            title={`Preview ${index + 1}`}
+            allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
+            scrolling="no"
+            style={{ width:'100%', height:'100%', border:0, objectFit:'contain' }}
+          />
 
           {/* Expand Button */}
           <button 
@@ -902,7 +890,7 @@ export default function CenterDetail() {
       </div>
 
       {/* Sticky booking footer - Airbnb style */}
-      <div className="center-booking-footer" style={{ zIndex: 10000 }}>
+      <div className="center-booking-footer" style={{ zIndex: bonusPanelOpen || bookingModalOpen ? 1 : 1000 }}>
         <div className="center-booking-info">
           <div className="center-booking-price">
             {centerData.pricing?.standard ? (
@@ -916,7 +904,7 @@ export default function CenterDetail() {
           </div>
           {centerData.rating && (
             <div className="center-booking-rating">
-              <FaStar /> {centerData.rating} <span className="reviews-count">(116 reviews)</span>
+              <FaStar /> {centerData.rating} <span className="reviews-count">(1161 reviews)</span>
             </div>
           )}
         </div>

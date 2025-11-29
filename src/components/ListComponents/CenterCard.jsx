@@ -346,19 +346,20 @@ function PlanBadge({ owner }) {
   return null;
 }
 
-export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete, canEdit, showToast, isBookingMode, onOccupancyUpdate }) {
+export default function CenterCard({ item, center, expanded, onToggle, onEdit, onDelete, canEdit, showToast, isBookingMode, onOccupancyUpdate }) {
   const navigate = useNavigate();
   const { user, refreshUser, isAdmin: userIsAdmin } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  // Bonus states
-  // Legacy bonus form state (removed visual usage); kept minimal for backward compatibility removal
-  // Clean up unused bonus management states after migration to Booking page modal
-  // (All edit/create/delete now handled externally.)
+  const [index, setIndex] = useState(0);
+  const [imageErrors, setImageErrors] = useState({});
+  
+  // Support both 'item' and 'center' props for flexibility
+  const data = item || center;
   
   // Get images and videos from the correct database field and fallbacks
-  const adminImages = item.images && Array.isArray(item.images) ? item.images : [];
+  const adminImages = data?.images && Array.isArray(data.images) ? data.images : [];
   
   // Process images - use thumbnail for card view, high quality available for detail
   const processedImages = adminImages.map(img => {
@@ -373,28 +374,28 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
   
   // Handle videos from both array and string formats - object болон string дэмжих
   let adminVideos = [];
-  if (item.videos) {
-    if (Array.isArray(item.videos)) {
-      adminVideos = item.videos.filter(video => {
+  if (data?.videos) {
+    if (Array.isArray(data.videos)) {
+      adminVideos = data.videos.filter(video => {
         if (typeof video === 'object' && video.data) {
           return true; // Video object format
         }
         return video && video.trim(); // String URL format
       });
-    } else if (typeof item.videos === 'string' && item.videos.trim()) {
-      adminVideos = item.videos.split('\n').filter(url => url && url.trim()).map(url => url.trim());
+    } else if (typeof data.videos === 'string' && data.videos.trim()) {
+      adminVideos = data.videos.split('\n').filter(url => url && url.trim()).map(url => url.trim());
     }
   }
 
   // Handle embed videos
   let adminEmbedVideos = [];
-  if (item.embedVideos) {
-    if (Array.isArray(item.embedVideos)) {
-      adminEmbedVideos = item.embedVideos.filter(embed => embed && embed.trim());
+  if (data?.embedVideos) {
+    if (Array.isArray(data.embedVideos)) {
+      adminEmbedVideos = data.embedVideos.filter(embed => embed && embed.trim());
     }
   }
   
-  const fallbackImages = [item.image, item.img, item.photo].filter(Boolean);
+  const fallbackImages = [data?.image, data?.img, data?.photo].filter(Boolean);
   const fallbackImageItems = fallbackImages.map(url => ({ type: 'image', url: enhanceImageUrl(url) }));
   const allImages = [...processedImages, ...fallbackImageItems].slice(0, 6);
   
@@ -436,9 +437,6 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
   
   // Use only images for carousel
   const media = imageItems.length ? imageItems : defaultMedia;
-  
-  const [index, setIndex] = useState(0);
-  const [imageErrors, setImageErrors] = useState({});
 
   const handleImageError = (imageIndex) => {
     setImageErrors(prev => ({ ...prev, [imageIndex]: true }));
@@ -458,7 +456,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
   useEffect(() => {
     setIndex(0);
     setImageErrors({});
-  }, [item?.id, item?._id]);
+  }, [data?.id, data?._id]);
 
   const prev = (e) => {
     e.stopPropagation();
@@ -471,8 +469,8 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
   };
 
   const handleCardClick = () => {
-    const centerId = item._id || item.id;
-    console.log("🔗 Navigating to center:", centerId, "Item:", item);
+    const centerId = data._id || data.id;
+    console.log("🔗 Navigating to center:", centerId, "data:", data);
     navigate(`/center/${centerId}`);
   };
 
@@ -485,40 +483,41 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
 
   // Generate consistent rating for each center (not changing with image index)
   const generateRating = (itemId) => {
-    // Use only item ID to create a consistent rating for each center
+    // Use only data ID to create a consistent rating for each center
     const seed = itemId ? itemId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 123;
     const baseRating = 3.5 + (seed % 15) / 10; // Between 3.5 and 5.0
     return Math.min(5.0, baseRating).toFixed(1);
   };
   
-  const rating = item.rating || generateRating(item._id || item.id || 'default');
+  const rating = data.rating || generateRating(data._id || data.id || 'default');
   
   // Display pricing information
   const getPriceDisplay = () => {
-    if (item.pricing && (item.pricing.standard || item.pricing.vip || item.pricing.stage)) {
+    if (data.pricing && (data.pricing.standard || data.pricing.vip || data.pricing.stage)) {
       const prices = [];
-      if (item.pricing.standard) prices.push(`${parseInt(item.pricing.standard).toLocaleString()}₮`);
-      if (item.pricing.vip) prices.push(`VIP: ${parseInt(item.pricing.vip).toLocaleString()}₮`);
-      if (item.pricing.stage) prices.push(`Stage: ${parseInt(item.pricing.stage).toLocaleString()}₮`);
-      return prices.length > 0 ? prices.join(' • ') : item.price || "3000₮/цаг";
+      if (data.pricing.standard) prices.push(`${parseInt(data.pricing.standard).toLocaleString()}₮`);
+      if (data.pricing.vip) prices.push(`VIP: ${parseInt(data.pricing.vip).toLocaleString()}₮`);
+      if (data.pricing.stage) prices.push(`Stage: ${parseInt(data.pricing.stage).toLocaleString()}₮`);
+      return prices.length > 0 ? prices.join(' • ') : data.price || "3000₮/цаг";
     }
-    return item.price || "3000₮/цаг";
+    return data.price || "3000₮/цаг";
   };
   
   const price = getPriceDisplay();
 
   // Check if center is in user's favorites
   useEffect(() => {
+    if (!data) return;
     if (user && user.favoritesCenters) {
-      const centerId = item._id || item.id;
+      const centerId = data._id || data.id;
       const isInFavorites = user.favoritesCenters.some(fav => 
-        (fav._id || fav).toString() === centerId.toString()
+        (fav._id || fav).toString() === centerId?.toString()
       );
       setIsFavorite(isInFavorites);
     } else {
       setIsFavorite(false);
     }
-  }, [user, item._id, item.id]);
+  }, [user, data?._id, data?.id, data]);
 
   // Toggle favorite status
   const toggleFavorite = async (e) => {
@@ -531,7 +530,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
     setFavoriteLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const centerId = item._id || item.id;
+      const centerId = data._id || data.id;
       
       if (isFavorite) {
         // Remove from favorites
@@ -558,6 +557,11 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
       setFavoriteLoading(false);
     }
   };
+
+  // Early return if no data - after all hooks
+  if (!data) {
+    return null;
+  }
 
   return (
     <div
@@ -586,7 +590,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
       <div style={{ position: "relative", height: 200, background: "#f5f5f5" }}>
         <img
           src={getCurrentMedia().url}
-          alt={item.name || "center"}
+          alt={data.name || "center"}
           onError={() => handleImageError(index)}
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
@@ -624,11 +628,11 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
           textAlign: "center",
           lineHeight: "1.2"
         }}>
-          {item.pricing && (item.pricing.standard || item.pricing.vip || item.pricing.stage) ? (
+          {data.pricing && (data.pricing.standard || data.pricing.vip || data.pricing.stage) ? (
             <div>
-              {item.pricing.standard && <div>🎮 {parseInt(item.pricing.standard).toLocaleString()}₮</div>}
-              {item.pricing.vip && <div style={{fontSize: "10px", opacity: 0.9}}>👑 VIP: {parseInt(item.pricing.vip).toLocaleString()}₮</div>}
-              {item.pricing.stage && <div style={{fontSize: "10px", opacity: 0.9}}>🎭 Stage: {parseInt(item.pricing.stage).toLocaleString()}₮</div>}
+              {data.pricing.standard && <div>🎮 {parseInt(data.pricing.standard).toLocaleString()}₮</div>}
+              {data.pricing.vip && <div style={{fontSize: "10px", opacity: 0.9}}>👑 VIP: {parseInt(data.pricing.vip).toLocaleString()}₮</div>}
+              {data.pricing.stage && <div style={{fontSize: "10px", opacity: 0.9}}>🎭 Stage: {parseInt(data.pricing.stage).toLocaleString()}₮</div>}
             </div>
           ) : (
             <div>{price}</div>
@@ -829,7 +833,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
               fontWeight: "700", 
               color: "#1a1a1a"
             }}>
-              {item.name || "Unnamed Center"}
+              {data.name || "Unnamed Center"}
             </h3>
           </div>
 
@@ -841,7 +845,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
             flexShrink: 0,
             flexWrap: 'wrap'
           }}>
-            <PlanBadge owner={typeof item.owner === 'object' ? item.owner : undefined} />
+            <PlanBadge owner={typeof data.owner === 'object' ? data.owner : undefined} />
             
             {((canEdit) || userIsAdmin) && !isBookingMode && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
@@ -879,7 +883,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
                 </button>
                 <button
                   className="card-action-btn card-action-btn-delete"
-                  onClick={(e) => handleActionClick(e, () => onDelete && onDelete(item._id ?? item.id))}
+                  onClick={(e) => handleActionClick(e, () => onDelete && onDelete(data._id ?? data.id))}
                   title="Устгах"
                   style={{
                     background: '#f44336',
@@ -924,11 +928,11 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
           marginBottom: 12
         }}>
           <FaMapMarkerAlt size={12} />
-          <span>{item.address || "No address provided"}</span>
+          <span>{data.address || "No address provided"}</span>
         </div> */}
 
         {/* Category tag */}
-        {item.category && (
+        {data.category && (
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -948,7 +952,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
               textTransform: "uppercase",
               letterSpacing: "0.5px"
             }}>
-              {item.category}
+              {data.category}
             </span>
 
             {isBookingMode && ((canEdit) || userIsAdmin) && (
@@ -973,7 +977,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
                   Засах
                 </button>
                 <button
-                  onClick={(e) => handleActionClick(e, () => onDelete && onDelete(item._id ?? item.id))}
+                  onClick={(e) => handleActionClick(e, () => onDelete && onDelete(data._id ?? data.id))}
                   style={{
                     background: "linear-gradient(135deg,#f43f5e,#e11d48)",
                     color: "#fff",
@@ -997,14 +1001,14 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         )}
 
         {/* Occupancy Display */}
-        {item.occupancy && (
-          <OccupancyInline occupancy={item.occupancy} />
+        {data.occupancy && (
+          <OccupancyInline occupancy={data.occupancy} />
         )}
 
         {/* Bonuses (if any) */}
-        {Array.isArray(item.bonus) && item.bonus.length > 0 && (
+        {Array.isArray(data.bonus) && data.bonus.length > 0 && (
           <div style={{ marginBottom: 16 }}>
-            <BonusList bonuses={item.bonus} />
+            <BonusList bonuses={data.bonus} />
           </div>
         )}
 
@@ -1040,7 +1044,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
         )}
         
         {/* Occupancy Display - зөвхөн expanded (дэлгэрэнгүй) үед харуулах */}
-        {item.occupancy && !isBookingMode && expanded && (
+        {data.occupancy && !isBookingMode && expanded && (
           <div style={{ 
             marginBottom: 16,
             padding: "12px",
@@ -1060,7 +1064,7 @@ export default function CenterCard({ item, expanded, onToggle, onEdit, onDelete,
               📊 Одоогийн ачаалал
             </div>
             
-            <OccupancyDisplay occupancy={item.occupancy} />
+            <OccupancyDisplay occupancy={data.occupancy} />
           </div>
         )}
 
