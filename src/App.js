@@ -8,7 +8,7 @@ import CenterDetail from "./router/CenterDetail";
 import Bonuses from "./router/Bonuses";
 import AuthChoice from "./router/AuthChoice";
 import Reels from "./router/Reels";
-import Intro from "./router/Intro";
+import Onboarding from "./router/Onboarding";
 import GameCenterControl from "./router/GameCenterControl";
 import BottomNav from "./components/MainNavbars/BottomNav";
 import Login from "./components/Login";
@@ -20,7 +20,7 @@ import GlobalToast from "./components/LittleComponents/GlobalToast";
 function HomeRedirect() {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return null;
-  return isAuthenticated ? <Navigate to="/map" replace /> : <Intro />;
+  return isAuthenticated ? <Navigate to="/map" replace /> : <Onboarding />;
 }
 
 function App() {
