@@ -42,7 +42,9 @@ const ForgotPassword = () => {
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/api/auth/forgot-password`, { emailOrPhone });
+      const response = await axios.post(`${API_BASE}/api/auth/forgot-password`, { emailOrPhone }, {
+        timeout: 30000 // 30 seconds timeout
+      });
       setResetMethod(response.data.method);
       setMessage(response.data.message);
       setStep(2);

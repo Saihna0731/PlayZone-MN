@@ -32,13 +32,13 @@ export default function MapCategoryFilter({ selectedCategory, onSelectCategory, 
       <style jsx>{`
         .map-category-filter {
           width: 100%;
-          padding: 8px 0;
+          padding: 6px 0 10px;
         }
         .category-scroll-container {
           display: flex;
-          gap: 8px;
+          gap: 10px;
           overflow-x: auto;
-          padding: 4px 16px 8px;
+          padding: 6px 16px 10px;
           pointer-events: auto;
           -ms-overflow-style: none;
           scrollbar-width: none;
@@ -50,33 +50,37 @@ export default function MapCategoryFilter({ selectedCategory, onSelectCategory, 
         .category-chip {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          background: rgba(255, 255, 255, 0.95);
+          gap: 8px;
+          padding: 12px 20px;
+          background: rgba(255, 255, 255, 0.98);
           backdrop-filter: blur(12px);
-          border: 1.5px solid rgba(229, 231, 235, 0.8);
-          border-radius: 20px;
+          border: 2px solid rgba(229, 231, 235, 0.9);
+          border-radius: 25px;
           white-space: nowrap;
           cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
           color: #374151;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           flex-shrink: 0;
         }
         .category-chip:hover {
           background: white;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          border-color: #9ca3af;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+          border-color: #6366f1;
+        }
+        .category-chip:active {
+          transform: scale(0.97);
         }
         .category-chip.active {
           background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
           color: white;
           border-color: transparent;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+          box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+          transform: translateY(-1px);
         }
         .category-chip.active:hover {
           background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
@@ -84,52 +88,72 @@ export default function MapCategoryFilter({ selectedCategory, onSelectCategory, 
         .category-icon {
           display: flex;
           align-items: center;
-          font-size: 14px;
+          font-size: 18px;
         }
         .category-label {
-          font-size: 12px;
+          font-size: 14px;
+          font-weight: 600;
         }
         .category-count {
-          background: rgba(0, 0, 0, 0.1);
-          color: inherit;
-          font-size: 10px;
+          background: rgba(99, 102, 241, 0.15);
+          color: #6366f1;
+          font-size: 12px;
           font-weight: 700;
-          padding: 2px 6px;
-          border-radius: 10px;
-          min-width: 18px;
+          padding: 4px 10px;
+          border-radius: 12px;
+          min-width: 24px;
           text-align: center;
         }
         .category-chip.active .category-count {
-          background: rgba(255, 255, 255, 0.25);
+          background: rgba(255, 255, 255, 0.3);
+          color: white;
         }
         
-        /* Responsive */
+        /* Responsive - Mobile */
         @media (max-width: 480px) {
-          .category-chip {
-            padding: 6px 10px;
-            gap: 4px;
-          }
-          .category-icon {
-            font-size: 12px;
-          }
-          .category-label {
-            font-size: 11px;
-          }
-          .category-count {
-            font-size: 9px;
-            padding: 1px 5px;
-          }
-        }
-        @media (min-width: 768px) {
-          .category-chip {
-            padding: 10px 18px;
+          .category-scroll-container {
             gap: 8px;
+            padding: 4px 12px 8px;
+          }
+          .category-chip {
+            padding: 10px 16px;
+            gap: 6px;
+            border-radius: 20px;
           }
           .category-icon {
             font-size: 16px;
           }
           .category-label {
-            font-size: 14px;
+            font-size: 13px;
+          }
+          .category-count {
+            font-size: 11px;
+            padding: 3px 8px;
+            min-width: 22px;
+          }
+        }
+        
+        /* Responsive - Tablet & Desktop */
+        @media (min-width: 768px) {
+          .category-scroll-container {
+            gap: 12px;
+            padding: 8px 24px 12px;
+          }
+          .category-chip {
+            padding: 14px 24px;
+            gap: 10px;
+            border-radius: 30px;
+          }
+          .category-icon {
+            font-size: 20px;
+          }
+          .category-label {
+            font-size: 15px;
+          }
+          .category-count {
+            font-size: 13px;
+            padding: 5px 12px;
+            min-width: 28px;
           }
         }
       `}</style>

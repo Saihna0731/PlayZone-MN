@@ -8,19 +8,34 @@ export default function BookingModal({ isOpen, onClose, center, onConfirm }) {
   const [duration, setDuration] = useState(1);
   const [seatType, setSeatType] = useState('standard');
   const [seats, setSeats] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (submitting) return; // Prevent double click
+    if (!date || !time) {
+      setError('Өдөр болон цаг сонгоно уу');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
     const price = (center.pricing?.[seatType] || center.price || 0) * duration * seats;
-    onConfirm({ 
-      date, 
-      time, 
-      duration, 
-      type: seatType, 
-      seats,
-      price 
-    });
+    try {
+      await onConfirm({ 
+        date, 
+        time, 
+        duration, 
+        type: seatType, 
+        seats,
+        price 
+      });
+    } catch (err) {
+      setError('Захиалга илгээхэд алдаа гарлаа. Дахин оролдоно уу.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -32,6 +47,11 @@ export default function BookingModal({ isOpen, onClose, center, onConfirm }) {
         </div>
         
         <div className="booking-modal-content">
+          {error && (
+            <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px' }}>
+              ⚠️ {error}
+            </div>
+          )}
           <div className="booking-field">
             <label><FaCalendarAlt /> Өдөр</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} />
@@ -82,8 +102,13 @@ export default function BookingModal({ isOpen, onClose, center, onConfirm }) {
           <div className="total-price">
             Нийт: {(center.pricing?.[seatType] || center.price || 0) * duration * seats}₮
           </div>
-          <button className="confirm-btn" onClick={handleSubmit}>
-            Баталгаажуулах
+          <button 
+            className="confirm-btn" 
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+          >
+            {submitting ? '⏳ Илгээж байна...' : 'Баталгаажуулах'}
           </button>
         </div>
       </div>

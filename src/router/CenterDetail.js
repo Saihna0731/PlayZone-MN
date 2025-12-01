@@ -26,26 +26,22 @@ export default function CenterDetail() {
   const [toast, setToast] = useState(null);
 
   const handleBookingConfirm = async (bookingData) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setToast({ message: "Та эхлээд нэвтэрнэ үү", type: "error", id: Date.now() });
-        return;
-      }
-
-      await axios.post(`${API_BASE}/api/bookings`, { 
-        centerId: id, 
-        ...bookingData 
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setBookingModalOpen(false);
-      setToast({ message: "Захиалга амжилттай илгээгдлээ! Эзэмшигч баталгаажуулахыг хүлээнэ үү.", type: "success", id: Date.now() });
-    } catch (error) {
-      console.error("Booking error:", error);
-      setToast({ message: "Захиалга өгөхөд алдаа гарлаа", type: "error", id: Date.now() });
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setToast({ message: "Та эхлээд нэвтэрнэ үү", type: "error", id: Date.now() });
+      throw new Error('No token');
     }
+
+    await axios.post(`${API_BASE}/api/bookings`, { 
+      centerId: id, 
+      ...bookingData 
+    }, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 15000 // 15 seconds timeout
+    });
+    
+    setBookingModalOpen(false);
+    setToast({ message: "Захиалга амжилттай илгээгдлээ! Эзэмшигч баталгаажуулахыг хүлээнэ үү.", type: "success", id: Date.now() });
   };
 
   // Helper: Get high quality image

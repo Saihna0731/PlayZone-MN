@@ -49,8 +49,7 @@ export default function MapTools({ onRefresh, onStyleChange, currentStyle, onLoc
         .map-tools-container {
           position: absolute;
           right: 16px;
-          bottom: 100px;
-          top: auto;
+          top: 160px;
           z-index: 900;
           display: flex;
           flex-direction: column;
@@ -161,7 +160,7 @@ export default function MapTools({ onRefresh, onStyleChange, currentStyle, onLoc
         @media (max-width: 480px) {
           .map-tools-container {
             right: 10px;
-            bottom: 80px;
+            top: 140px;
           }
           .main-tool-btn {
             width: 42px;

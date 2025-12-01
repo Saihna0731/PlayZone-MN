@@ -588,13 +588,6 @@ export default function MapView() {
               {isRestricted ? <FaLock /> : <FaFilter />}
             </button>
           </div>
-          <div className="profile-wrapper" onClick={() => navigate('/profile')}>
-            <img 
-              src={user?.avatar || "https://ui-avatars.com/api/?name=User&background=random"} 
-              alt="Profile" 
-              className="profile-avatar"
-            />
-          </div>
         </div>
         
         <div className="filter-container">
@@ -703,7 +696,7 @@ export default function MapView() {
           flex: 1;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 10px;
           min-width: 0;
         }
 
@@ -761,27 +754,7 @@ export default function MapView() {
           }
         }
 
-        .profile-wrapper {
-          width: 42px;
-          height: 42px;
-          min-width: 42px;
-          border-radius: 50%;
-          background: white;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          overflow: hidden;
-          border: 2px solid white;
-          flex-shrink: 0;
-        }
 
-        .profile-avatar {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
 
         .filter-container {
           pointer-events: auto;
@@ -827,11 +800,7 @@ export default function MapView() {
             border-radius: 10px;
             font-size: 14px;
           }
-          .profile-wrapper {
-            width: 38px;
-            height: 38px;
-            min-width: 38px;
-          }
+
           :global(.leaflet-control-zoom) {
             margin-bottom: 70px !important;
             margin-right: 8px !important;
@@ -854,10 +823,7 @@ export default function MapView() {
             width: 44px;
             height: 44px;
           }
-          .profile-wrapper {
-            width: 44px;
-            height: 44px;
-          }
+
         }
         
         /* Responsive - Desktop */
@@ -875,10 +841,7 @@ export default function MapView() {
             border-radius: 14px;
             font-size: 18px;
           }
-          .profile-wrapper {
-            width: 48px;
-            height: 48px;
-          }
+
         }
       `}</style>
     </div>
