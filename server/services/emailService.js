@@ -1,21 +1,12 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Email transporter үүсгэх - Resend эсвэл Gmail
+// Resend client (Railway дээр Gmail-аас илүү найдвартай)
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+// Email transporter үүсгэх (Gmail backup)
 const createTransporter = () => {
-  // Resend ашиглах (Railway дээр илүү сайн ажиллана)
-  if (process.env.RESEND_API_KEY) {
-    return nodemailer.createTransport({
-      host: 'smtp.resend.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: 'resend',
-        pass: process.env.RESEND_API_KEY
-      }
-    });
-  }
-  
-  // Gmail App Password ашиглах (fallback)
+  // Gmail App Password ашиглах
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -33,13 +24,8 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
   try {
     const transporter = createTransporter();
     
-    // Resend ашиглаж байвал from хаяг өөрчлөх
-    const fromEmail = process.env.RESEND_API_KEY 
-      ? `PlayZone MN <onboarding@resend.dev>` 
-      : `"PlayZone MN" <${process.env.EMAIL_USER}>`;
-    
     const mailOptions = {
-      from: fromEmail,
+      from: `"PlayZone MN" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'PlayZone MN - Нууц үг сэргээх код',
       html: `
@@ -173,10 +159,35 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('📧 Email sent:', info.messageId);
+    console.log('📧 Email sent via Gmail:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Email send error:', error);
+    console.error('❌ Gmail error:', error.message);
+    
+    // Gmail амжилтгүй бол Resend ашиглах
+    if (resend) {
+      try {
+        console.log('📧 Trying Resend...');
+        const { data, error: resendError } = await resend.emails.send({
+          from: 'PlayZone MN <noreply@playzone.mn>',
+          to: [email],
+          subject: 'PlayZone MN - Нууц үг сэргээх код',
+          html: mailOptions.html
+        });
+        
+        if (resendError) {
+          console.error('❌ Resend error:', resendError);
+          return { success: false, error: resendError.message };
+        }
+        
+        console.log('📧 Email sent via Resend:', data?.id);
+        return { success: true, messageId: data?.id };
+      } catch (resendErr) {
+        console.error('❌ Resend failed:', resendErr.message);
+        return { success: false, error: resendErr.message };
+      }
+    }
+    
     return { success: false, error: error.message };
   }
 };
