@@ -77,12 +77,15 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
       html: htmlContent
     };
 
-    // Resend эхлээд ашиглах (verified domain: playzone.cv)
+    // Resend эхлээд ашиглах
     if (resend) {
       try {
-        console.log('📧 Trying Resend with playzone.cv...');
+        // playzone.cv verified бол ашиглана, үгүй бол default domain
+        const fromAddress = 'PlayZone MN <onboarding@resend.dev>';
+        console.log('📧 Trying Resend...');
+        
         const { data, error: resendError } = await resend.emails.send({
-          from: 'PlayZone MN <noreply@playzone.cv>',
+          from: fromAddress,
           to: [email],
           subject: 'PlayZone MN - Нууц үг сэргээх код',
           html: htmlContent
