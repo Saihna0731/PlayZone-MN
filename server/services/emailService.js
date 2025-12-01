@@ -1,21 +1,26 @@
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 
-// Resend client (Railway дээр Gmail-аас илүү найдвартай)
+// Resend client (Domain verified бол ашиглана)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Email transporter үүсгэх (Gmail backup)
+// Email transporter үүсгэх - Direct SMTP
 const createTransporter = () => {
-  // Gmail App Password ашиглах
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // TLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_APP_PASSWORD
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
+    tls: {
+      ciphers: 'SSLv3',
+      rejectUnauthorized: false
+    }
   });
 };
 
@@ -158,34 +163,38 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
       `
     };
 
-    // Resend эхлээд ашиглах (Railway дээр илүү найдвартай)
-    if (resend) {
-      try {
-        console.log('📧 Trying Resend first...');
-        const { data, error: resendError } = await resend.emails.send({
-          from: 'PlayZone MN <onboarding@resend.dev>',
-          to: [email],
-          subject: 'PlayZone MN - Нууц үг сэргээх код',
-          html: mailOptions.html
-        });
-        
-        if (resendError) {
+    // Gmail эхлээд ашиглах
+    try {
+      console.log('📧 Trying Gmail SMTP...');
+      const info = await transporter.sendMail(mailOptions);
+      console.log('📧 Email sent via Gmail:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    } catch (gmailError) {
+      console.error('❌ Gmail error:', gmailError.message);
+      
+      // Gmail амжилтгүй бол Resend fallback (зөвхөн verified domain байвал)
+      if (resend && process.env.RESEND_DOMAIN_VERIFIED === 'true') {
+        try {
+          console.log('📧 Trying Resend fallback...');
+          const { data, error: resendError } = await resend.emails.send({
+            from: `PlayZone MN <noreply@${process.env.RESEND_DOMAIN || 'playzone.mn'}>`,
+            to: [email],
+            subject: 'PlayZone MN - Нууц үг сэргээх код',
+            html: mailOptions.html
+          });
+          
+          if (!resendError && data?.id) {
+            console.log('📧 Email sent via Resend:', data.id);
+            return { success: true, messageId: data.id };
+          }
           console.error('❌ Resend error:', resendError);
-          // Resend амжилтгүй бол Gmail руу fallback
-        } else {
-          console.log('📧 Email sent via Resend:', data?.id);
-          return { success: true, messageId: data?.id };
+        } catch (resendErr) {
+          console.error('❌ Resend failed:', resendErr.message);
         }
-      } catch (resendErr) {
-        console.error('❌ Resend failed:', resendErr.message);
-        // Gmail руу fallback
       }
+      
+      return { success: false, error: gmailError.message };
     }
-
-    // Gmail fallback
-    const info = await transporter.sendMail(mailOptions);
-    console.log('📧 Email sent via Gmail:', info.messageId);
-    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ Email send error:', error.message);
     return { success: false, error: error.message };
