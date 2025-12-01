@@ -46,7 +46,7 @@ function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('с�
           flex: 1,
           border: "none",
           outline: "none",
-          fontSize: "14px",
+          fontSize: "16px",
           background: "transparent",
           color: "#333",
           fontWeight: "500"
