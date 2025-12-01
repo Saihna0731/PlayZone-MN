@@ -337,42 +337,37 @@ export default function List() {
           </div>
         )}
 
-        {/* Category chips (kept below VIP) */}
+        {/* Category chips - PC Gaming эхэнд, тоо хэмжээтэй */}
         <div className="list-controls-category">
           <div className="category-chip-row">
-            <button
-              type="button"
-              onClick={() => setCategory('all')}
-              className={`category-chip ${category === 'all' ? 'active' : ''}`}
-            >
-              Бүгд
-            </button>
-            <button
-              type="button"
-              onClick={() => setCategory('GameCenter')}
-              className={`category-chip ${category === 'GameCenter' ? 'active' : ''}`}
-            >
-              Game Center
-            </button>
-            <button
-              type="button"
-              onClick={() => setCategory('Ps')}
-              className={`category-chip ${category === 'Ps' ? 'active' : ''}`}
-            >
-              Playstation
-            </button>
-            <button
-            type="button"
-            onClick={() => setCategory('Pc gaming')}
-            className={`category-chip ${category === 'Pc gaming' ? 'active' : ''}`}
-            ></button>
-            <button
-              type="button"
-              onClick={() => setCategory('Billard')}
-              className={`category-chip ${category === 'Billard' ? 'active' : ''}`}
-            >
-              Billard
-            </button>
+            {[
+              { id: 'Pc gaming', label: 'PC Gaming', icon: '🖥️' },
+              { id: 'GameCenter', label: 'Game Center', icon: '🎮' },
+              { id: 'Ps', label: 'PlayStation', icon: '🎯' },
+              { id: 'Billard', label: 'Billard', icon: '🎱' },
+            ].map(cat => {
+              const count = items.filter(it => {
+                const rawCat = (it.category || '').toLowerCase();
+                if (cat.id === 'Pc gaming') return rawCat.includes('pc') || rawCat.includes('computer');
+                if (cat.id === 'GameCenter') return rawCat.includes('game') && !rawCat.includes('pc');
+                if (cat.id === 'Ps') return rawCat.includes('ps') || rawCat.includes('playstation');
+                if (cat.id === 'Billard') return rawCat.includes('billard') || rawCat.includes('billiard');
+                return false;
+              }).length;
+              
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategory(category === cat.id ? 'all' : cat.id)}
+                  className={`category-chip ${category === cat.id ? 'active' : ''}`}
+                >
+                  <span className="cat-icon">{cat.icon}</span>
+                  <span className="cat-label">{cat.label}</span>
+                  {count > 0 && <span className="cat-count">{count}</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
 

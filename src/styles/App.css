@@ -147,3 +147,101 @@
     height: 44px;
   }
 }
+
+/* ===== Global Responsive Layout ===== */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Safe area insets for notch devices */
+.page-with-bottom-space {
+  padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Responsive font sizes */
+html {
+  font-size: 16px;
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1200px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+/* Responsive container */
+.responsive-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (max-width: 480px) {
+  .responsive-container {
+    padding: 0 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-container {
+    padding: 0 24px;
+  }
+}
+
+/* Touch-friendly minimum tap targets */
+button, a, .clickable {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (min-width: 768px) {
+  button, a, .clickable {
+    min-height: auto;
+    min-width: auto;
+  }
+}
+
+/* Prevent horizontal scroll */
+.no-horizontal-scroll {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Smooth scrolling */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Better focus visibility */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Hide scrollbar but keep scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

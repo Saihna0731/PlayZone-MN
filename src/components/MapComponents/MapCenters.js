@@ -159,7 +159,7 @@ const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) 
   });
 };
 
-export default function MapCenters({ selectedCategory, searchQuery = "", filters = {}, onMarkerClick, onCentersUpdate, onCategoriesUpdate }) {
+export default function MapCenters({ selectedCategory, searchQuery = "", filters = {}, onMarkerClick, onCentersUpdate, onCategoriesUpdate, onCategoryCountsUpdate }) {
   const [centers, setCenters] = useState([]);
   const [loading, setLoading] = useState(true);
   const { canViewDetails: hasActiveSubscription } = useSubscription();
@@ -231,18 +231,59 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
 
   // Derive categories from centers and send up (guard against infinite update loops)
   const prevCatsRef = useRef([]);
+  const prevCountsRef = useRef({});
   useEffect(() => {
-    if (!onCategoriesUpdate || !centers.length) return;
+    if (!centers.length) return;
     const rawCats = centers.map(c => (c.category || 'gaming').toLowerCase().trim());
     const freqMap = rawCats.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {});
     const unique = Array.from(new Set(rawCats)).sort((a, b) => (freqMap[b] || 0) - (freqMap[a] || 0));
-    const prev = prevCatsRef.current;
-    if (prev.length === unique.length && prev.every((v, i) => v === unique[i])) {
-      return; // No change; skip parent update
+    
+    // Calculate category counts for filter UI
+    const counts = {
+      'pc-center': 0,
+      'gaming': 0,
+      'ps5': 0,
+      'billard': 0,
+      'vip': 0
+    };
+    
+    centers.forEach(center => {
+      const rawCat = (center.category || 'gaming').toLowerCase();
+      if (rawCat.includes('pc') || rawCat.includes('computer')) {
+        counts['pc-center']++;
+      } else if (rawCat.includes('game') && !rawCat.includes('pc')) {
+        counts['gaming']++;
+      } else if (rawCat.includes('ps') || rawCat.includes('playstation')) {
+        counts['ps5']++;
+      } else if (rawCat.includes('billard') || rawCat.includes('billiard')) {
+        counts['billard']++;
+      }
+      // VIP count based on business_pro plan
+      const plan = center.owner?.subscription?.plan;
+      if (plan === 'business_pro') {
+        counts['vip']++;
+      }
+    });
+    
+    // Update categories
+    if (onCategoriesUpdate) {
+      const prev = prevCatsRef.current;
+      if (!(prev.length === unique.length && prev.every((v, i) => v === unique[i]))) {
+        prevCatsRef.current = unique;
+        onCategoriesUpdate(unique);
+      }
     }
-    prevCatsRef.current = unique;
-    onCategoriesUpdate(unique);
-  }, [centers, onCategoriesUpdate]);
+    
+    // Update category counts
+    if (onCategoryCountsUpdate) {
+      const prevCounts = prevCountsRef.current;
+      const countsStr = JSON.stringify(counts);
+      if (JSON.stringify(prevCounts) !== countsStr) {
+        prevCountsRef.current = counts;
+        onCategoryCountsUpdate(counts);
+      }
+    }
+  }, [centers, onCategoriesUpdate, onCategoryCountsUpdate]);
 
   // Filter centers based on category + search
   const filteredCenters = centers.filter(center => {

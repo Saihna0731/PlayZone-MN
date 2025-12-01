@@ -14,9 +14,10 @@ import { FaFilter, FaLock, FaTimes } from "react-icons/fa";
 
 export default function MapView() {
   const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [visibleCenters, setVisibleCenters] = useState([]); // For list view
   const [availableCategories, setAvailableCategories] = useState([]); // Dynamic categories from DB
+  const [categoryCounts, setCategoryCounts] = useState({}); // Category counts
   const [mapStyle, setMapStyle] = useState("streets"); // streets, satellite, dark
   const [refreshKey, setRefreshKey] = useState(0);
   const [toast, setToast] = useState(null);
@@ -606,7 +607,7 @@ export default function MapView() {
               }
               setSelectedCategory(cat);
             }}
-            categories={availableCategories}
+            categoryCounts={categoryCounts}
           />
         </div>
       </div>
@@ -649,6 +650,7 @@ export default function MapView() {
             filters={filters}
             onCentersUpdate={setVisibleCenters}
             onCategoriesUpdate={setAvailableCategories}
+            onCategoryCountsUpdate={setCategoryCounts}
           />
         </MapContainer>
 
@@ -680,19 +682,19 @@ export default function MapView() {
           z-index: 800;
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          padding-top: 16px;
-          background: linear-gradient(to bottom, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%);
+          gap: 8px;
+          padding-top: env(safe-area-inset-top, 12px);
+          background: linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%);
           pointer-events: none;
         }
 
         .top-bar {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 0 16px;
+          gap: 8px;
+          padding: 0 12px;
           pointer-events: auto;
-          max-width: 800px;
+          max-width: 1200px;
           margin: 0 auto;
           width: 100%;
         }
@@ -701,27 +703,31 @@ export default function MapView() {
           flex: 1;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
+          min-width: 0;
         }
 
         .search-wrapper {
           flex: 1;
+          min-width: 0;
         }
 
         .filter-toggle-btn {
-          width: 48px;
-          height: 48px;
-          border-radius: 14px;
+          width: 42px;
+          height: 42px;
+          min-width: 42px;
+          border-radius: 12px;
           background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
           border: none;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          font-size: 18px;
+          font-size: 16px;
           box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
           cursor: pointer;
           transition: all 0.2s;
+          flex-shrink: 0;
         }
         
         .filter-toggle-btn:active {
@@ -756,8 +762,9 @@ export default function MapView() {
         }
 
         .profile-wrapper {
-          width: 48px;
-          height: 48px;
+          width: 42px;
+          height: 42px;
+          min-width: 42px;
           border-radius: 50%;
           background: white;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -788,19 +795,90 @@ export default function MapView() {
         
         /* Adjust Zoom Control Position */
         :global(.leaflet-control-zoom) {
-          margin-bottom: 20px !important; /* Lowered to avoid overlap with MapTools */
-          margin-right: 16px !important;
+          margin-bottom: 80px !important;
+          margin-right: 12px !important;
           border: none !important;
           box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         }
         :global(.leaflet-control-zoom-in),
         :global(.leaflet-control-zoom-out) {
           border-radius: 8px !important;
-          width: 40px !important;
-          height: 40px !important;
-          line-height: 40px !important;
+          width: 36px !important;
+          height: 36px !important;
+          line-height: 36px !important;
           color: #374151 !important;
-          margin-bottom: 4px !important; /* Reduced gap */
+          margin-bottom: 4px !important;
+        }
+        
+        /* Responsive - Mobile */
+        @media (max-width: 480px) {
+          .map-overlay-top {
+            padding-top: env(safe-area-inset-top, 8px);
+            gap: 6px;
+          }
+          .top-bar {
+            padding: 0 8px;
+            gap: 6px;
+          }
+          .filter-toggle-btn {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            border-radius: 10px;
+            font-size: 14px;
+          }
+          .profile-wrapper {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+          }
+          :global(.leaflet-control-zoom) {
+            margin-bottom: 70px !important;
+            margin-right: 8px !important;
+          }
+          :global(.leaflet-control-zoom-in),
+          :global(.leaflet-control-zoom-out) {
+            width: 32px !important;
+            height: 32px !important;
+            line-height: 32px !important;
+          }
+        }
+        
+        /* Responsive - Tablet */
+        @media (min-width: 481px) and (max-width: 768px) {
+          .top-bar {
+            padding: 0 16px;
+            gap: 10px;
+          }
+          .filter-toggle-btn {
+            width: 44px;
+            height: 44px;
+          }
+          .profile-wrapper {
+            width: 44px;
+            height: 44px;
+          }
+        }
+        
+        /* Responsive - Desktop */
+        @media (min-width: 769px) {
+          .map-overlay-top {
+            padding-top: 16px;
+          }
+          .top-bar {
+            padding: 0 24px;
+            gap: 16px;
+          }
+          .filter-toggle-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            font-size: 18px;
+          }
+          .profile-wrapper {
+            width: 48px;
+            height: 48px;
+          }
         }
       `}</style>
     </div>

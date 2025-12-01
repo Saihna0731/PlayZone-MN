@@ -316,17 +316,82 @@
   .special-card-title { font-size: 20px; }
 }
 
-/* Category chips styling for RN components rendered on web */
+/* Category chips styling */
 .category-chip {
   display: inline-flex;
   align-items: center;
-  padding: 8px 8px;
-  margin-right: 8px;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 900px;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.category-chip.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+.category-chip:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+.category-chip.active { 
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: transparent; 
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+.category-chip .cat-icon {
+  font-size: 14px;
+}
+.category-chip .cat-label {
+  font-size: 12px;
+}
+.category-chip .cat-count {
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+.category-chip.active .cat-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Responsive category chips */
+@media (max-width: 480px) {
+  .category-chip {
+    padding: 6px 10px;
+    gap: 4px;
+  }
+  .category-chip .cat-icon {
+    font-size: 12px;
+  }
+  .category-chip .cat-label {
+    font-size: 11px;
+  }
+  .category-chip .cat-count {
+    font-size: 9px;
+    padding: 1px 5px;
+  }
+}
+@media (min-width: 768px) {
+  .category-chip {
+    padding: 10px 18px;
+    gap: 8px;
+  }
+  .category-chip .cat-icon {
+    font-size: 16px;
+  }
+  .category-chip .cat-label {
+    font-size: 14px;
+  }
+}
 
 /* First row: Search + Add button */
 .list-controls-row {

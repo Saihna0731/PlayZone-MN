@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayZone MN - Бизнес Танилцуулга</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: #ffffff; 
+      color: #1f2937; 
+    }
+    
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      padding: 60px 40px;
+      border-bottom: 3px solid #3b82f6;
+      position: relative;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+    
+    .slide-number {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .slide h1 {
+      font-size: 52px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+    }
+    
+    .slide h2 {
+      font-size: 38px;
+      margin-bottom: 30px;
+      color: #1e40af;
+      text-align: center;
+      font-weight: 700;
+    }
+    
+    .slide h3 {
+      font-size: 26px;
+      margin-bottom: 16px;
+      color: #3b82f6;
+    }
+    
+    .slide p {
+      font-size: 18px;
+      color: #4b5563;
+      max-width: 900px;
+      text-align: center;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .logo {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 50px;
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    }
+    
+    /* Screenshot containers */
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      max-width: 1200px;
+      margin-top: 30px;
+      width: 100%;
+    }
+    
+    .screenshot-card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e5e7eb;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .screenshot-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    }
+    
+    .screenshot-card img {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .screenshot-card h4 {
+      font-size: 18px;
+      color: #1e40af;
+      margin: 16px 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .screenshot-card p {
+      font-size: 14px;
+      color: #6b7280;
+      text-align: left;
+      margin: 0;
+      line-height: 1.5;
+    }
+    
+    /* Feature boxes */
+    .feature-box {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      border-left: 4px solid #3b82f6;
+      margin: 10px 0;
+    }
+    
+    .feature-box.green { border-left-color: #22c55e; }
+    .feature-box.orange { border-left-color: #f97316; }
+    .feature-box.purple { border-left-color: #8b5cf6; }
+    
+    /* Two column layout */
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      max-width: 1100px;
+      margin-top: 30px;
+      width: 100%;
+    }
+    
+    @media (max-width: 900px) {
+      .two-column { grid-template-columns: 1fr; }
+      .slide h1 { font-size: 36px; }
+      .slide h2 { font-size: 28px; }
+      .screenshot-grid { grid-template-columns: 1fr; }
+    }
+    
+    /* Pricing */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1000px;
+      margin-top: 30px;
+    }
+    
+    @media (max-width: 900px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+    
+    .price-card {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s;
+    }
+    
+    .price-card.popular {
+      border-color: #3b82f6;
+      transform: scale(1.05);
+      box-shadow: 0 10px 40px rgba(59, 130, 246, 0.2);
+    }
+    
+    .price-card h4 {
+      font-size: 22px;
+      color: #1e40af;
+      margin-bottom: 10px;
+    }
+    
+    .price-card .price {
+      font-size: 36px;
+      font-weight: bold;
+      color: #3b82f6;
+      margin: 20px 0;
+    }
+    
+    .price-card .price span {
+      font-size: 16px;
+      color: #6b7280;
+    }
+    
+    .price-card ul {
+      list-style: none;
+      text-align: left;
+      padding: 0;
+    }
+    
+    .price-card li {
+      padding: 8px 0;
+      color: #4b5563;
+      font-size: 14px;
+    }
+    
+    /* Contact box */
+    .contact-box {
+      background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 20px;
+      padding: 30px;
+      margin-top: 40px;
+      max-width: 600px;
+      text-align: center;
+    }
+    
+    .contact-box h3 {
+      color: #1e40af;
+      margin-bottom: 20px;
+    }
+    
+    .contact-box p {
+      text-align: center;
+      font-size: 16px;
+    }
+    
+    /* Navigation */
+    .nav-dots {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 100;
+    }
+    
+    .nav-dot {
+      width: 14px;
+      height: 14px;
+      background: #cbd5e1;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .nav-dot:hover, .nav-dot.active {
+      background: #3b82f6;
+      transform: scale(1.3);
+    }
+    
+    /* Tech stack */
+    .tech-grid {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    
+    .tech-item {
+      background: white;
+      border: 1px solid #e5e7eb;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 15px;
+      color: #4b5563;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
+    /* Print styles */
+    @media print {
+      .nav-dots { display: none; }
+      .slide { page-break-after: always; min-height: auto; padding: 40px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Dots -->
+  <div class="nav-dots">
+    <div class="nav-dot active" onclick="scrollToSlide(1)" title="Нүүр"></div>
+    <div class="nav-dot" onclick="scrollToSlide(2)" title="Газрын зураг"></div>
+    <div class="nav-dot" onclick="scrollToSlide(3)" title="Жагсаалт"></div>
+    <div class="nav-dot" onclick="scrollToSlide(4)" title="Төвийн дэлгэрэнгүй"></div>
+    <div class="nav-dot" onclick="scrollToSlide(5)" title="Захиалга"></div>
+    <div class="nav-dot" onclick="scrollToSlide(6)" title="Эзэмшигч"></div>
+    <div class="nav-dot" onclick="scrollToSlide(7)" title="Удирдлага"></div>
+    <div class="nav-dot" onclick="scrollToSlide(8)" title="Эрх"></div>
+    <div class="nav-dot" onclick="scrollToSlide(9)" title="Холбоо"></div>
+  </div>
+
+  <!-- Slide 1: Title -->
+  <div class="slide" id="slide1">
+    <div class="slide-number">1 / 9</div>
+    
+    <div class="logo-container">
+      <div class="logo">🎮</div>
+      <div>
+        <h1 style="font-size: 48px; margin: 0;">PlayZone MN</h1>
+        <p style="margin: 0; font-size: 20px; color: #6366f1;">Монголын Game Center Платформ</p>
+      </div>
+    </div>
+    
+    <p style="font-size: 22px; max-width: 800px; margin-top: 30px;">
+      Хэрэглэгчид ойролцоох game center-үүдийг <strong>газрын зураг</strong> дээрээс хайж олох, 
+      <strong>ачаалал</strong> шалгах, <strong>захиалга</strong> хийх боломжтой платформ
+    </p>
+    
+    <div class="tech-grid" style="margin-top: 40px;">
+      <div class="tech-item">⚛️ React</div>
+      <div class="tech-item">🟢 Node.js</div>
+      <div class="tech-item">🍃 MongoDB</div>
+      <div class="tech-item">🗺️ Leaflet Maps</div>
+      <div class="tech-item">☁️ Vercel + Railway</div>
+    </div>
+    
+    <div class="contact-box" style="margin-top: 50px;">
+      <p style="font-size: 18px; margin: 0;">
+        🌐 <strong>playzone.cv</strong> &nbsp;|&nbsp; 📱 <strong>95520443</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- Slide 2: Map View -->
+  <div class="slide" id="slide2">
+    <div class="slide-number">2 / 9</div>
+    <h2>🗺️ Газрын зураг (MapView)</h2>
+    <p>Хэрэглэгч газрын зураг дээрээс бүх game center-үүдийг харна</p>
+    
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="screenshots/map-view.png" alt="Map View">
+        <h4>🗺️ Үндсэн газрын зураг</h4>
+        <p>
+          • Leaflet газрын зураг дээр бүх төвүүд marker-аар харагдана<br>
+          • Төв тус бүр өнгөт marker-тай (ачааллаас хамаарч)<br>
+          • Zoom in/out, хөдөлгөх боломжтой<br>
+          • Категори шүүлтүүр: PC Gaming, PlayStation, Billard, VIP
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/map-popup.png" alt="Map Popup">
+        <h4>📍 Marker дээр дарах үед</h4>
+        <p>
+          • Төвийн нэр, хаяг, утас харагдана<br>
+          • Заал 65%, VIP 40%, Stage 31% ачаалал<br>
+          • Энгийн: 3000₮, VIP: 5000₮, Stage: 7000₮<br>
+          • "Дэлгэрэнгүй" товч → Төвийн хуудас руу
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 3: List View -->
+  <div class="slide" id="slide3">
+    <div class="slide-number">3 / 9</div>
+    <h2>📋 Жагсаалт хуудас (List)</h2>
+    <p>Хэрэглэгч төвүүдийг жагсаалт хэлбэрээр харна</p>
+    
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="screenshots/list-view.png" alt="List View">
+        <h4>📱 Төвүүдийн жагсаалт</h4>
+        <p>
+          • Gaming Center, PC Gaming, Billiard, PlayStation категориуд<br>
+          • Special centers (5) - онцлох төвүүд carousel<br>
+          • Popular for me (1) - санал болгох<br>
+          • Дуртай төвүүдээ зүрхээр тэмдэглэх
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/bonus-tab.png" alt="Bonus Tab">
+        <h4>🎁 Bonus таб</h4>
+        <p>
+          • Normal centers, Bonus, Захиалга таб<br>
+          • "Сул суудал гарлаа" - сул суудлын мэдэгдэл<br>
+          • Заал: 5 сул суудал, VIP: 10 сул суудал<br>
+          • Тусгай хөнгөлөлтүүд харуулна
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 4: Center Detail -->
+  <div class="slide" id="slide4">
+    <div class="slide-number">4 / 9</div>
+    <h2>🏢 Төвийн дэлгэрэнгүй хуудас</h2>
+    <p>Хэрэглэгч сонгосон төвийнхөө бүх мэдээллийг харна</p>
+    
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="screenshots/center-detail.png" alt="Center Detail">
+        <h4>📸 Төвийн мэдээлэл</h4>
+        <p>
+          • Зураг carousel - олон зургийг гүйлгэж үзэх<br>
+          • Нэр: Test4, Үнэлгээ: ⭐ 3.9 (116 reviews)<br>
+          • Үнийн мэдээлэл: 3,000₮/цаг<br>
+          • "Захиалах" товч
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/active-bonus.png" alt="Active Bonus">
+        <h4>🎁 Идэвхтэй бонус popup</h4>
+        <p>
+          • "Сул суудал гарлаа" гарчигтай popup<br>
+          • ✅ СУЛ СУУДАЛ checkbox<br>
+          • Заал: 5 суудал, VIP өрөө: 10 суудал<br>
+          • "Захиалах (Залгах)" товч
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/booking-modal.png" alt="Booking Modal">
+        <h4>📅 Захиалга өгөх modal</h4>
+        <p>
+          • Өдөр сонгох: 11/30/2025<br>
+          • Цаг сонгох: 02:43 PM<br>
+          • Үргэлжлэх хугацаа: 1ц, 2ц, 3ц, 4ц, 5ц<br>
+          • Суудлын төрөл: VIP/Энгийн<br>
+          • Нийт: 10000₮ → "Баталгаажуулах"
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 5: User Profile & Bookings -->
+  <div class="slide" id="slide5">
+    <div class="slide-number">5 / 9</div>
+    <h2>👤 Хэрэглэгчийн профайл & Захиалга</h2>
+    <p>Хэрэглэгч өөрийн захиалгуудыг харж удирдана</p>
+    
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="screenshots/profile-bookings.png" alt="Profile Bookings">
+        <h4>📋 Миний захиалгууд</h4>
+        <p>
+          • Profile хуудас → Миний захиалгууд (3)<br>
+          • Test4 төвд хийсэн захиалгууд<br>
+          • Огноо: 2025-11-25, Цаг: 21:40<br>
+          • Төлөв: Хүлээгдэж буй / Баталгаажсан / Цуцлагдсан
+        </p>
+      </div>
+      
+      <div class="screenshot-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+        <h4 style="color: #92400e;">📊 Захиалгын төлөвүүд</h4>
+        <p style="color: #78350f; font-size: 16px;">
+          <strong style="color: #f59e0b;">🟡 Хүлээгдэж буй</strong><br>
+          Эзэмшигч баталгаажуулаагүй<br><br>
+          <strong style="color: #22c55e;">🟢 Баталгаажсан</strong><br>
+          Эзэмшигч зөвшөөрсөн, очиж болно<br><br>
+          <strong style="color: #ef4444;">🔴 Цуцлагдсан</strong><br>
+          Цуцлагдсан захиалга
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 6: Owner - Game Center Control -->
+  <div class="slide" id="slide6">
+    <div class="slide-number">6 / 9</div>
+    <h2>🎮 Game Center Удирдлага (Эзэмшигч)</h2>
+    <p>Төв эзэмшигч өөрийн төвүүдийг удирдана</p>
+    
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="screenshots/owner-control.png" alt="Owner Control">
+        <h4>🏢 Миний төвүүд хуудас</h4>
+        <p>
+          • Game Center Control header<br>
+          • "+ Шинэ төв нэмэх (2/3)" - Нэмэх боломжтой тоо<br>
+          • Миний төвүүд (2) жагсаалт<br>
+          • Төв тус бүрийн зураг, үнэ, үнэлгээ харуулна
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/owner-actions.png" alt="Owner Actions">
+        <h4>⚡ Үйлдлийн товчнууд</h4>
+        <p>
+          • АЧААЛАЛ: Энгийн 65%, VIP 40%, Stage 31%<br>
+          • 🎁 Бонус: "Сул суудал гарлаа" идэвхтэй<br>
+          • 🟣 Ачаалал - slider-аар шинэчлэх<br>
+          • 🟠 Бонус нэмэх - урамшуулал үүсгэх<br>
+          • 🟡 Бонус засах - бонус удирдах<br>
+          • 🔵 Засах - мэдээлэл засах<br>
+          • 🔴 Устгах - төв устгах
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 7: Owner Modals -->
+  <div class="slide" id="slide7">
+    <div class="slide-number">7 / 9</div>
+    <h2>⚙️ Эзэмшигчийн удирдлагын modal-ууд</h2>
+    <p>Эзэмшигч эдгээр modal-уудаар төвөө удирдана</p>
+    
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="screenshots/edit-center.png" alt="Edit Center">
+        <h4>✏️ Game Center засах</h4>
+        <p>
+          • Үндсэн үнэ: 3000₮/цаг<br>
+          • Үнэлгээ: 3.9<br>
+          • Утасны дугаар: 12345678<br>
+          • И-мэйл, вэбсайт<br>
+          • Цагийн хуваарь: 10:00 - 23:00<br>
+          • Байршил: Latitude, Longitude
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/pick-location.png" alt="Pick Location">
+        <h4>📍 Байршил сонгох</h4>
+        <p>
+          • Газрын зураг дээр дарж байршил сонгох<br>
+          • Улаанбаатар хотын зураг<br>
+          • "Confirm location" товч<br>
+          • "Cancel" товч
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/occupancy-modal.png" alt="Occupancy Modal">
+        <h4>📊 Ачаалал шинэчлэх</h4>
+        <p>
+          • 💻 Заал (Стандарт): 65%<br>
+          • ⭐ VIP: 40%<br>
+          • 🎮 Stage: 31%<br>
+          • Slider-аар 0-100% хооронд тохируулна<br>
+          • "Болих" / "✓ Хадгалах" товчнууд
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/add-bonus.png" alt="Add Bonus">
+        <h4>🎁 Бонус нэмэх</h4>
+        <p>
+          • Гарчиг оруулах талбар<br>
+          • Тайлбар (сонголттой)<br>
+          • Төрөл сонгох: Заал, VIP, Stage<br>
+          • "✅ Хадгалах" товч
+        </p>
+      </div>
+      
+      <div class="screenshot-card">
+        <img src="screenshots/manage-bonus.png" alt="Manage Bonus">
+        <h4>📝 Бонус засах</h4>
+        <p>
+          • Бонусуудын жагсаалт<br>
+          • "Сул суудал гарлаа" бонус<br>
+          • STD 5, VIP 10 тоо<br>
+          • "Засах" товч<br>
+          • "Устгах" товч (улаан)
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 8: Subscription Plans -->
+  <div class="slide" id="slide8">
+    <div class="slide-number">8 / 9</div>
+    <h2>💎 Эрхийн төлөвлөгөө</h2>
+    <p>Хэрэглэгч болон эзэмшигчдэд зориулсан төлбөрт эрхүүд</p>
+    
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h4>👤 Энгийн хэрэглэгч</h4>
+        <div class="price">1,990₮ <span>/сар</span></div>
+        <ul>
+          <li>✅ Бүх төв харах</li>
+          <li>✅ Дэлгэрэнгүй мэдээлэл</li>
+          <li>✅ Ачаалал шалгах</li>
+          <li>✅ Захиалга хийх</li>
+          <li>✅ Reels үзэх</li>
+          <li>✅ Дуртай төв хадгалах</li>
+        </ul>
+      </div>
+      
+      <div class="price-card popular">
+        <div style="background: #3b82f6; color: white; padding: 6px 16px; border-radius: 20px; font-size: 12px; margin-bottom: 12px; display: inline-block;">ТҮГЭЭМЭЛ</div>
+        <h4>🏢 Бизнес Стандарт</h4>
+        <div class="price">19,900₮ <span>/сар</span></div>
+        <ul>
+          <li>✅ 1 төв нэмэх</li>
+          <li>✅ 3 зураг оруулах</li>
+          <li>✅ Ачаалал удирдах</li>
+          <li>✅ Захиалга хүлээн авах</li>
+          <li>✅ Бонус нэмэх</li>
+          <li>✅ Үндсэн тайлан</li>
+        </ul>
+      </div>
+      
+      <div class="price-card">
+        <h4>🚀 Бизнес Про</h4>
+        <div class="price">39,900₮ <span>/сар</span></div>
+        <ul>
+          <li>✅ 2 төв нэмэх</li>
+          <li>✅ Хязгааргүй зураг</li>
+          <li>✅ Видео оруулах</li>
+          <li>✅ Дэлгэрэнгүй тайлан</li>
+          <li>✅ VIP дэмжлэг</li>
+          <li>✅ Онцлох байршил</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="feature-box" style="margin-top: 40px; max-width: 600px; text-align: center;">
+      <h4 style="color: #1e40af; margin-bottom: 12px;">💳 Төлбөрийн арга</h4>
+      <p style="text-align: center; margin: 0;">
+        <strong>Банк шилжүүлэг:</strong> Хаан банк - 5401345831<br>
+        <strong>Дансны нэр:</strong> Баатархүү Баярсайхан<br>
+        <strong>QPay:</strong> QR код уншуулах (тун удахгүй)
+      </p>
+    </div>
+  </div>
+
+  <!-- Slide 9: Contact -->
+  <div class="slide" id="slide9">
+    <div class="slide-number">9 / 9</div>
+    
+    <div class="logo-container">
+      <div class="logo">🎮</div>
+      <div>
+        <h1 style="font-size: 48px; margin: 0;">PlayZone MN</h1>
+        <p style="margin: 0; font-size: 18px; color: #6366f1;">Монголын Game Center Платформ</p>
+      </div>
+    </div>
+    
+    <div class="two-column" style="margin-top: 40px;">
+      <div class="feature-box green">
+        <h4 style="color: #166534; margin-bottom: 12px;">🌐 Холбоосууд</h4>
+        <p style="text-align: left; margin: 0; line-height: 2;">
+          <strong>Вэбсайт:</strong> playzone.cv<br>
+          <strong>Backend:</strong> Railway.app<br>
+          <strong>Frontend:</strong> Vercel.com
+        </p>
+      </div>
+      
+      <div class="feature-box purple">
+        <h4 style="color: #6b21a8; margin-bottom: 12px;">📞 Холбоо барих</h4>
+        <p style="text-align: left; margin: 0; line-height: 2;">
+          <strong>И-мэйл:</strong> baatarhvvb@gmail.com<br>
+          <strong>Утас:</strong> 95520443<br>
+          <strong>Банк:</strong> Хаан банк - 5401345831
+        </p>
+      </div>
+    </div>
+    
+    <div class="contact-box" style="margin-top: 50px;">
+      <h3 style="color: #1e40af;">🙏 Баярлалаа!</h3>
+      <p style="font-size: 18px;">
+        Асуулт байвал холбогдоорой
+      </p>
+    </div>
+  </div>
+
+  <script>
+    function scrollToSlide(n) {
+      document.getElementById('slide' + n).scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Update active dot on scroll
+    window.addEventListener('scroll', () => {
+      const slides = document.querySelectorAll('.slide');
+      const dots = document.querySelectorAll('.nav-dot');
+      
+      slides.forEach((slide, i) => {
+        const rect = slide.getBoundingClientRect();
+        if (rect.top >= 0 && rect.top < window.innerHeight / 2) {
+          dots.forEach(d => d.classList.remove('active'));
+          if (dots[i]) dots[i].classList.add('active');
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
