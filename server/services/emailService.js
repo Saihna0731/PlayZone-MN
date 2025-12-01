@@ -80,9 +80,10 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
     // Resend эхлээд ашиглах
     if (resend) {
       try {
-        // playzone.cv verified бол ашиглана, үгүй бол default domain
-        const fromAddress = 'PlayZone MN <onboarding@resend.dev>';
-        console.log('📧 Trying Resend...');
+        // playzone.cv verified бол ашиглана
+        // TODO: Domain verified болсны дараа 'noreply@playzone.cv' болгох
+        const fromAddress = 'PlayZone MN <noreply@playzone.cv>';
+        console.log('📧 Trying Resend with playzone.cv...');
         
         const { data, error: resendError } = await resend.emails.send({
           from: fromAddress,
@@ -96,8 +97,10 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
           return { success: true, messageId: data.id };
         }
         console.error('❌ Resend error:', resendError);
+        // Resend алдаатай бол Gmail fallback руу орно
       } catch (resendErr) {
         console.error('❌ Resend failed:', resendErr.message);
+        // Exception байвал Gmail fallback руу орно
       }
     }
 
