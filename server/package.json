@@ -20,10 +20,11 @@
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
-    "https-proxy-agent": "^7.0.2",
+    "https-proxy-agent": "^7.0.6",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "latest",
-    "nodemailer": "^7.0.11"
+    "nodemailer": "^7.0.11",
+    "resend": "^6.5.2"
   },
   "devDependencies": {
     "nodemon": "latest"

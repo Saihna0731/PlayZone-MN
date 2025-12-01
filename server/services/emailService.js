@@ -1,16 +1,28 @@
 const nodemailer = require('nodemailer');
 
-// Email transporter үүсгэх
+// Email transporter үүсгэх - Resend эсвэл Gmail
 const createTransporter = () => {
-  // Gmail App Password ашиглах
+  // Resend ашиглах (Railway дээр илүү сайн ажиллана)
+  if (process.env.RESEND_API_KEY) {
+    return nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass: process.env.RESEND_API_KEY
+      }
+    });
+  }
+  
+  // Gmail App Password ашиглах (fallback)
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER, // Таны Gmail
-      pass: process.env.EMAIL_APP_PASSWORD // Gmail App Password
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_APP_PASSWORD
     },
-    // Timeout тохиргоо - удаан холболт эсвэл алдаа гарахаас сэргийлэх
-    connectionTimeout: 10000, // 10 секунд
+    connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000
   });
@@ -21,8 +33,13 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
   try {
     const transporter = createTransporter();
     
+    // Resend ашиглаж байвал from хаяг өөрчлөх
+    const fromEmail = process.env.RESEND_API_KEY 
+      ? `PlayZone MN <onboarding@resend.dev>` 
+      : `"PlayZone MN" <${process.env.EMAIL_USER}>`;
+    
     const mailOptions = {
-      from: `"PlayZone MN" <${process.env.EMAIL_USER}>`,
+      from: fromEmail,
       to: email,
       subject: 'PlayZone MN - Нууц үг сэргээх код',
       html: `
