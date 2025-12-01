@@ -49,7 +49,7 @@ export default function MapTools({ onRefresh, onStyleChange, currentStyle, onLoc
         .map-tools-container {
           position: absolute;
           right: 16px;
-          bottom: 650px; /* Positioned above zoom controls (220px + zoom height ~80px) */
+          bottom: 100px;
           top: auto;
           z-index: 900;
           display: flex;
@@ -155,6 +155,32 @@ export default function MapTools({ onRefresh, onStyleChange, currentStyle, onLoc
           background: #eff6ff;
           color: #2563eb;
           font-weight: 600;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 480px) {
+          .map-tools-container {
+            right: 10px;
+            bottom: 80px;
+          }
+          .main-tool-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-size: 18px;
+          }
+          .tools-menu {
+            width: 150px;
+            padding: 6px;
+          }
+          .tool-action-btn {
+            padding: 8px;
+            font-size: 13px;
+          }
+          .style-option {
+            padding: 6px;
+            font-size: 12px;
+          }
         }
       `}</style>
     </div>

@@ -8,7 +8,11 @@ const createTransporter = () => {
     auth: {
       user: process.env.EMAIL_USER, // Таны Gmail
       pass: process.env.EMAIL_APP_PASSWORD // Gmail App Password
-    }
+    },
+    // Timeout тохиргоо - удаан холболт эсвэл алдаа гарахаас сэргийлэх
+    connectionTimeout: 10000, // 10 секунд
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
 };
 

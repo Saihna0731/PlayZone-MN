@@ -25,12 +25,12 @@ function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('с�
       alignItems: "center",
       background: "rgba(255,255,255,0.98)",
       borderRadius: "14px",
-      padding: "8px 14px",
+      padding: "6px 12px",
       backdropFilter: "blur(12px)",
       boxShadow: "0 4px 20px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
       border: "1px solid rgba(102, 126, 234, 0.15)",
       width: "100%",
-      height: "48px"
+      height: "42px"
     }}>
       <FaSearch style={{ 
         color: "#667eea", 
