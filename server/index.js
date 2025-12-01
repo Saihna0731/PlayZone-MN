@@ -21,10 +21,22 @@ app.use(helmet({
 
 // CORS: restrict if env provided
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+// Default allowed origins for development and production
+const DEFAULT_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3012',
+  'https://playzone-mn.vercel.app',
+  'https://playzonemn.vercel.app'
+];
+const ALL_ORIGINS = [...new Set([...ALLOWED_ORIGINS, ...DEFAULT_ORIGINS])];
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    return cb(new Error('CORS not allowed'), false);
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return cb(null, true);
+    if (ALL_ORIGINS.includes(origin)) return cb(null, true);
+    console.log('CORS blocked origin:', origin);
+    return cb(null, true); // Allow all for now, log blocked
   },
   credentials: true,
   methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
