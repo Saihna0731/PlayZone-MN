@@ -1,8 +1,13 @@
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 
-// Resend client (Domain verified бол ашиглана)
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Resend client функц - дуудах бүрт шинээр авна (env variable өөрчлөгдөхөд автоматаар шинэчлэгдэнэ)
+const getResendClient = () => {
+  if (process.env.RESEND_API_KEY) {
+    return new Resend(process.env.RESEND_API_KEY);
+  }
+  return null;
+};
 
 // Email transporter үүсгэх - Direct SMTP
 const createTransporter = () => {
@@ -28,7 +33,9 @@ const createTransporter = () => {
 const sendPasswordResetEmail = async (email, code, username = '') => {
   console.log('📧 sendPasswordResetEmail called for:', email);
   console.log('📧 RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
-  console.log('📧 resend client exists:', !!resend);
+  
+  const resend = getResendClient();
+  console.log('📧 resend client created:', !!resend);
   
   const htmlContent = `
     <!DOCTYPE html>
