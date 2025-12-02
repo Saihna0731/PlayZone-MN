@@ -109,7 +109,7 @@ const userSchema = new mongoose.Schema({
     },
     paymentMethod: {
       type: String,
-      enum: ['qpay', 'mostmoney', 'card', 'mock', 'admin'],
+      enum: ['qpay', 'mostmoney', 'card', 'mock', 'admin', 'monpay', 'bank_transfer'],
       default: null
     }
   },
