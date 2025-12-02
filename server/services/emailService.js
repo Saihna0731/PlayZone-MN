@@ -70,9 +70,12 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
       console.log('📧 Creating Resend client...');
       const resend = new Resend(process.env.RESEND_API_KEY);
       
-      console.log('📧 Sending via Resend API...');
+      // onboarding@resend.dev ашиглана - бүх хүнд илгээж болно
+      const fromEmail = 'PlayZone MN <onboarding@resend.dev>';
+      
+      console.log('📧 Sending via Resend API from:', fromEmail);
       const result = await resend.emails.send({
-        from: 'PlayZone MN <onboarding@resend.dev>',
+        from: fromEmail,
         to: email,
         subject: 'PlayZone MN - Нууц үг сэргээх код',
         html: htmlContent
