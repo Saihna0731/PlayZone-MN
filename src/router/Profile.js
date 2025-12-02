@@ -773,17 +773,17 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Show upgrade option only for users without active subscription */}
-        {(!isTrialActive && !subscription?.isActive) && (
+        {/* Show upgrade option - Always visible for centerOwners, show for users without active paid subscription */}
+        {(user?.accountType === 'centerOwner' || (!subscription?.isActive || isTrialActive)) && (
           <MenuItem 
             icon="💎"
-            title="Эрх шинэчлэх"
+            title={subscription?.isActive && !isTrialActive ? "Эрх сунгах" : "Эрх шинэчлэх"}
             onClick={() => {
               setExpandedSection(prev => prev === 'payments' ? '' : 'payments');
               setShowUpgradeModal(true);
             }}
             active={expandedSection === 'payments'}
-            highlight={true}
+            highlight={!subscription?.isActive || isTrialActive}
           />
         )}
 
