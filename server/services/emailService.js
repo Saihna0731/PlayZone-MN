@@ -1,7 +1,12 @@
 const nodemailer = require('nodemailer');
-const { Resend } = require('resend');
+const sgMail = require('@sendgrid/mail');
 
-// Email transporter үүсгэх - Direct SMTP
+// SendGrid тохируулах
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// Gmail backup transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -64,37 +69,28 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
     </html>
   `;
 
-  // RESEND - Railway дээр үндсэн арга
-  if (process.env.RESEND_API_KEY) {
+  // SENDGRID - Railway дээр хамгийн найдвартай (үнэгүй 100 email/өдөр)
+  if (process.env.SENDGRID_API_KEY) {
     try {
-      console.log('📧 Creating Resend client...');
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      
-      // onboarding@resend.dev ашиглана - бүх хүнд илгээж болно
-      const fromEmail = 'PlayZone MN <onboarding@resend.dev>';
-      
-      console.log('📧 Sending via Resend API from:', fromEmail);
-      const result = await resend.emails.send({
-        from: fromEmail,
+      console.log('📧 Sending via SendGrid...');
+      const msg = {
         to: email,
+        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playzone.mn',
         subject: 'PlayZone MN - Нууц үг сэргээх код',
         html: htmlContent
-      });
+      };
       
-      console.log('📧 Resend result:', JSON.stringify(result));
-      
-      if (result.error) {
-        console.error('❌ Resend error:', JSON.stringify(result.error));
-      } else if (result.data?.id) {
-        console.log('✅ Email sent via Resend! ID:', result.data.id);
-        return { success: true, messageId: result.data.id };
+      const result = await sgMail.send(msg);
+      console.log('✅ Email sent via SendGrid! Status:', result[0]?.statusCode);
+      return { success: true, messageId: result[0]?.headers?.['x-message-id'] };
+    } catch (sgError) {
+      console.error('❌ SendGrid error:', sgError.message);
+      if (sgError.response) {
+        console.error('❌ SendGrid response:', JSON.stringify(sgError.response.body));
       }
-    } catch (resendErr) {
-      console.error('❌ Resend exception:', resendErr.message);
-      console.error('❌ Resend stack:', resendErr.stack);
     }
   } else {
-    console.log('⚠️ RESEND_API_KEY not found in environment');
+    console.log('⚠️ SENDGRID_API_KEY not found');
   }
 
   // Gmail fallback
