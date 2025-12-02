@@ -80,10 +80,10 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
     // Resend эхлээд ашиглах
     if (resend) {
       try {
-        // playzone.cv verified бол ашиглана
-        // TODO: Domain verified болсны дараа 'noreply@playzone.cv' болгох
-        const fromAddress = 'PlayZone MN <noreply@playzone.cv>';
-        console.log('📧 Trying Resend with playzone.cv...');
+        // Resend үнэгүй tier нь зөвхөн onboarding@resend.dev-ээс илгээх боломжтой
+        // Domain verify хийсний дараа өөр хаягаар илгээх боломжтой болно
+        const fromAddress = 'PlayZone MN <onboarding@resend.dev>';
+        console.log('📧 Trying Resend...');
         
         const { data, error: resendError } = await resend.emails.send({
           from: fromAddress,
