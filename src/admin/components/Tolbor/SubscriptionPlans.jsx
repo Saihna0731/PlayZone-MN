@@ -364,6 +364,41 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
                     </div>
                   </div>
 
+                  {/* IBAN Account Number */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+                      IBAN дугаар (Олон улсын шилжүүлэг)
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: '#fef3c7',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #fbbf24'
+                    }}>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#92400e', fontFamily: 'monospace' }}>
+                        MN2500 500 991 0746 3441
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard('MN2500500991074634441', 'iban')}
+                        style={{
+                          background: copied === 'iban' ? '#10b981' : '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          fontWeight: '600'
+                        }}
+                      >
+                        {copied === 'iban' ? '✓' : '📋'}
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Bank Name */}
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>

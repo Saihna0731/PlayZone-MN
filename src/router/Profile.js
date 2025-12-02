@@ -115,7 +115,7 @@ export default function Profile() {
   const { user, isAuthenticated, logout, updateProfile, isAdmin, refreshUser } = useAuth();
   const { subscription } = useSubscription();
   const [activeTab, setActiveTab] = useState('profile'); // profile, dashboard, confirm
-  const [expandedSection, setExpandedSection] = useState('profile'); // accordion: profile, manageBookings, confirmBookings, notifications, payments, linked
+  const [expandedSection, setExpandedSection] = useState(null); // accordion: profile, manageBookings, confirmBookings, notifications, payments, linked - null by default
   const [viewMode, setViewMode] = useState('list'); // list, calendar
   const [selectedDateBookings, setSelectedDateBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -652,6 +652,20 @@ export default function Profile() {
           </div>
         )}
 
+        {/* Show upgrade option - Always visible for centerOwners, show for users without active paid subscription */}
+        {(user?.accountType === 'centerOwner' || (!subscription?.isActive || isTrialActive)) && (
+          <MenuItem 
+            icon="💎"
+            title={subscription?.isActive && !isTrialActive ? "Эрх сунгах" : "Эрх шинэчлэх"}
+            onClick={() => {
+              setExpandedSection(prev => prev === 'payments' ? '' : 'payments');
+              setShowUpgradeModal(true);
+            }}
+            active={expandedSection === 'payments'}
+            highlight={!subscription?.isActive || isTrialActive}
+          />
+        )}
+
         {/* Center Owner specific menus - TOP PRIORITY */}
         {user?.accountType === 'centerOwner' && (
           <>
@@ -773,20 +787,6 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Show upgrade option - Always visible for centerOwners, show for users without active paid subscription */}
-        {(user?.accountType === 'centerOwner' || (!subscription?.isActive || isTrialActive)) && (
-          <MenuItem 
-            icon="💎"
-            title={subscription?.isActive && !isTrialActive ? "Эрх сунгах" : "Эрх шинэчлэх"}
-            onClick={() => {
-              setExpandedSection(prev => prev === 'payments' ? '' : 'payments');
-              setShowUpgradeModal(true);
-            }}
-            active={expandedSection === 'payments'}
-            highlight={!subscription?.isActive || isTrialActive}
-          />
-        )}
-
         <MenuItem 
           icon="🔗"
           title="Linked Accounts"
@@ -805,16 +805,6 @@ export default function Profile() {
               Холбогдсон аккаунт одоогоор алга.
             </div>
           </div>
-        )}
-
-        {/* Game Center Control - Owner болон Admin-д харуулах */}
-        {(user?.accountType === 'centerOwner' || isAdmin) && (
-          <MenuItem 
-            icon="🎮"
-            title="Game Center Control"
-            onClick={() => navigate('/game-center-control')}
-            highlight={true}
-          />
         )}
 
         <MenuItem 
