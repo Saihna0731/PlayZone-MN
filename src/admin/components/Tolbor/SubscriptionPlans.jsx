@@ -11,6 +11,9 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
   const [toast, setToast] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
+  const [waitingForPayment, setWaitingForPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [successPlanName, setSuccessPlanName] = useState('');
 
   // Одоогийн хэрэглэгчийн төрлөөс (user vs centerOwner) хамаарч panel-аа автоматаар сонгоно
   const effectiveType = isOwner || subscription?.accountType === 'centerOwner' ? 'center' : 'subscription';
@@ -526,6 +529,24 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
                     <li>Төлбөр амжилттай → Хэсэг хугацааны дараа эрх нээгдэнэ ✅</li>
                   </ol>
                 </div>
+
+                {/* Waiting for Payment Message */}
+                <div style={{
+                  marginTop: '16px',
+                  padding: '16px',
+                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                  borderRadius: '12px',
+                  border: '2px solid #fbbf24',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400e', marginBottom: '4px' }}>
+                    Төлбөр баталгаажихыг хүлээж байна...
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#a16207' }}>
+                    Шилжүүлэг хийсний дараа админ баталгаажуулна
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1017,6 +1038,101 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
       </div>
 
   {showPayment && <PaymentModal />}
+  
+  {/* Payment Success Modal */}
+  {paymentSuccess && (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.6)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 10000,
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '24px',
+        padding: '40px 32px',
+        maxWidth: '400px',
+        width: '100%',
+        textAlign: 'center',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        animation: 'scaleIn 0.3s ease'
+      }}>
+        <div style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 24px auto',
+          fontSize: '40px',
+          color: 'white',
+          boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
+        }}>
+          ✓
+        </div>
+        
+        <h2 style={{
+          margin: '0 0 12px 0',
+          fontSize: '24px',
+          fontWeight: '800',
+          color: '#1f2937'
+        }}>
+          🎉 Баяр хүргэе!
+        </h2>
+        
+        <p style={{
+          margin: '0 0 24px 0',
+          fontSize: '16px',
+          color: '#4b5563',
+          lineHeight: '1.6'
+        }}>
+          Таны төлбөр амжилттай баталгаажлаа!<br/>
+          <strong style={{ color: '#059669' }}>{successPlanName}</strong> эрх идэвхжлээ.
+        </p>
+        
+        <div style={{
+          background: '#f0fdf4',
+          padding: '16px',
+          borderRadius: '12px',
+          marginBottom: '24px',
+          border: '2px solid #10b981'
+        }}>
+          <div style={{ fontSize: '14px', color: '#047857', fontWeight: '600' }}>
+            ✅ 30 хоногийн эрх нээгдлээ
+          </div>
+        </div>
+        
+        <button
+          onClick={() => {
+            setPaymentSuccess(false);
+            refreshSubscription();
+            onClose();
+          }}
+          style={{
+            width: '100%',
+            padding: '16px',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+          }}
+        >
+          Үргэлжлүүлэх →
+        </button>
+      </div>
+    </div>
+  )}
+  
   {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
     </>
   );

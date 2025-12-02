@@ -511,6 +511,33 @@ export default function Profile() {
             {user.fullName || user.username}
           </h2>
           
+          {/* Subscription Status Badge */}
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "13px",
+            fontWeight: "700",
+            marginTop: "8px",
+            background: subscription?.isActive && !isTrialActive
+              ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+              : isTrialActive
+                ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                : "#f3f4f6",
+            color: subscription?.isActive || isTrialActive ? "white" : "#6b7280",
+            boxShadow: subscription?.isActive || isTrialActive ? "0 2px 8px rgba(0,0,0,0.15)" : "none"
+          }}>
+            {subscription?.isActive && !isTrialActive ? (
+              <><span>✅</span> {subscription.plan === 'business_pro' ? 'Бизнес Про' : subscription.plan === 'business_standard' ? 'Бизнес Стандарт' : 'Энгийн'} эрхтэй</>
+            ) : isTrialActive ? (
+              <><span>🎁</span> Trial ({trialDaysLeft} хоног)</>
+            ) : (
+              <><span>⭐</span> Үнэгүй хэрэглэгч</>
+            )}
+          </div>
+          
           {user?.accountType === 'centerOwner' ? (
             <div style={{
               display: "flex",
