@@ -807,6 +807,16 @@ export default function Profile() {
           </div>
         )}
 
+        {/* Game Center Control - Owner болон Admin-д харуулах */}
+        {(user?.accountType === 'centerOwner' || isAdmin) && (
+          <MenuItem 
+            icon="🎮"
+            title="Game Center Control"
+            onClick={() => navigate('/game-center-control')}
+            highlight={true}
+          />
+        )}
+
         <MenuItem 
           icon="🚪"
           title="Logout"

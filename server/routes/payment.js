@@ -605,6 +605,427 @@ router.post('/webhook-sms', async (req, res) => {
 });
 
 /**
+ * iOS Shortcut баталгаажуулалт
+ * POST /api/payment/shortcut-verify
+ * 
+ * Headers: X-API-Key
+ * Body: { paymentCode, smsText?, amount? }
+ */
+router.post('/shortcut-verify', async (req, res) => {
+  try {
+    // API Key шалгах
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey || apiKey !== process.env.SHORTCUT_API_KEY) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Unauthorized - Invalid API Key' 
+      });
+    }
+
+    const { paymentCode, smsText, amount } = req.body;
+
+    if (!paymentCode) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Төлбөрийн код шаардлагатай' 
+      });
+    }
+
+    // Payment Code олох
+    const codeRecord = await PaymentCode.findOne({ 
+      code: paymentCode.toUpperCase(),
+      status: 'pending',
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!codeRecord) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Төлбөрийн код олдсонгүй эсвэл хүчингүй болсон' 
+      });
+    }
+
+    // Хэрэв SMS текст байвал дүн шалгах
+    let parsedAmount = amount;
+    let transactionId = null;
+
+    if (smsText) {
+      const amountMatch = smsText.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:₮|MNT)/i);
+      const transactionMatch = smsText.match(/(?:Гүйлгээ|Transaction|Ref|гүйлгээ):\s*[#]?([A-Z0-9]+)/i);
+      
+      if (amountMatch) {
+        parsedAmount = parseFloat(amountMatch[1].replace(/,/g, ''));
+      }
+      if (transactionMatch) {
+        transactionId = transactionMatch[1];
+      }
+    }
+
+    // Дүн таарч байгаа эсэх шалгах (optional - хэрэв amount parse хийсэн бол)
+    if (parsedAmount && parsedAmount !== codeRecord.amount) {
+      console.log('Amount mismatch:', { parsed: parsedAmount, expected: codeRecord.amount });
+      // Warning log but continue - user might have paid correct amount
+    }
+
+    // Давхар гүйлгээ шалгах
+    if (transactionId) {
+      const existingLog = await SmsLog.findOne({ transactionId });
+      if (existingLog) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Энэ гүйлгээг өмнө нь ашигласан байна' 
+        });
+      }
+    }
+
+    // Хэрэглэгч олох
+    const user = await User.findById(codeRecord.userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Хэрэглэгч олдсонгүй' 
+      });
+    }
+
+    // Subscription идэвхжүүлэх
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const planConfig = {
+      normal: { 
+        maxCenters: 0, 
+        maxImages: 3, 
+        canUploadVideo: false,
+        hasAdvancedAnalytics: false,
+        hasMarketingBoost: false
+      },
+      business_standard: { 
+        maxCenters: 1, 
+        maxImages: 3, 
+        canUploadVideo: false,
+        hasAdvancedAnalytics: false,
+        hasMarketingBoost: false
+      },
+      business_pro: { 
+        maxCenters: 2, 
+        maxImages: -1, 
+        canUploadVideo: true,
+        hasAdvancedAnalytics: true,
+        hasMarketingBoost: true
+      }
+    };
+
+    user.subscription = {
+      plan: codeRecord.planId,
+      isActive: true,
+      startDate: now,
+      endDate: endDate,
+      autoRenew: false,
+      paymentMethod: 'bank_transfer',
+      ...planConfig[codeRecord.planId]
+    };
+
+    if (user.trial && user.trial.isActive) {
+      user.trial.isActive = false;
+    }
+
+    await user.save();
+
+    // Payment Code completed болгох
+    codeRecord.status = 'used';
+    codeRecord.usedAt = now;
+    codeRecord.transactionId = transactionId;
+    await codeRecord.save();
+
+    // SMS Log хадгалах
+    await SmsLog.create({ 
+      from: 'iOS-Shortcut',
+      message: smsText || 'Manual verification via Shortcut', 
+      amount: codeRecord.amount, 
+      transactionId: transactionId || `SC-${Date.now()}`, 
+      timestamp: now,
+      userId: user._id,
+      planId: codeRecord.planId,
+      processed: true,
+      source: 'ios-shortcut'
+    });
+
+    console.log('✅ Shortcut баталгаажуулалт амжилттай:', {
+      userId: user._id,
+      email: user.email,
+      planId: codeRecord.planId,
+      paymentCode: paymentCode
+    });
+
+    res.json({ 
+      success: true, 
+      message: `🎉 Амжилттай! ${codeRecord.planId} эрх идэвхжлээ.`,
+      subscription: {
+        plan: codeRecord.planId,
+        endDate: endDate
+      }
+    });
+
+  } catch (error) {
+    console.error('Shortcut verify error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Серверийн алдаа гарлаа' 
+    });
+  }
+});
+
+/**
+ * Monpay Notification баталгаажуулалт (iOS Shortcut)
+ * POST /api/payment/monpay-verify
+ * 
+ * Headers: X-API-Key
+ * Body: { 
+ *   paymentCode: "PZ-ABC123",
+ *   notificationText: "Таны 99107463441 дансанд 1990 төгрөгийн орлого хийгдлээ.",
+ *   amount?: number
+ * }
+ * 
+ * Monpay notification format:
+ * "Таны 99107463441 дансанд 1990 төгрөгийн орлого хийгдлээ."
+ */
+router.post('/monpay-verify', async (req, res) => {
+  try {
+    // API Key шалгах
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey || apiKey !== process.env.SHORTCUT_API_KEY) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Unauthorized - Invalid API Key' 
+      });
+    }
+
+    const { paymentCode, notificationText, amount } = req.body;
+
+    console.log('📱 Monpay verification request:', { paymentCode, notificationText, amount });
+
+    // Payment Code шаардлагатай
+    if (!paymentCode) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Төлбөрийн код (PZ-XXXXXX) шаардлагатай' 
+      });
+    }
+
+    // Notification text-ээс мэдээлэл задлах
+    let parsedAmount = amount;
+    let transactionRef = null;
+
+    if (notificationText) {
+      // Monpay notification format parse хийх
+      // Format: "Таны 99107463441 дансанд 1990 төгрөгийн орлого хийгдлээ."
+      // Format: "Таны 99107463441 дансанд 500 төгрөгийн орлого хийгдлээ."
+      // Format: "Танд Баярмаа-с 7500.00₮ ирлээ"
+      
+      const amountPatterns = [
+        // "1990 төгрөгийн" - Monpay notification format
+        /дансанд\s+(\d+(?:,\d{3})*(?:\.\d{2})?)\s*төгрөгийн/i,
+        // "7500.00₮ ирлээ" - peer transfer (Танд Баярмаа-с 7500.00₮ ирлээ)
+        /(\d+(?:,\d{3})*(?:\.\d{2})?)\s*₮\s*ирлээ/i,
+        // "+1,990.00₮" - statement format
+        /\+(\d+(?:,\d{3})*(?:\.\d{2})?)\s*₮/i,
+        // "19,900₮" - general format
+        /(\d+(?:,\d{3})*(?:\.\d{2})?)\s*₮/i,
+        // "1990 төгрөг" - simple
+        /(\d+)\s*төгрөг/i
+      ];
+
+      for (const pattern of amountPatterns) {
+        const match = notificationText.match(pattern);
+        if (match) {
+          parsedAmount = parseFloat(match[1].replace(/,/g, ''));
+          console.log('💰 Parsed amount:', parsedAmount, 'from pattern:', pattern);
+          break;
+        }
+      }
+
+      // Гүйлгээний утга / код олох (Statement дээрээс)
+      // Format: "PZ-123456 ( 540134583..."
+      const codePatterns = [
+        /(PZ-[A-Z0-9]{6})/i,  // PZ-XXXXXX format
+        /^(PZ-[A-Z0-9]+)/i     // Line эхэнд PZ- байвал
+      ];
+
+      for (const pattern of codePatterns) {
+        const match = notificationText.match(pattern);
+        if (match) {
+          transactionRef = match[1].toUpperCase();
+          console.log('🔑 Found code in notification:', transactionRef);
+          break;
+        }
+      }
+
+      console.log('📱 Monpay parsed:', { parsedAmount, transactionRef });
+    }
+
+    // Хэрэв notification дотор код олдвол, paymentCode-тай тохируулах
+    const codeToUse = transactionRef || paymentCode.toUpperCase();
+
+    // Payment Code олох
+    let codeRecord = await PaymentCode.findOne({ 
+      code: codeToUse,
+      status: 'pending',
+      expiresAt: { $gt: new Date() }
+    });
+
+    // Хэрэв олдоогүй бол өгөгдсөн paymentCode-оор дахин хайх
+    if (!codeRecord && transactionRef !== paymentCode.toUpperCase()) {
+      codeRecord = await PaymentCode.findOne({ 
+        code: paymentCode.toUpperCase(),
+        status: 'pending',
+        expiresAt: { $gt: new Date() }
+      });
+    }
+
+    if (!codeRecord) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Төлбөрийн код олдсонгүй эсвэл хүчингүй болсон. Шинэ код үүсгэнэ үү.' 
+      });
+    }
+
+    // Дүн шалгах
+    if (parsedAmount) {
+      if (parsedAmount !== codeRecord.amount) {
+        console.log('⚠️ Amount mismatch:', { parsed: parsedAmount, expected: codeRecord.amount });
+        return res.status(400).json({ 
+          success: false,
+          message: `Төлбөрийн дүн таарахгүй байна. Шаардлагатай: ${codeRecord.amount}₮, Илгээсэн: ${parsedAmount}₮` 
+        });
+      }
+    }
+
+    // Давхар гүйлгээ шалгах
+    const existingLog = await SmsLog.findOne({ 
+      source: 'monpay',
+      paymentCode: codeRecord.code,
+      processed: true
+    });
+
+    if (existingLog) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Энэ төлбөрийн код аль хэдийн ашиглагдсан байна' 
+      });
+    }
+
+    // Хэрэглэгч олох
+    const user = await User.findById(codeRecord.userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Хэрэглэгч олдсонгүй' 
+      });
+    }
+
+    // Subscription идэвхжүүлэх
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const planConfig = {
+      normal: { 
+        maxCenters: 0, 
+        maxImages: 3, 
+        canUploadVideo: false,
+        hasAdvancedAnalytics: false,
+        hasMarketingBoost: false
+      },
+      business_standard: { 
+        maxCenters: 1, 
+        maxImages: 3, 
+        canUploadVideo: false,
+        hasAdvancedAnalytics: false,
+        hasMarketingBoost: false
+      },
+      business_pro: { 
+        maxCenters: 2, 
+        maxImages: -1, 
+        canUploadVideo: true,
+        hasAdvancedAnalytics: true,
+        hasMarketingBoost: true
+      }
+    };
+
+    user.subscription = {
+      plan: codeRecord.planId,
+      isActive: true,
+      startDate: now,
+      endDate: endDate,
+      autoRenew: false,
+      paymentMethod: 'monpay',
+      ...planConfig[codeRecord.planId]
+    };
+
+    if (user.trial && user.trial.isActive) {
+      user.trial.isActive = false;
+    }
+
+    await user.save();
+
+    // Payment Code completed болгох
+    codeRecord.status = 'used';
+    codeRecord.usedAt = now;
+    await codeRecord.save();
+
+    // Log хадгалах
+    await SmsLog.create({ 
+      from: 'Monpay',
+      message: notificationText || 'Monpay notification verification', 
+      amount: codeRecord.amount, 
+      transactionId: `MP-${Date.now()}`, 
+      timestamp: now,
+      userId: user._id,
+      planId: codeRecord.planId,
+      processed: true,
+      source: 'monpay',
+      paymentCode: codeRecord.code
+    });
+
+    console.log('✅ Monpay баталгаажуулалт амжилттай:', {
+      userId: user._id,
+      email: user.email,
+      planId: codeRecord.planId,
+      paymentCode: codeRecord.code,
+      amount: codeRecord.amount
+    });
+
+    const planNames = {
+      'normal': 'Энгийн',
+      'business_standard': 'Бизнес Стандарт',
+      'business_pro': 'Бизнес Про'
+    };
+
+    return res.json({ 
+      success: true, 
+      message: `🎉 Амжилттай! ${planNames[codeRecord.planId]} эрх идэвхжлээ.`,
+      subscription: {
+        plan: codeRecord.planId,
+        planName: planNames[codeRecord.planId],
+        endDate: endDate,
+        daysLeft: 30
+      }
+    });
+
+  } catch (error) {
+    console.error('Monpay verify error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Серверийн алдаа гарлаа',
+      error: error.message
+    });
+  }
+});
+
+// Monpay төлбөр боловсруулах helper function - removed, merged into main endpoint
+
+/**
  * Subscription status шалгах
  * GET /api/payment/subscription-status
  */

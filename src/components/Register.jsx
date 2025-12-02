@@ -3,6 +3,150 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/Auth.css';
 
+// Owner Onboarding Guide Modal
+function OwnerGuideModal({ isOpen, onClose, onGoToControl }) {
+  if (!isOpen) return null;
+  
+  const steps = [
+    { icon: '🏢', title: '1. Төвөө нэмэх', desc: 'Game Center Control хэсэгт орж "Шинэ төв нэмэх" товч дарна' },
+    { icon: '📝', title: '2. Мэдээлэл оруулах', desc: 'Нэр, хаяг, зураг, үнэ, нээх хаах цаг оруулах' },
+    { icon: '📊', title: '3. Ачаалал шинэчлэх', desc: 'Өдөр бүр ачааллаа (%) шинэчлэх' },
+    { icon: '🎁', title: '4. Бонус нэмэх', desc: 'Урамшуулал, хөнгөлөлт нэмж хэрэглэгчдийг татах' },
+    { icon: '💎', title: '5. Эрх сунгах', desc: 'Trial дууссаны дараа төлбөр төлж эрхээ сунгах' }
+  ];
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.6)',
+      zIndex: 2000,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '24px',
+        width: '100%',
+        maxWidth: '480px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        padding: '28px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+      }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '12px' }}>🎉</div>
+          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#1f2937' }}>
+            Бүртгэл амжилттай!
+          </h2>
+          <p style={{ margin: '8px 0 0', color: '#6b7280', fontSize: '14px' }}>
+            Төвөө нэмж эхлэхэд бэлэн боллоо
+          </p>
+        </div>
+
+        {/* Steps */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#374151', marginBottom: '16px' }}>
+            📋 Эхлэх заавар:
+          </h3>
+          {steps.map((step, i) => (
+            <div key={i} style={{
+              display: 'flex',
+              gap: '14px',
+              padding: '14px',
+              background: i === 0 ? 'linear-gradient(135deg, #dbeafe, #e0e7ff)' : '#f9fafb',
+              borderRadius: '12px',
+              marginBottom: '10px',
+              border: i === 0 ? '2px solid #3b82f6' : '1px solid #e5e7eb'
+            }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: i === 0 ? '#3b82f6' : '#e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                flexShrink: 0
+              }}>
+                {step.icon}
+              </div>
+              <div>
+                <div style={{ fontWeight: '700', color: '#1f2937', fontSize: '14px', marginBottom: '2px' }}>
+                  {step.title}
+                </div>
+                <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                  {step.desc}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Trial Info */}
+        <div style={{
+          background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '20px',
+          border: '2px solid #f59e0b'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '20px' }}>⏰</span>
+            <span style={{ fontWeight: '700', color: '#92400e', fontSize: '14px' }}>
+              14 хоногийн Trial эрх идэвхжлээ!
+            </span>
+          </div>
+          <p style={{ margin: 0, fontSize: '13px', color: '#78350f' }}>
+            Trial хугацаанд 1 төв нэмэх боломжтой. Дууссаны дараа эрхээ сунгаарай.
+          </p>
+        </div>
+
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: '14px',
+              background: '#f3f4f6',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#4b5563',
+              cursor: 'pointer'
+            }}
+          >
+            Дараа үзэх
+          </button>
+          <button
+            onClick={onGoToControl}
+            style={{
+              flex: 2,
+              padding: '14px',
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '700',
+              color: 'white',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+            }}
+          >
+            🎮 Төв нэмэх →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const Register = () => {
   const [params] = useSearchParams();
   const initialType = params.get('type') === 'owner' ? 'centerOwner' : 'user';
@@ -21,6 +165,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showOwnerGuide, setShowOwnerGuide] = useState(false); // Owner guide modal
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -122,7 +267,12 @@ const Register = () => {
   const result = await register(payload);
     
     if (result.success) {
-      navigate('/map');
+      // Owner бүртгүүлсэн бол guide modal харуулах
+      if (accountType === 'centerOwner') {
+        setShowOwnerGuide(true);
+      } else {
+        navigate('/map');
+      }
     } else {
       setError(result.message);
     }
@@ -130,8 +280,26 @@ const Register = () => {
     setLoading(false);
   };
 
+  // Guide modal handlers
+  const handleCloseGuide = () => {
+    setShowOwnerGuide(false);
+    navigate('/map');
+  };
+
+  const handleGoToControl = () => {
+    setShowOwnerGuide(false);
+    navigate('/game-center-control');
+  };
+
   return (
     <div className="auth-container">
+      {/* Owner Guide Modal */}
+      <OwnerGuideModal 
+        isOpen={showOwnerGuide} 
+        onClose={handleCloseGuide}
+        onGoToControl={handleGoToControl}
+      />
+      
       <div className="auth-background">
         <div className="auth-card register-card" style={{
           background: 'white',

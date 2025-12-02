@@ -422,13 +422,14 @@ const badgeStyle = (color) => ({
 
 export default function GameCenterControl() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { subscription, isActive: hasActiveSubscription, plan } = useSubscription();
   const [centers, setCenters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editCenter, setEditCenter] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [subscriptionMessage, setSubscriptionMessage] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(''); // Search state
   
   // Check max centers allowed
   const maxCenters = subscription?.maxCenters || (plan === 'business_standard' ? 1 : plan === 'business_pro' ? 2 : 0);
@@ -449,11 +450,19 @@ export default function GameCenterControl() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Check if user is center owner
+  // Check if user is center owner or admin
   const isCenterOwner = user?.accountType === 'centerOwner' || user?.role === 'centerOwner';
+  const hasAccess = isCenterOwner || isAdmin;
+
+  // Filter centers by search query
+  const filteredCenters = centers.filter(center => 
+    center.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    center.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    center.owner?.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchCenters = useCallback(async () => {
-    if (!user || !isCenterOwner) {
+    if (!user || !hasAccess) {
       setLoading(false);
       return;
     }
@@ -461,8 +470,9 @@ export default function GameCenterControl() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      // Use my-centers endpoint to get only owned centers
-      const res = await axios.get(`${API_BASE}/api/centers/my-centers`, {
+      // Admin gets all centers, owners get only their own
+      const endpoint = isAdmin ? `${API_BASE}/api/centers` : `${API_BASE}/api/centers/my-centers`;
+      const res = await axios.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCenters(res.data || []);
@@ -472,7 +482,7 @@ export default function GameCenterControl() {
     } finally {
       setLoading(false);
     }
-  }, [user, isCenterOwner]);
+  }, [user, hasAccess, isAdmin]);
 
   useEffect(() => {
     fetchCenters();
@@ -565,8 +575,8 @@ export default function GameCenterControl() {
     }
   };
 
-  // Non-owner redirect
-  if (!isCenterOwner && !loading) {
+  // Non-owner/non-admin redirect
+  if (!hasAccess && !loading) {
     return (
       <div style={{ 
         minHeight: "100vh", 
@@ -644,15 +654,66 @@ export default function GameCenterControl() {
             ←
           </button>
           <h1 style={{ margin: 0, fontSize: "20px", fontWeight: "800" }}>
-            🎮 Game Center Control
+            🎮 {isAdmin ? 'Admin Control Panel' : 'Game Center Control'}
           </h1>
         </div>
         <p style={{ margin: 0, fontSize: "13px", opacity: 0.9, marginLeft: "48px" }}>
-          Төвүүдээ нэмэх, засах, удирдах
+          {isAdmin ? 'Бүх төвүүдийг удирдах' : 'Төвүүдээ нэмэх, засах, удирдах'}
         </p>
       </div>
 
       <div style={{ padding: "16px" }}>
+        {/* Search Bar - Admin only */}
+        {isAdmin && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              background: 'white',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              border: '2px solid #e5e7eb',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+            }}>
+              <span style={{ fontSize: '18px' }}>🔍</span>
+              <input
+                type="text"
+                placeholder="Төвийн нэр, хаяг, эзэмшигчээр хайх..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151'
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    background: '#f3f4f6',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    color: '#6b7280'
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <div style={{ marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
+              Нийт {filteredCenters.length} / {centers.length} төв
+            </div>
+          </div>
+        )}
         {/* Subscription Warning */}
         {subscriptionMessage && (
           <div style={{
@@ -701,8 +762,8 @@ export default function GameCenterControl() {
           </div>
         )}
 
-        {/* Add New Center Button */}
-        {!showAddForm && !editCenter && (
+        {/* Add New Center Button - Only for owners, not admin */}
+        {!showAddForm && !editCenter && !isAdmin && (
           <button
             onClick={() => {
               if (!hasActiveSubscription) {
@@ -757,12 +818,12 @@ export default function GameCenterControl() {
               alignItems: "center",
               gap: "8px"
             }}>
-              🏢 Миний төвүүд ({centers.length})
+              🏢 {isAdmin ? 'Бүх төвүүд' : 'Миний төвүүд'} ({filteredCenters.length})
             </h2>
 
-            {centers.length > 0 ? (
+            {filteredCenters.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {centers.map((center) => (
+                {filteredCenters.map((center) => (
                   <div key={center._id} style={{ position: "relative" }}>
                     <CenterCard center={center} showDistance={false} />
                     

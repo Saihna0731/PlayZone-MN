@@ -38,6 +38,15 @@ const smsLogSchema = new mongoose.Schema({
     default: false,
     index: true
   },
+  source: {
+    type: String,
+    enum: ['android-forwarder', 'ios-shortcut', 'manual', 'webhook', 'monpay'],
+    default: 'webhook'
+  },
+  paymentCode: {
+    type: String,
+    index: true
+  },
   error: String,
   createdAt: {
     type: Date,

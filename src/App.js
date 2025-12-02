@@ -25,7 +25,7 @@ function HomeRedirect() {
 
 function App() {
   const location = useLocation();
-  const hideNav = ["/login", "/register", "/auth", "/reels", "/", "/game-center-control"].includes(location.pathname) || location.pathname.startsWith('/center/');
+  const hideNav = ["/login", "/register", "/auth", "/reels", "/"].includes(location.pathname) || location.pathname.startsWith('/center/');
   const lockScroll = location.pathname === '/map' || location.pathname === '/reels';
   return (
     <AuthProvider>

@@ -105,7 +105,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
     const [copied, setCopied] = useState('');
     const [paymentCode, setPaymentCode] = useState(null);
     const [codeLoading, setCodeLoading] = useState(true);
-    const [paymentMethod, setPaymentMethod] = useState('bank'); // 'bank' or 'qpay'
+    const [paymentMethod, setPaymentMethod] = useState('monpay'); // 'monpay', 'bank' or 'qpay'
     const [qpayLoading, setQpayLoading] = useState(false);
     const [qpayData, setQpayData] = useState(null);
 
@@ -237,17 +237,17 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
               marginBottom: '20px'
             }}>
               <button
-                onClick={() => setPaymentMethod('bank')}
+                onClick={() => setPaymentMethod('monpay')}
                 style={{
                   flex: 1,
-                  padding: '14px',
-                  border: paymentMethod === 'bank' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                  padding: '14px 8px',
+                  border: paymentMethod === 'monpay' ? '2px solid #e11d48' : '2px solid #e5e7eb',
                   borderRadius: '12px',
-                  background: paymentMethod === 'bank' ? '#eff6ff' : 'white',
-                  color: paymentMethod === 'bank' ? '#1d4ed8' : '#6b7280',
+                  background: paymentMethod === 'monpay' ? '#fff1f2' : 'white',
+                  color: paymentMethod === 'monpay' ? '#be123c' : '#6b7280',
                   cursor: 'pointer',
                   fontWeight: '600',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   transition: 'all 0.2s'
                 }}
               >
@@ -262,20 +262,237 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
                 }}
                 style={{
                   flex: 1,
-                  padding: '14px',
+                  padding: '14px 8px',
                   border: paymentMethod === 'qpay' ? '2px solid #00b14f' : '2px solid #e5e7eb',
                   borderRadius: '12px',
                   background: paymentMethod === 'qpay' ? '#ecfdf5' : 'white',
                   color: paymentMethod === 'qpay' ? '#047857' : '#6b7280',
                   cursor: 'pointer',
                   fontWeight: '600',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   transition: 'all 0.2s'
                 }}
               >
                 📱 QPay
               </button>
             </div>
+
+            {/* Bank Transfer Content (Monpay данс руу) */}
+            {paymentMethod === 'monpay' && (
+              <div style={{
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                padding: '20px',
+                borderRadius: '16px',
+                marginBottom: '20px',
+                border: '2px solid #3b82f6'
+              }}>
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#1d4ed8', fontSize: '18px' }}>
+                    🏦 Банк шилжүүлэг
+                  </h4>
+                  <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                    Аль ч банкнаас шилжүүлж болно
+                  </p>
+                </div>
+
+                {/* Supported Banks */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '16px',
+                  flexWrap: 'wrap'
+                }}>
+                  {['Хаан', 'Голомт', 'ХХБ', 'State', 'Monpay'].map(bank => (
+                    <span key={bank} style={{
+                      background: 'white',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      fontSize: '11px',
+                      color: '#1d4ed8',
+                      border: '1px solid #93c5fd'
+                    }}>
+                      ✓ {bank}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Account Details */}
+                <div style={{
+                  background: 'white',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  marginBottom: '16px'
+                }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#1d4ed8' }}>
+                    📱 Хүлээн авагч данс (Monpay)
+                  </h4>
+                  
+                  {/* Monpay Account Number */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+                      Дансны дугаар
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: '#f0f9ff',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      <span style={{ fontSize: '16px', fontWeight: '700', color: '#1d4ed8', fontFamily: 'monospace' }}>
+                        99107463441
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard('99107463441', 'monpay')}
+                        style={{
+                          background: copied === 'monpay' ? '#10b981' : '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          fontWeight: '600'
+                        }}
+                      >
+                        {copied === 'monpay' ? '✓' : '📋'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bank Name */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+                      Банк
+                    </div>
+                    <div style={{
+                      background: '#f0f9ff',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #bfdbfe',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#1d4ed8'
+                    }}>
+                      Monpay (Аль ч банкнаас шилжүүлнэ)
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+                      Утас
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: '#f0f9ff',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      <span style={{ fontSize: '15px', fontWeight: '600', color: '#1d4ed8', fontFamily: 'monospace' }}>
+                        95520443
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard('95520443', 'monpayphone')}
+                        style={{
+                          background: copied === 'monpayphone' ? '#10b981' : '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          fontWeight: '600'
+                        }}
+                      >
+                        {copied === 'monpayphone' ? '✓' : '📋'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Code */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  marginBottom: '16px',
+                  border: '2px solid #fbbf24'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#92400e', marginBottom: '8px', fontWeight: '600' }}>
+                    ⚠️ ГҮЙЛГЭЭНИЙ УТГА (заавал оруулах!)
+                  </div>
+                  {codeLoading ? (
+                    <div style={{ textAlign: 'center', padding: '12px', color: '#92400e' }}>
+                      ⏳ Код үүсгэж байна...
+                    </div>
+                  ) : paymentCode ? (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: 'white',
+                      padding: '12px 16px',
+                      borderRadius: '10px'
+                    }}>
+                      <span style={{ 
+                        fontSize: '22px', 
+                        fontWeight: '700', 
+                        color: '#92400e', 
+                        fontFamily: 'monospace',
+                        letterSpacing: '2px'
+                      }}>
+                        {paymentCode.code}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(paymentCode.code, 'monpaycode')}
+                        style={{
+                          background: copied === 'monpaycode' ? '#10b981' : '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          fontWeight: '700'
+                        }}
+                      >
+                        {copied === 'monpaycode' ? '✓ Хуулсан' : '📋 Хуулах'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '12px', color: '#dc2626' }}>
+                      ⚠️ Код үүсгэхэд алдаа
+                    </div>
+                  )}
+                </div>
+
+                {/* Instructions */}
+                <div style={{
+                  background: 'white',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  color: '#374151',
+                  lineHeight: '1.6'
+                }}>
+                  <strong style={{ color: '#1d4ed8' }}>📌 Заавар:</strong>
+                  <ol style={{ margin: '8px 0 0 0', paddingLeft: '18px' }}>
+                    <li>Банкны апп нээх (Хаан/Голомт/ХХБ/Monpay)</li>
+                    <li><strong>99107463441</strong> данс руу шилжүүлэг хийх</li>
+                    <li><strong style={{ color: '#f59e0b' }}>Гүйлгээний утга</strong> дээр <strong>{paymentCode?.code || 'PZ-XXXXXX'}</strong> бичих</li>
+                    <li>Төлбөр амжилттай → Хэсэг хугацааны дараа эрх нээгдэнэ ✅</li>
+                  </ol>
+                </div>
+              </div>
+            )}
 
             {/* QPay Content */}
             {paymentMethod === 'qpay' && (
