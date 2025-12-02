@@ -1,14 +1,6 @@
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 
-// Resend client функц - дуудах бүрт шинээр авна (env variable өөрчлөгдөхөд автоматаар шинэчлэгдэнэ)
-const getResendClient = () => {
-  if (process.env.RESEND_API_KEY) {
-    return new Resend(process.env.RESEND_API_KEY);
-  }
-  return null;
-};
-
 // Email transporter үүсгэх - Direct SMTP
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -31,11 +23,9 @@ const createTransporter = () => {
 
 // Password reset code илгээх
 const sendPasswordResetEmail = async (email, code, username = '') => {
-  console.log('📧 sendPasswordResetEmail called for:', email);
-  console.log('📧 RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
-  
-  const resend = getResendClient();
-  console.log('📧 resend client created:', !!resend);
+  console.log('📧 ========== EMAIL SEND START ==========');
+  console.log('📧 To:', email);
+  console.log('📧 RESEND_API_KEY:', process.env.RESEND_API_KEY ? 'EXISTS (length: ' + process.env.RESEND_API_KEY.length + ')' : 'MISSING');
   
   const htmlContent = `
     <!DOCTYPE html>
@@ -51,10 +41,10 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
         </div>
         <div style="padding: 40px 30px;">
           <div style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a1a1a;">
-            Сайн байна уу${username ? ', ' + username : ''}!
+            Сайн байна у|${username ? ', ' + username : ''}!
           </div>
           <div style="color: #555; margin-bottom: 30px; font-size: 15px;">
-            Таны нууц үг сэргээх хүсэлт ирлээ. Доорх 6 оронтой кодыг ашиглан нууц үгээ солино уу:
+            Таны нууц үг сэргээх хүсэлт ирлээ. Доорх 6 оронтой кодыг ашиглан нууц үгээ солино у|:
           </div>
           
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
@@ -67,53 +57,58 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
           </div>
         </div>
         <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0; font-size: 13px; color: #666;">
-          <p style="margin: 5px 0;">© 2025 PlayZone MN. Бүх эрх хуулиар хамгаалагдсан.</p>
+          <p style="margin: 5px 0;">© 2025 PlayZone MN.</p>
         </div>
       </div>
     </body>
     </html>
   `;
 
-  // Resend ЭХЛЭЭД ашиглах (Railway дээр Gmail ажиллахгүй)
-  if (resend) {
+  // RESEND - Railway дээр үндсэн арга
+  if (process.env.RESEND_API_KEY) {
     try {
-      console.log('📧 Sending via Resend...');
-      const { data, error: resendError } = await resend.emails.send({
+      console.log('📧 Creating Resend client...');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      
+      console.log('📧 Sending via Resend API...');
+      const result = await resend.emails.send({
         from: 'PlayZone MN <onboarding@resend.dev>',
-        to: [email],
+        to: email,
         subject: 'PlayZone MN - Нууц үг сэргээх код',
         html: htmlContent
       });
       
-      if (resendError) {
-        console.error('❌ Resend API error:', JSON.stringify(resendError));
-      } else if (data?.id) {
-        console.log('✅ Email sent via Resend:', data.id);
-        return { success: true, messageId: data.id };
+      console.log('📧 Resend result:', JSON.stringify(result));
+      
+      if (result.error) {
+        console.error('❌ Resend error:', JSON.stringify(result.error));
+      } else if (result.data?.id) {
+        console.log('✅ Email sent via Resend! ID:', result.data.id);
+        return { success: true, messageId: result.data.id };
       }
     } catch (resendErr) {
       console.error('❌ Resend exception:', resendErr.message);
+      console.error('❌ Resend stack:', resendErr.stack);
     }
   } else {
-    console.log('⚠️ Resend client not initialized - RESEND_API_KEY missing');
+    console.log('⚠️ RESEND_API_KEY not found in environment');
   }
 
-  // Gmail fallback (local dev-д ажиллана)
+  // Gmail fallback
+  console.log('📧 Falling back to Gmail SMTP...');
   try {
-    console.log('📧 Trying Gmail SMTP fallback...');
     const transporter = createTransporter();
-    const mailOptions = {
+    const info = await transporter.sendMail({
       from: `"PlayZone MN" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'PlayZone MN - Нууц үг сэргээх код',
       html: htmlContent
-    };
-    const info = await transporter.sendMail(mailOptions);
+    });
     console.log('✅ Email sent via Gmail:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (gmailError) {
-    console.error('❌ Gmail error:', gmailError.message);
-    return { success: false, error: 'Email илгээхэд алдаа гарлаа. Дараа дахин оролдоно уу.' };
+    console.error('❌ Gmail failed:', gmailError.message);
+    return { success: false, error: 'Email илгээхэд алдаа гарлаа.' };
   }
 };
 
