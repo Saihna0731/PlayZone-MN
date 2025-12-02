@@ -792,18 +792,30 @@ router.post('/shortcut-verify', async (req, res) => {
  */
 router.post('/monpay-verify', async (req, res) => {
   try {
+    console.log('========================================');
+    console.log('📱 MONPAY-VERIFY REQUEST RECEIVED');
+    console.log('========================================');
+    console.log('📋 Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+    console.log('========================================');
+
     // API Key шалгах
     const apiKey = req.headers['x-api-key'];
+    console.log('🔑 API Key received:', apiKey ? `${apiKey.substring(0, 10)}...` : 'MISSING');
+    console.log('🔑 Expected API Key:', process.env.SHORTCUT_API_KEY ? `${process.env.SHORTCUT_API_KEY.substring(0, 10)}...` : 'NOT SET');
+    
     if (!apiKey || apiKey !== process.env.SHORTCUT_API_KEY) {
+      console.log('❌ API Key шалгалт амжилтгүй');
       return res.status(401).json({ 
         success: false,
         message: 'Unauthorized - Invalid API Key' 
       });
     }
+    console.log('✅ API Key шалгалт амжилттай');
 
     const { paymentCode, notificationText, amount } = req.body;
 
-    console.log('📱 Monpay verification request:', { paymentCode, notificationText, amount });
+    console.log('📱 Parsed data:', { paymentCode, notificationText, amount });
 
     // Payment Code шаардлагатай
     if (!paymentCode) {
