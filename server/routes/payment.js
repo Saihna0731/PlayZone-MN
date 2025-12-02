@@ -790,7 +790,7 @@ router.post('/shortcut-verify', async (req, res) => {
  * Monpay notification format:
  * "Таны 99107463441 дансанд 1990 төгрөгийн орлого хийгдлээ."
  */
-router.post('/monpay-verify', async (req, res) => {
+router.post('/api/payment/monpay-verify', async (req, res) => {
   try {
     console.log('========================================');
     console.log('📱 MONPAY-VERIFY REQUEST RECEIVED');
