@@ -391,7 +391,7 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
 
         return (
           <Marker key={markerKey} {...markerProps}>
-            <Popup className="custom-popup" minWidth={300} maxWidth={340}>
+            <Popup className="custom-popup" minWidth={220} maxWidth={280} autoPan={true} autoPanPadding={[20, 20]}>
               <div className="popup-card">
                 {/* Header Image */}
                 

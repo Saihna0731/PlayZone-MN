@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { MapContainer, TileLayer, ZoomControl, CircleMarker, Popup } from "react-leaflet";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import MapCenters from "../components/MapComponents/MapCenters";
 import MapSearch from "../components/MapComponents/MapSearch";
 import MapCategoryFilter from "../components/MapComponents/MapCategoryFilter";
@@ -9,8 +10,9 @@ import FilterPanel from "../components/MapComponents/FilterPanel";
 import Toast from "../components/LittleComponents/Toast";
 import { cacheUtils } from "../utils/cache";
 import { useAuth } from "../contexts/AuthContext";
+import { API_BASE } from "../config";
 import "leaflet/dist/leaflet.css";
-import { FaFilter, FaLock, FaTimes } from "react-icons/fa";
+import { FaFilter, FaLock, FaTimes, FaGift, FaChevronRight } from "react-icons/fa";
 
 export default function MapView() {
   const [query, setQuery] = useState("");
@@ -29,6 +31,8 @@ export default function MapView() {
   const [showSnowEffect, setShowSnowEffect] = useState(false);
   const [showPromoPanel, setShowPromoPanel] = useState(false);
   const [showTrialNotification, setShowTrialNotification] = useState(false);
+  const [showBonusPanel, setShowBonusPanel] = useState(false);
+  const [bonuses, setBonuses] = useState([]);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -44,8 +48,10 @@ export default function MapView() {
     if (user) {
       const promoKey = `playzone_promo_seen_${user._id}`;
       const trialKey = `playzone_trial_notified_${user._id}`;
+      const bonusKey = `playzone_bonus_shown_${user._id}_${new Date().toDateString()}`;
       const hasSeenPromo = localStorage.getItem(promoKey);
       const hasSeenTrialNotif = localStorage.getItem(trialKey);
+      const hasSeenBonusToday = localStorage.getItem(bonusKey);
       
       // Show promotional panel once for logged-in users who haven't seen it
       if (!hasSeenPromo) {
@@ -56,6 +62,32 @@ export default function MapView() {
       if (!hasSeenTrialNotif && user.subscription?.plan === 'trial' && user.subscription?.isActive) {
         setTimeout(() => setShowTrialNotification(true), 500);
         localStorage.setItem(trialKey, 'true');
+      }
+
+      // Show bonus panel once per day for logged-in users
+      if (!hasSeenBonusToday && hasSeenPromo) {
+        // Fetch bonuses
+        axios.get(`${API_BASE}/api/centers`)
+          .then(res => {
+            const centers = res.data || [];
+            const bonusList = [];
+            centers.forEach(c => {
+              const ownerPlan = c?.owner?.subscription?.plan || c?.subscription?.plan || '';
+              const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
+              if (Array.isArray(c.bonus) && c.bonus.length && normalized === 'business_pro') {
+                c.bonus.forEach(b => {
+                  bonusList.push({ center: c, bonus: b });
+                });
+              }
+            });
+            // Sort by newest first and take top 5
+            bonusList.sort((a,b) => new Date(b.bonus.createdAt) - new Date(a.bonus.createdAt));
+            if (bonusList.length > 0) {
+              setBonuses(bonusList.slice(0, 5));
+              setTimeout(() => setShowBonusPanel(true), 1500);
+            }
+          })
+          .catch(err => console.error('Bonus fetch error:', err));
       }
     }
   }, [user]);
@@ -69,6 +101,13 @@ export default function MapView() {
 
   const handleCloseTrialNotif = () => {
     setShowTrialNotification(false);
+  };
+
+  const handleCloseBonusPanel = () => {
+    if (user) {
+      localStorage.setItem(`playzone_bonus_shown_${user._id}_${new Date().toDateString()}`, 'true');
+    }
+    setShowBonusPanel(false);
   };
 
   useEffect(() => {
@@ -291,6 +330,179 @@ export default function MapView() {
               }}
             >
               Эхлүүлье! 🚀
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bonus Welcome Panel - Shows once per day for logged-in users */}
+      {showBonusPanel && bonuses.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.75)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          animation: 'fadeIn 0.3s ease-out',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            borderRadius: '24px 24px 0 0',
+            padding: '24px 20px 32px',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            boxShadow: '0 -10px 40px rgba(0,0,0,0.3)',
+            animation: 'slideUp 0.4s ease-out'
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FaGift style={{ color: 'white', fontSize: '20px' }} />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
+                    🔥 Өнөөдрийн урамшуулал
+                  </h2>
+                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6b7280' }}>
+                    {bonuses.length} шинэ bonus байна!
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseBonusPanel}
+                style={{
+                  background: 'rgba(0,0,0,0.05)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6b7280'
+                }}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            {/* Bonus List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {bonuses.map(({ center, bonus }, idx) => {
+                const primaryImage = center?.images?.[0]?.thumbnail || center?.images?.[0] || center?.logo || '/logo192.png';
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      handleCloseBonusPanel();
+                      navigate(`/center/${center._id}`);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                      padding: '14px',
+                      background: '#fff',
+                      borderRadius: '16px',
+                      border: '1px solid #f0f0f0',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <img
+                      src={primaryImage}
+                      alt={center.name}
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '12px',
+                        objectFit: 'cover'
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        margin: '0 0 4px',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        color: '#1f2937',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {bonus.title || 'Урамшуулал'}
+                      </h4>
+                      <p style={{
+                        margin: 0,
+                        fontSize: '13px',
+                        color: '#6b7280',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        📍 {center.name}
+                      </p>
+                    </div>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                      color: '#fff',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      FREE
+                    </div>
+                    <FaChevronRight style={{ color: '#9ca3af', fontSize: '14px' }} />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* View All Button */}
+            <button
+              onClick={() => {
+                handleCloseBonusPanel();
+                navigate('/bonuses');
+              }}
+              style={{
+                width: '100%',
+                marginTop: '20px',
+                padding: '14px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '14px',
+                fontSize: '15px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(99,102,241,0.3)'
+              }}
+            >
+              Бүх урамшуулал харах →
             </button>
           </div>
         </div>
@@ -617,7 +829,9 @@ export default function MapView() {
       <div className="map-wrapper">
         <MapContainer
           center={[47.9188, 106.9176]} // Ulaanbaatar default
-          zoom={13}
+          zoom={14}
+          minZoom={10}
+          maxZoom={18}
           style={{ height: "100%", width: "100%" }}
           zoomControl={false}
           whenCreated={setMapInstance}
@@ -754,7 +968,16 @@ export default function MapView() {
           }
         }
 
-
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
 
         .filter-container {
           pointer-events: auto;

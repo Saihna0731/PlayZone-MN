@@ -7,7 +7,7 @@ import { useSubscription } from "../hooks/useSubscription";
 import SubscriptionPlans from "../admin/components/Tolbor/SubscriptionPlans";
 import BottomNav from "../components/MainNavbars/BottomNav";
 import SimpleCalendar from "../components/LittleComponents/SimpleCalendar.jsx";
-import { FaHistory, FaChartLine, FaUser, FaCalendarAlt, FaMoneyBillWave, FaClock, FaList, FaChevronRight, FaBell } from "react-icons/fa";
+import { FaHistory, FaChartLine, FaUser, FaCalendarAlt, FaMoneyBillWave, FaClock, FaList, FaChevronRight, FaBell, FaFacebook, FaPhone, FaHeadset } from "react-icons/fa";
 import '../styles/Profile.css';
 
 // PlayZone MN Logo Component
@@ -830,6 +830,93 @@ export default function Profile() {
               color: "#6b7280"
             }}>
               Холбогдсон аккаунт одоогоор алга.
+            </div>
+          </div>
+        )}
+
+        {/* Contact & Support Section */}
+        <MenuItem 
+          icon={<FaHeadset />}
+          title="Холбоо барих"
+          onClick={() => setExpandedSection(prev => prev === 'contact' ? '' : 'contact')}
+          active={expandedSection === 'contact'}
+        />
+        {expandedSection === 'contact' && (
+          <div style={{ marginTop: "-4px", marginBottom: "12px" }}>
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "20px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
+            }}>
+              {/* Phone Contact */}
+              <a
+                href="tel:95520443"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                  padding: "14px 16px",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  borderRadius: "12px",
+                  marginBottom: "12px",
+                  textDecoration: "none",
+                  color: "white",
+                  boxShadow: "0 4px 12px rgba(16,185,129,0.3)"
+                }}
+              >
+                <div style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "12px",
+                  background: "rgba(255,255,255,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px"
+                }}>
+                  <FaPhone />
+                </div>
+                <div>
+                  <div style={{ fontSize: "15px", fontWeight: "700" }}>Утас: 95520443</div>
+                  <div style={{ fontSize: "12px", opacity: 0.9 }}>Дарж залгах</div>
+                </div>
+              </a>
+
+              {/* Facebook Page */}
+              <a
+                href="https://www.facebook.com/profile.php?id=61584426755433"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                  padding: "14px 16px",
+                  background: "linear-gradient(135deg, #1877f2 0%, #0d65d9 100%)",
+                  borderRadius: "12px",
+                  textDecoration: "none",
+                  color: "white",
+                  boxShadow: "0 4px 12px rgba(24,119,242,0.3)"
+                }}
+              >
+                <div style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "12px",
+                  background: "rgba(255,255,255,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "22px"
+                }}>
+                  <FaFacebook />
+                </div>
+                <div>
+                  <div style={{ fontSize: "15px", fontWeight: "700" }}>PlayZone Mongolia</div>
+                  <div style={{ fontSize: "12px", opacity: 0.9 }}>Facebook хуудас</div>
+                </div>
+              </a>
             </div>
           </div>
         )}

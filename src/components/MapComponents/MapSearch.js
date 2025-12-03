@@ -59,15 +59,16 @@ function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('с�
           color: "#fff",
           border: "none",
           borderRadius: "10px",
-          padding: "8px 16px",
-          fontSize: "13px",
+          padding: "8px 12px",
+          fontSize: "12px",
           cursor: "pointer",
-          marginLeft: "8px",
+          marginLeft: "6px",
           fontWeight: "600",
-          height: "34px",
+          height: "30px",
           boxShadow: "0 3px 8px rgba(102, 126, 234, 0.3)",
           transition: "all 0.2s ease",
-          minWidth: "60px"
+          minWidth: "50px",
+          flexShrink: 0
         }}
         onMouseEnter={(e) => {
           e.target.style.transform = "translateY(-1px)";
