@@ -24,18 +24,18 @@ function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('с�
       display: "flex",
       alignItems: "center",
       background: "rgba(255,255,255,0.98)",
-      borderRadius: "14px",
-      padding: "6px 12px",
+      borderRadius: "12px",
+      padding: "4px 10px",
       backdropFilter: "blur(12px)",
-      boxShadow: "0 4px 20px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
-      border: "1px solid rgba(102, 126, 234, 0.15)",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+      border: "1px solid rgba(102, 126, 234, 0.12)",
       width: "100%",
-      height: "42px"
+      height: "36px"
     }}>
       <FaSearch style={{ 
         color: "#667eea", 
-        marginRight: "10px",
-        fontSize: "16px"
+        marginRight: "8px",
+        fontSize: "13px"
       }} />
       <input
         type="text"
@@ -46,7 +46,7 @@ function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('с�
           flex: 1,
           border: "none",
           outline: "none",
-          fontSize: "16px",
+          fontSize: "14px",
           background: "transparent",
           color: "#333",
           fontWeight: "500"
@@ -58,16 +58,16 @@ function MapSearch({ onSearch, placeholder = "Нэр, хаяг, бонус ('с�
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           color: "#fff",
           border: "none",
-          borderRadius: "10px",
-          padding: "8px 12px",
-          fontSize: "12px",
+          borderRadius: "8px",
+          padding: "5px 10px",
+          fontSize: "11px",
           cursor: "pointer",
-          marginLeft: "6px",
+          marginLeft: "4px",
           fontWeight: "600",
-          height: "30px",
-          boxShadow: "0 3px 8px rgba(102, 126, 234, 0.3)",
+          height: "26px",
+          boxShadow: "0 2px 6px rgba(102, 126, 234, 0.25)",
           transition: "all 0.2s ease",
-          minWidth: "50px",
+          minWidth: "40px",
           flexShrink: 0
         }}
         onMouseEnter={(e) => {

@@ -476,7 +476,9 @@ export default function CenterCard({ item, center, expanded, onToggle, onEdit, o
 
   const handleActionClick = (e, action) => {
     e.stopPropagation();
-    action();
+    if (typeof action === 'function') {
+      action();
+    }
   };
 
   // Bonus management is handled in Booking page. Legacy helpers removed.
@@ -566,12 +568,13 @@ export default function CenterCard({ item, center, expanded, onToggle, onEdit, o
   return (
     <div
       onClick={handleCardClick}
+      className="center-card-wrapper"
       style={{
         cursor: "pointer",
         borderRadius: 16,
         overflow: "hidden",
         background: "#fff",
-        marginBottom: 20,
+        marginBottom: 12,
         transition: "all 0.3s ease",
         boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
         transform: "translateY(0)",
@@ -587,7 +590,7 @@ export default function CenterCard({ item, center, expanded, onToggle, onEdit, o
       }}
     >
       {/* Image carousel (Images only) */}
-      <div style={{ position: "relative", height: 200, background: "#f5f5f5" }}>
+      <div className="center-card-image" style={{ position: "relative", height: 160, background: "#f5f5f5" }}>
         <img
           src={getCurrentMedia().url}
           alt={data.name || "center"}

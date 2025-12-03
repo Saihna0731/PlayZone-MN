@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "../config";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,6 +16,7 @@ import SpecialCenterCard from "../components/ListComponents/SpecialCenterCard";
 import "../styles/List.css";
 
 export default function List() {
+  const navigate = useNavigate();
   const { isAuthenticated, isAdmin, isCenterOwner, user } = useAuth();
   const { subscription, isPremiumUser } = useSubscription();
   const [items, setItems] = useState([]);
@@ -230,13 +231,10 @@ export default function List() {
   const safeItems = Array.isArray(items) ? items : [];
   const safeFiltered = Array.isArray(filtered) ? filtered : [];
 
+  // Bonus байгаа бүх төвийг харуулна (subscription шалгалтгүй)
   const bonusCenters = safeItems.filter(it => {
     const hasBonus = Array.isArray(it.bonus) && it.bonus.length > 0;
-    // Owner populate хийсэн тул шууд owner.subscription.plan -г ашиглана
-    const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
-    const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
-    const isBusinessPro = normalized === 'business_pro';
-    return hasBonus && isBusinessPro;
+    return hasBonus;
   });
   
   // Special Centers - Business Pro эрхтэй owner-ийн бүх төвүүд
@@ -280,8 +278,8 @@ export default function List() {
         {bonusCenters.length > 0 && (
           <div className="list-section">
             <div className="list-section-header">
-              <h3 className="list-title">Bonus</h3>
-              <button type="button" className="see-all-link" onClick={() => { window.location.href = '/bonuses'; }}>See all</button>
+              <h3 className="list-title">🎁 Bonus урамшуулал</h3>
+              <button type="button" className="see-all-link" onClick={() => { navigate('/bonuses'); }}>🔥 Popular for me →</button>
             </div>
             <div className="list-horizontal" data-section="bonus">
               {bonusCenters.map(center => {
@@ -291,16 +289,12 @@ export default function List() {
                     key={key}
                     center={center}
                     onOrder={() => {
-                      window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'Захиалгын хүсэлт илгээгдлээ' } }));
+                      // Бүх хэрэглэгчид bonus-тай төвийн дэлгэрэнгүйг харах боломжтой
+                      navigate(`/center/${center._id || center.id}`);
                     }}
                     onClick={() => {
-                      // Navigate to center detail if user has access; otherwise show toast
-                      // Navigation uses window.location to avoid importing useNavigate here
-                      if (isAdmin || isPremiumUser || (isCenterOwner && subscription?.plan !== 'free')) {
-                        window.location.href = `/center/${center._id || center.id}`;
-                      } else {
-                        window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'info', message: 'Дэлгэрэнгүй харахын тулд төлөвлөгөө идэвхжүүлнэ үү' } }));
-                      }
+                      // Бүх хэрэглэгчид (normal, trial, premium) bonus-тай төвийг харах боломжтой
+                      navigate(`/center/${center._id || center.id}`);
                     }}
                   />
                 );

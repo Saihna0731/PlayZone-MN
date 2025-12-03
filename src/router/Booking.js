@@ -10,7 +10,7 @@ import "../styles/List.css";
 
 export default function Booking() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const [bookingHistory, setBookingHistory] = useState([]);
   const [ownerBookings, setOwnerBookings] = useState([]);
   const [ownedCenters, setOwnedCenters] = useState([]);
@@ -25,7 +25,9 @@ export default function Booking() {
 
   const subscription = user?.subscription;
   const trial = user?.trial;
-  const canAccessBooking = subscription?.plan === "normal" || 
+  // Admin болон centerOwner бүгд эрхтэй
+  const canAccessBooking = isAdmin ||
+                           subscription?.plan === "normal" || 
                            trial?.plan === "trial" ||
                            subscription?.plan === "business_standard" || 
                            subscription?.plan === "business_pro" ||
@@ -46,11 +48,13 @@ export default function Booking() {
   }, [user]);
 
   const fetchOwnerData = useCallback(async () => {
-    if (!user || !isCenterOwner) { setLoading(false); return; }
+    if (!user || (!isCenterOwner && !isAdmin)) { setLoading(false); return; }
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const centersRes = await axios.get(`${API_BASE}/api/centers/my-centers`, { headers: { Authorization: `Bearer ${token}` } });
+      // Admin бол бүх center, centerOwner бол зөвхөн өөрийн center-үүдийг авна
+      const centersEndpoint = isAdmin ? `${API_BASE}/api/centers` : `${API_BASE}/api/centers/my-centers`;
+      const centersRes = await axios.get(centersEndpoint, { headers: { Authorization: `Bearer ${token}` } });
       if (centersRes.data && centersRes.data.length > 0) {
         setOwnedCenters(centersRes.data);
         setHasCenters(true);
@@ -77,13 +81,13 @@ export default function Booking() {
       }
     } catch (error) { setOwnedCenters([]); setHasCenters(false); setOwnerBookings([]); }
     finally { setLoading(false); }
-  }, [user, isCenterOwner]);
+  }, [user, isCenterOwner, isAdmin]);
 
   useEffect(() => {
     if (!authLoading && user) {
-      if (isCenterOwner) { fetchOwnerData(); } else { fetchBookingHistory(); }
+      if (isCenterOwner || isAdmin) { fetchOwnerData(); } else { fetchBookingHistory(); }
     } else if (!authLoading) { setLoading(false); }
-  }, [authLoading, user, isCenterOwner, fetchBookingHistory, fetchOwnerData]);
+  }, [authLoading, user, isCenterOwner, isAdmin, fetchBookingHistory, fetchOwnerData]);
 
   const handleStatusUpdate = async (bookingId, newStatus) => {
     try {
@@ -169,26 +173,26 @@ export default function Booking() {
 
   const hasBookingOnDate = (date) => {
     if (!date) return false;
-    const bookings = isCenterOwner ? ownerBookings : bookingHistory;
+    const bookings = (isCenterOwner || isAdmin) ? ownerBookings : bookingHistory;
     return bookings.some(booking => new Date(booking.date).toDateString() === date.toDateString());
   };
 
   const getBookingsForDate = (date) => {
     if (!date) return [];
-    const bookings = isCenterOwner ? ownerBookings : bookingHistory;
+    const bookings = (isCenterOwner || isAdmin) ? ownerBookings : bookingHistory;
     return bookings.filter(booking => new Date(booking.date).toDateString() === date.toDateString());
   };
 
   const monthNames = ["1-р сар", "2-р сар", "3-р сар", "4-р сар", "5-р сар", "6-р сар", "7-р сар", "8-р сар", "9-р сар", "10-р сар", "11-р сар", "12-р сар"];
 
-  // CENTER OWNER VIEW
-  if (isCenterOwner) {
+  // CENTER OWNER / ADMIN VIEW
+  if (isCenterOwner || isAdmin) {
     const displayBookings = activeTab === 'pending' ? pendingRequests : ownerBookings;
     return (
       <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)", paddingBottom: "100px" }}>
-        <div style={{ background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)", padding: "20px", paddingTop: "env(safe-area-inset-top, 20px)", color: "white" }}>
-          <h1 style={{ margin: "0 0 8px 0", fontSize: "20px", fontWeight: "800" }}>📋 Ирсэн захиалгууд</h1>
-          <p style={{ margin: 0, fontSize: "13px", opacity: 0.9 }}>Төвийнхөө захиалгуудыг удирдах</p>
+        <div style={{ background: isAdmin ? "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)" : "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)", padding: "20px", paddingTop: "env(safe-area-inset-top, 20px)", color: "white" }}>
+          <h1 style={{ margin: "0 0 8px 0", fontSize: "20px", fontWeight: "800" }}>{isAdmin ? "👑 Admin - Бүх захиалгууд" : "📋 Ирсэн захиалгууд"}</h1>
+          <p style={{ margin: 0, fontSize: "13px", opacity: 0.9 }}>{isAdmin ? "Бүх төвүүдийн захиалгуудыг удирдах" : "Төвийнхөө захиалгуудыг удирдах"}</p>
         </div>
         
         <div style={{ padding: "16px", paddingBottom: "0" }}>
@@ -206,7 +210,7 @@ export default function Booking() {
         </div>
         
         <div style={{ padding: "16px" }}>
-          {!hasCenters ? (
+          {!hasCenters && !isAdmin ? (
             <div style={{ background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)", padding: "40px 20px", borderRadius: "20px", textAlign: "center", border: "2px solid #f59e0b" }}>
               <div style={{ fontSize: "48px", marginBottom: "16px" }}>⚠️</div>
               <h3 style={{ color: "#92400e", marginBottom: "8px", fontSize: "18px", fontWeight: "700" }}>Төв бүртгэгдээгүй байна</h3>

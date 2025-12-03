@@ -435,7 +435,8 @@ export default function GameCenterControl() {
   const normalizedPlan = (plan || '').toLowerCase();
   const isTrial = normalizedPlan === 'trial' || normalizedPlan.includes('trial');
   const maxCenters = subscription?.maxCenters || hookMaxCenters || (isTrial || normalizedPlan === 'business_standard' ? 1 : normalizedPlan === 'business_pro' ? 3 : 0);
-  const canAddMore = (hasActiveSubscription || isTrial) && centers.length < maxCenters;
+  const safeCenters = Array.isArray(centers) ? centers : [];
+  const canAddMore = (hasActiveSubscription || isTrial) && safeCenters.length < maxCenters;
   
   // Occupancy Modal state
   const [occupancyModal, setOccupancyModal] = useState({ open: false, center: null });
@@ -457,7 +458,7 @@ export default function GameCenterControl() {
   const hasAccess = isCenterOwner || isAdmin;
 
   // Filter centers by search query
-  const filteredCenters = centers.filter(center => 
+  const filteredCenters = safeCenters.filter(center => 
     center.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     center.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     center.owner?.username?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -477,7 +478,15 @@ export default function GameCenterControl() {
       const res = await axios.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCenters(res.data || []);
+      // API хариу нь array эсвэл object.centers байж болно
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setCenters(data);
+      } else if (data && Array.isArray(data.centers)) {
+        setCenters(data.centers);
+      } else {
+        setCenters([]);
+      }
     } catch (error) {
       console.error("Error fetching centers:", error);
       setCenters([]);
@@ -665,57 +674,57 @@ export default function GameCenterControl() {
       </div>
 
       <div style={{ padding: "16px" }}>
-        {/* Search Bar - Admin only */}
-        {isAdmin && (
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              background: 'white',
-              borderRadius: '12px',
-              padding: '12px 16px',
-              border: '2px solid #e5e7eb',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-            }}>
-              <span style={{ fontSize: '18px' }}>🔍</span>
-              <input
-                type="text"
-                placeholder="Төвийн нэр, хаяг, эзэмшигчээр хайх..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Search Bar - Everyone */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            background: 'white',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            border: '2px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+          }}>
+            <span style={{ fontSize: '18px' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Төвийн нэр, хаягаар хайх..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151'
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
                 style={{
-                  flex: 1,
+                  background: '#f3f4f6',
                   border: 'none',
-                  outline: 'none',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151'
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#6b7280'
                 }}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    background: '#f3f4f6',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    color: '#6b7280'
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {isAdmin && (
             <div style={{ marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
               Нийт {filteredCenters.length} / {centers.length} төв
             </div>
-          </div>
-        )}
+          )}
+        </div>
         {/* Subscription Warning */}
         {subscriptionMessage && (
           <div style={{
@@ -764,24 +773,27 @@ export default function GameCenterControl() {
           </div>
         )}
 
-        {/* Add New Center Button - Only for owners, not admin */}
-        {!showAddForm && !editCenter && !isAdmin && (
+        {/* Add New Center Button - For owners and admin */}
+        {!showAddForm && !editCenter && (
           <button
             onClick={() => {
-              if (!hasActiveSubscription && !isTrial) {
-                setSubscriptionMessage('Таны эрх дууссан байна. Шинэ төв нэмэхийн тулд эрхээ сунгана уу.');
-                return;
-              }
-              if (centers.length >= maxCenters) {
-                setSubscriptionMessage(`Таны эрхээр хамгийн ихдээ ${maxCenters} төв нэмэх боломжтой. Илүү төв нэмэхийн тулд эрхээ шинэчлээрэй.`);
-                return;
+              // Admin-д хязгаарлалт байхгүй
+              if (!isAdmin) {
+                if (!hasActiveSubscription && !isTrial) {
+                  setSubscriptionMessage('Таны эрх дууссан байна. Шинэ төв нэмэхийн тулд эрхээ сунгана уу.');
+                  return;
+                }
+                if (centers.length >= maxCenters) {
+                  setSubscriptionMessage(`Таны эрхээр хамгийн ихдээ ${maxCenters} төв нэмэх боломжтой. Илүү төв нэмэхийн тулд эрхээ шинэчлээрэй.`);
+                  return;
+                }
               }
               setShowAddForm(true);
             }}
             style={{
               width: "100%",
               padding: "16px",
-              background: canAddMore 
+              background: (isAdmin || canAddMore)
                 ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)" 
                 : "linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)",
               border: "none",
@@ -795,10 +807,10 @@ export default function GameCenterControl() {
               justifyContent: "center",
               gap: "8px",
               marginBottom: "20px",
-              boxShadow: canAddMore ? "0 4px 16px rgba(34, 197, 94, 0.3)" : "none"
+              boxShadow: (isAdmin || canAddMore) ? "0 4px 16px rgba(34, 197, 94, 0.3)" : "none"
             }}
           >
-            ➕ Шинэ төв нэмэх ({centers.length}/{maxCenters})
+            ➕ Шинэ төв нэмэх {!isAdmin && `(${centers.length}/${maxCenters})`}
           </button>
         )}
 
@@ -827,7 +839,12 @@ export default function GameCenterControl() {
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {filteredCenters.map((center) => (
                   <div key={center._id} style={{ position: "relative" }}>
-                    <CenterCard center={center} showDistance={false} />
+                    <CenterCard 
+                      center={center} 
+                      showDistance={false}
+                      onEdit={() => handleEdit(center)}
+                      onDelete={(id) => handleDelete(center)}
+                    />
                     
                     {/* Action Buttons */}
                     <div style={{

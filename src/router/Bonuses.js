@@ -22,20 +22,28 @@ export default function Bonuses() {
       setLoading(true); setError(null);
       try {
         const res = await axios.get(`${API_BASE}/api/centers`);
-        setCenters(res.data || []);
+        // Хариу нь array эсвэл object.centers байж болно
+        const data = res.data;
+        if (Array.isArray(data)) {
+          setCenters(data);
+        } else if (data && Array.isArray(data.centers)) {
+          setCenters(data.centers);
+        } else {
+          setCenters([]);
+        }
       } catch (e) {
         setError(e.response?.data?.error || e.message);
+        setCenters([]);
       } finally { setLoading(false); }
     };
     load();
   }, []);
 
-  // Filter Business Pro centers with bonus
+  // Bonus байгаа бүх төвийг харуулна (subscription шалгалтгүй)
   const bonusCenters = useMemo(() => {
+    if (!Array.isArray(centers)) return [];
     return centers.filter(c => {
-      const ownerPlan = c?.owner?.subscription?.plan || c?.subscription?.plan || '';
-      const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
-      return Array.isArray(c.bonus) && c.bonus.length && normalized === 'business_pro';
+      return Array.isArray(c.bonus) && c.bonus.length > 0;
     });
   }, [centers]);
 

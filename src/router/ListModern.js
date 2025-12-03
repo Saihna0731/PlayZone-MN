@@ -231,7 +231,8 @@ export default function ListModern() {
   };
   const hasBonus = (it) => Array.isArray(it.bonus) && it.bonus.length > 0;
   
-  const bonusCenters = safeFiltered.filter(it => hasBonus(it) && isBusinessPro(it));
+  // Бүх bonus-тай төвийг харуулах (subscription шалгалтгүй)
+  const bonusCenters = safeFiltered.filter(it => hasBonus(it));
   const specialCenters = safeFiltered.filter(it => isBusinessPro(it));
   const regularCenters = safeFiltered.filter(it => !isBusinessPro(it));
 
@@ -612,36 +613,17 @@ export default function ListModern() {
         {/* Tab Content */}
         {activeTab === "normal" && (
           <div style={{ padding: "0 20px 20px 20px", background: "#ffffff" }}>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: "12px",
-              marginTop: "8px"
-            }}>
+            <div className="normal-centers-grid">
               {regularCenters.slice(0, 6).map(center => (
                 <div
                   key={center._id || center.id}
                   onClick={() => navigate(`/center/${center._id || center.id}`)}
-                  style={{
-                    background: "#ffffff",
-                    borderRadius: "16px",
-                    overflow: "hidden",
-                    border: "1px solid #f0f0f0",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
-                  }}
+                  className="normal-center-card"
                 >
-                  <div style={{
-                    position: "relative",
-                    height: "160px",
+                  <div className="normal-card-image" style={{
                     background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url(${getAllImages(center)[0]})`,
                     backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    padding: "12px"
+                    backgroundPosition: "center"
                   }}>
                     {isBusinessPro(center) && (
                       <div style={{

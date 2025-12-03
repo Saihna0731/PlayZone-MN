@@ -759,6 +759,71 @@ export default function Profile() {
           </>
         )}
 
+        {/* Admin specific menus */}
+        {isAdmin && (
+          <>
+            {/* Admin Game Center Control Button */}
+            <div
+              onClick={() => navigate('/game-center-control')}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px",
+                background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
+                marginBottom: "12px",
+                borderRadius: "16px",
+                cursor: "pointer",
+                boxShadow: "0 6px 20px rgba(220, 38, 38, 0.4)",
+                border: "2px solid rgba(255,255,255,0.2)"
+              }}
+            >
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "16px"
+              }}>
+                <div style={{
+                  width: "52px",
+                  height: "52px",
+                  borderRadius: "14px",
+                  background: "rgba(255,255,255,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "26px"
+                }}>
+                  👑
+                </div>
+                <div>
+                  <span style={{
+                    fontSize: "17px",
+                    fontWeight: "800",
+                    color: "#ffffff",
+                    display: "block"
+                  }}>
+                    Game Center удирдах
+                  </span>
+                  <span style={{
+                    fontSize: "12px",
+                    color: "rgba(255,255,255,0.8)"
+                  }}>
+                    Бүх төвийг засах, устгах эрхтэй
+                  </span>
+                </div>
+              </div>
+              <FaChevronRight style={{ color: "rgba(255,255,255,0.8)", fontSize: "18px" }} />
+            </div>
+            
+            <MenuItem 
+              icon="📋"
+              title="Бүх захиалга удирдах"
+              onClick={() => navigate('/booking')}
+              active={false}
+            />
+          </>
+        )}
+
         {/* Regular user menu - My Orders */}
         {user?.accountType !== 'centerOwner' && (
           <>

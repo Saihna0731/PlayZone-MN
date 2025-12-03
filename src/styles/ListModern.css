@@ -445,6 +445,38 @@
   background: #fff;
 }
 
+/* Normal Centers Grid - responsive */
+.normal-centers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.normal-center-card {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.normal-center-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.normal-card-image {
+  position: relative;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px;
+}
+
 .centers-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -780,17 +812,85 @@
 
 @media (min-width: 1024px) {
   .list-page-container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
   }
   
   .centers-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    gap: 14px;
+  }
+  
+  /* Normal Centers - Desktop 4 column, compact */
+  .normal-centers-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  
+  .normal-center-card {
+    border-radius: 10px;
+  }
+  
+  .normal-card-image {
+    height: 180px;
+    padding: 8px;
+  }
+  
+  .normal-card-image h3 {
+    font-size: 12px !important;
   }
   
   .vip-card-modern {
     height: 280px;
+  }
+  
+  /* Card compact on desktop - 4 column-д тохирсон хэмжээ */
+  .center-card-compact {
+    border-radius: 10px;
+  }
+  
+  .compact-card-image-wrapper {
+    height: 100px;
+    margin: 5px;
+    width: calc(100% - 10px);
+    border-radius: 10px;
+  }
+  
+  .compact-card-content {
+    padding: 6px 10px 10px 10px;
+  }
+  
+  .compact-card-title {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  
+  .compact-card-location {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  
+  .compact-card-price {
+    font-size: 14px;
+  }
+  
+  .compact-price-unit {
+    font-size: 10px;
+  }
+  
+  .compact-card-rating {
+    font-size: 10px;
+  }
+  
+  .compact-card-badge {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  
+  .facility-chip {
+    font-size: 8px;
+    padding: 2px 5px;
   }
 }
 

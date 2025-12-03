@@ -50,18 +50,18 @@ export default function MapCategoryFilter({ selectedCategory, onSelectCategory, 
         .category-chip {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 12px 20px;
+          gap: 6px;
+          padding: 8px 14px;
           background: rgba(255, 255, 255, 0.98);
           backdrop-filter: blur(12px);
-          border: 2px solid rgba(229, 231, 235, 0.9);
-          border-radius: 25px;
+          border: 1.5px solid rgba(229, 231, 235, 0.9);
+          border-radius: 18px;
           white-space: nowrap;
           cursor: pointer;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
           transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
           color: #374151;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           flex-shrink: 0;
@@ -88,10 +88,10 @@ export default function MapCategoryFilter({ selectedCategory, onSelectCategory, 
         .category-icon {
           display: flex;
           align-items: center;
-          font-size: 18px;
+          font-size: 14px;
         }
         .category-label {
-          font-size: 14px;
+          font-size: 12px;
           font-weight: 600;
         }
         .category-count {
@@ -109,27 +109,31 @@ export default function MapCategoryFilter({ selectedCategory, onSelectCategory, 
           color: white;
         }
         
-        /* Responsive - Mobile */
+        /* Responsive - Mobile - Compact for more map visibility */
         @media (max-width: 480px) {
+          .map-category-filter {
+            padding: 2px 0 4px;
+          }
           .category-scroll-container {
-            gap: 8px;
-            padding: 4px 12px 8px;
+            gap: 6px;
+            padding: 2px 10px 4px;
           }
           .category-chip {
-            padding: 10px 16px;
-            gap: 6px;
-            border-radius: 20px;
+            padding: 6px 10px;
+            gap: 4px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
           }
           .category-icon {
-            font-size: 16px;
+            font-size: 12px;
           }
           .category-label {
-            font-size: 13px;
+            font-size: 11px;
           }
           .category-count {
-            font-size: 11px;
-            padding: 3px 8px;
-            min-width: 22px;
+            font-size: 9px;
+            padding: 2px 5px;
+            min-width: 16px;
           }
         }
         

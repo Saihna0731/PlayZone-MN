@@ -3,15 +3,15 @@
   "name": "PlayZone MN - Game Center Finder",
   "icons": [
     {
-      "src": "playzone-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "playzone-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
-      "src": "PlayZone MN logo.png",
+      "src": "playzone-logo.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",

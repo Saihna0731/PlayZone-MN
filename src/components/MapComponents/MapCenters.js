@@ -29,9 +29,14 @@ const getOccupancyColor = (percentage) => {
 
 // Custom marker icon with center's logo - subscription шалгалттай
 // Bonus байгаа эсэхийг шалгана (одоогоор хугацаагаар хязгаарлахгүй)
-const hasRecentActivity = (center) => Array.isArray(center?.bonus) && center.bonus.length > 0;
+const hasRecentActivity = (center, shownCenters = {}) => {
+  const centerId = center?._id || center?.id;
+  // Хэрэв bonus popup харуулсан бол red dot байхгүй
+  if (shownCenters[centerId]) return false;
+  return Array.isArray(center?.bonus) && center.bonus.length > 0;
+};
 
-const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) => {
+const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails, shownCenters = {}) => {
   // Center-ийн logo эсвэл эхний зураг → thumbnail/highQuality/стринг → legacy image → default
   let logoSrc = "/logo192.png";
   if (center?.logo) {
@@ -53,7 +58,7 @@ const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) 
     ? getOccupancyColor(center.occupancy.standard || center.occupancy.vip || center.occupancy.stage || 0)
     : '#cccccc';
   
-  const recent = hasRecentActivity(center);
+  const recent = hasRecentActivity(center, shownCenters);
 
   return L.divIcon({
     className: canInteract ? 'custom-marker interactive' : 'custom-marker disabled leaflet-interactive-disabled',
@@ -162,6 +167,8 @@ const createCustomIcon = (center, canViewDetails, canInteract = canViewDetails) 
 export default function MapCenters({ selectedCategory, searchQuery = "", filters = {}, onMarkerClick, onCentersUpdate, onCategoriesUpdate, onCategoryCountsUpdate }) {
   const [centers, setCenters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bonusShownCenters, setBonusShownCenters] = useState({}); // Track which centers have shown bonus notification
+  const [activeBonusPopup, setActiveBonusPopup] = useState(null); // Currently showing bonus popup
   const { canViewDetails: hasActiveSubscription } = useSubscription();
   const { user } = useAuth();
   const map = useMap();
@@ -355,6 +362,25 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
   }, [JSON.stringify(filteredCenters), onCentersUpdate]);
 
   const handleMarkerClick = (center) => {
+    const hasBonus = hasRecentActivity(center);
+    const centerId = center._id || center.id;
+    
+    // Хэрэв bonus байгаа бөгөөд урьд нь харуулаагүй бол эхлээд bonus popup харуулна
+    if (hasBonus && !bonusShownCenters[centerId]) {
+      // Mark as shown
+      setBonusShownCenters(prev => ({ ...prev, [centerId]: true }));
+      // Show bonus popup
+      setActiveBonusPopup(center);
+      
+      // Auto close after 4 seconds
+      setTimeout(() => {
+        setActiveBonusPopup(null);
+      }, 4000);
+      
+      return; // Don't show regular popup yet
+    }
+    
+    // Regular behavior
     if (onMarkerClick) {
       onMarkerClick(center);
     }
@@ -366,8 +392,164 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
     }
   };
 
+  const closeBonusPopup = () => {
+    setActiveBonusPopup(null);
+  };
+
+  // Get bonus info for popup
+  const getBonusInfo = (center) => {
+    if (!center?.bonus?.length) return null;
+    const bonus = center.bonus[0];
+    return {
+      title: bonus.title || 'Урамшуулал',
+      text: bonus.text || '',
+      standardFree: bonus.standardFree,
+      vipFree: bonus.vipFree
+    };
+  };
+
   return (
     <>
+      {/* Bonus Notification Popup - Category доор гарах */}
+      {activeBonusPopup && (
+        <div style={{
+          position: 'fixed',
+          top: '140px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9000,
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+          border: '2px solid #22c55e',
+          maxWidth: '320px',
+          width: '90%',
+          animation: 'slideDown 0.3s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            {/* Center Image */}
+            <img 
+              src={activeBonusPopup.logo || activeBonusPopup.images?.[0]?.thumbnail || activeBonusPopup.images?.[0] || '/logo192.png'}
+              alt={activeBonusPopup.name}
+              style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '12px',
+                objectFit: 'cover',
+                border: '2px solid #22c55e'
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                marginBottom: '4px'
+              }}>
+                <span style={{ fontSize: '16px' }}>🎁</span>
+                <h4 style={{ 
+                  margin: 0, 
+                  fontSize: '14px', 
+                  fontWeight: '700',
+                  color: '#1f2937'
+                }}>
+                  {getBonusInfo(activeBonusPopup)?.title}
+                </h4>
+              </div>
+              <p style={{ 
+                margin: '0 0 8px', 
+                fontSize: '12px', 
+                color: '#6b7280' 
+              }}>
+                📍 {activeBonusPopup.name}
+              </p>
+              
+              {/* Seats info */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {getBonusInfo(activeBonusPopup)?.standardFree && (
+                  <span style={{
+                    background: '#10b981',
+                    color: '#fff',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '600'
+                  }}>
+                    🪑 Заал: {getBonusInfo(activeBonusPopup).standardFree}
+                  </span>
+                )}
+                {getBonusInfo(activeBonusPopup)?.vipFree && (
+                  <span style={{
+                    background: '#8b5cf6',
+                    color: '#fff',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '600'
+                  }}>
+                    👑 VIP: {getBonusInfo(activeBonusPopup).vipFree}
+                  </span>
+                )}
+                {getBonusInfo(activeBonusPopup)?.text && !getBonusInfo(activeBonusPopup)?.standardFree && !getBonusInfo(activeBonusPopup)?.vipFree && (
+                  <span style={{
+                    background: '#3b82f6',
+                    color: '#fff',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '600'
+                  }}>
+                    {getBonusInfo(activeBonusPopup).text.slice(0, 30)}{getBonusInfo(activeBonusPopup).text.length > 30 ? '...' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Close button */}
+            <button
+              onClick={closeBonusPopup}
+              style={{
+                background: 'rgba(0,0,0,0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: '#6b7280'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          
+          <button
+            onClick={() => {
+              closeBonusPopup();
+              navigate(`/center/${activeBonusPopup._id}`);
+            }}
+            style={{
+              width: '100%',
+              marginTop: '12px',
+              padding: '10px',
+              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Дэлгэрэнгүй харах →
+          </button>
+        </div>
+      )}
+
       {filteredCenters.map((c) => {
         const markerKey = c._id || c.id;
         const canViewDetails = hasActiveSubscription || user?.role === 'admin';
@@ -383,7 +565,7 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
 
         const markerProps = {
           position: [lat, lng],
-          icon: createCustomIcon(c, canViewDetails, canInteract),
+          icon: createCustomIcon(c, canViewDetails, canInteract, bonusShownCenters),
           eventHandlers: {
             click: () => handleMarkerClick(c)
           }
@@ -647,6 +829,16 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
         }
         .popup-btn-upgrade:hover {
           background: #d97706;
+        }
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
         }
       `}</style>
     </>

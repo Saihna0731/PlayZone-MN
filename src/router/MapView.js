@@ -12,7 +12,7 @@ import { cacheUtils } from "../utils/cache";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE } from "../config";
 import "leaflet/dist/leaflet.css";
-import { FaFilter, FaLock, FaTimes, FaGift, FaChevronRight } from "react-icons/fa";
+import { FaFilter, FaLock, FaTimes, FaGift, FaChevronRight, FaChair, FaCrown } from "react-icons/fa";
 
 export default function MapView() {
   const [query, setQuery] = useState("");
@@ -43,6 +43,39 @@ export default function MapView() {
     (!user.subscription?.plan || user.subscription.plan === 'free')
   );
 
+  // Fetch bonuses for the panel
+  const fetchBonuses = useCallback(() => {
+    axios.get(`${API_BASE}/api/centers`)
+      .then(res => {
+        const centers = res.data?.centers || res.data || [];
+        const bonusList = [];
+        centers.forEach(c => {
+          const hasBonus = Array.isArray(c.bonus) && c.bonus.length > 0;
+          if (!hasBonus) return;
+          // Бүх bonus-тай төвүүдийг харуулна
+          c.bonus.forEach(b => {
+            bonusList.push({ center: c, bonus: b });
+          });
+        });
+        
+        // Сул суудалтай bonus-г эхэнд жагсаах
+        bonusList.sort((a, b) => {
+          const aHasSeats = a.bonus.standardFree || a.bonus.vipFree;
+          const bHasSeats = b.bonus.standardFree || b.bonus.vipFree;
+          if (aHasSeats && !bHasSeats) return -1;
+          if (!aHasSeats && bHasSeats) return 1;
+          // Дараа нь шинээр нэмэгдсэнээр
+          return new Date(b.bonus.createdAt) - new Date(a.bonus.createdAt);
+        });
+        
+        if (bonusList.length > 0) {
+          setBonuses(bonusList.slice(0, 5));
+          setTimeout(() => setShowBonusPanel(true), 500);
+        }
+      })
+      .catch(err => console.error('Bonus fetch error:', err));
+  }, []);
+
   // Check for first-time user and show promotional panel
   useEffect(() => {
     if (user) {
@@ -64,37 +97,26 @@ export default function MapView() {
         localStorage.setItem(trialKey, 'true');
       }
 
-      // Show bonus panel once per day for logged-in users
-      if (!hasSeenBonusToday && hasSeenPromo) {
-        // Fetch bonuses
-        axios.get(`${API_BASE}/api/centers`)
-          .then(res => {
-            const centers = res.data || [];
-            const bonusList = [];
-            centers.forEach(c => {
-              const ownerPlan = c?.owner?.subscription?.plan || c?.subscription?.plan || '';
-              const normalized = ownerPlan.toLowerCase().replace(/[-_\s]+/g,'_');
-              if (Array.isArray(c.bonus) && c.bonus.length && normalized === 'business_pro') {
-                c.bonus.forEach(b => {
-                  bonusList.push({ center: c, bonus: b });
-                });
-              }
-            });
-            // Sort by newest first and take top 5
-            bonusList.sort((a,b) => new Date(b.bonus.createdAt) - new Date(a.bonus.createdAt));
-            if (bonusList.length > 0) {
-              setBonuses(bonusList.slice(0, 5));
-              setTimeout(() => setShowBonusPanel(true), 1500);
-            }
-          })
-          .catch(err => console.error('Bonus fetch error:', err));
+      // Show bonus panel once per day - promo харсан үгүйгээс үл хамааран
+      if (!hasSeenBonusToday) {
+        // Promo харсан бол шууд bonus харуулна, үгүй бол promo хаагдахыг хүлээнэ
+        if (hasSeenPromo) {
+          fetchBonuses();
+        }
+        // Promo-г хараагүй бол handleClosePromo дотор bonus fetch хийгдэнэ
       }
     }
-  }, [user]);
+  }, [user, fetchBonuses]);
 
   const handleClosePromo = () => {
     if (user) {
       localStorage.setItem(`playzone_promo_seen_${user._id}`, 'true');
+      // Promo хаагдсаны дараа bonus panel харуулах
+      const bonusKey = `playzone_bonus_shown_${user._id}_${new Date().toDateString()}`;
+      const hasSeenBonusToday = localStorage.getItem(bonusKey);
+      if (!hasSeenBonusToday) {
+        fetchBonuses();
+      }
     }
     setShowPromoPanel(false);
   };
@@ -363,56 +385,70 @@ export default function MapView() {
             animation: 'slideUp 0.4s ease-out'
           }}>
             {/* Header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '20px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {(() => {
+              const seatsCount = bonuses.filter(b => b.bonus.standardFree || b.bonus.vipFree).length;
+              return (
                 <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'space-between',
+                  marginBottom: '20px'
                 }}>
-                  <FaGift style={{ color: 'white', fontSize: '20px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      background: seatsCount > 0 
+                        ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' 
+                        : 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {seatsCount > 0 ? (
+                        <FaChair style={{ color: 'white', fontSize: '20px' }} />
+                      ) : (
+                        <FaGift style={{ color: 'white', fontSize: '20px' }} />
+                      )}
+                    </div>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
+                        {seatsCount > 0 ? '🪑 Шуурхай сул суудал!' : '🔥 Өнөөдрийн урамшуулал'}
+                      </h2>
+                      <p style={{ margin: '2px 0 0', fontSize: '13px', color: seatsCount > 0 ? '#16a34a' : '#6b7280' }}>
+                        {seatsCount > 0 
+                          ? `${seatsCount} газарт сул суудал байна!` 
+                          : `${bonuses.length} шинэ bonus байна!`}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCloseBonusPanel}
+                    style={{
+                      background: 'rgba(0,0,0,0.05)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '36px',
+                      height: '36px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#6b7280'
+                    }}
+                  >
+                    <FaTimes />
+                  </button>
                 </div>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
-                    🔥 Өнөөдрийн урамшуулал
-                  </h2>
-                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    {bonuses.length} шинэ bonus байна!
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleCloseBonusPanel}
-                style={{
-                  background: 'rgba(0,0,0,0.05)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#6b7280'
-                }}
-              >
-                <FaTimes />
-              </button>
-            </div>
+              );
+            })()}
 
             {/* Bonus List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {bonuses.map(({ center, bonus }, idx) => {
                 const primaryImage = center?.images?.[0]?.thumbnail || center?.images?.[0] || center?.logo || '/logo192.png';
+                const hasSeats = bonus.standardFree || bonus.vipFree;
                 return (
                   <div
                     key={idx}
@@ -425,14 +461,35 @@ export default function MapView() {
                       alignItems: 'center',
                       gap: '14px',
                       padding: '14px',
-                      background: '#fff',
+                      background: hasSeats ? 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)' : '#fff',
                       borderRadius: '16px',
-                      border: '1px solid #f0f0f0',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                      border: hasSeats ? '2px solid #22c55e' : '1px solid #f0f0f0',
+                      boxShadow: hasSeats ? '0 4px 12px rgba(34,197,94,0.15)' : '0 2px 8px rgba(0,0,0,0.05)',
                       cursor: 'pointer',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s',
+                      position: 'relative'
                     }}
                   >
+                    {/* Сул суудал badge */}
+                    {hasSeats && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '12px',
+                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                        color: '#fff',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        boxShadow: '0 2px 6px rgba(34,197,94,0.3)'
+                      }}>
+                        <FaChair style={{ fontSize: '10px' }} /> Сул суудал!
+                      </div>
+                    )}
                     <img
                       src={primaryImage}
                       alt={center.name}
@@ -465,17 +522,54 @@ export default function MapView() {
                       }}>
                         📍 {center.name}
                       </p>
+                      {/* Сул суудлын дэлгэрэнгүй */}
+                      {hasSeats && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                          {bonus.standardFree && (
+                            <span style={{
+                              background: '#10b981',
+                              color: '#fff',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}>
+                              <FaChair style={{ fontSize: '9px' }} /> {bonus.standardFree}
+                            </span>
+                          )}
+                          {bonus.vipFree && (
+                            <span style={{
+                              background: '#8b5cf6',
+                              color: '#fff',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}>
+                              <FaCrown style={{ fontSize: '9px' }} /> VIP {bonus.vipFree}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div style={{
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-                      color: '#fff',
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: '600'
-                    }}>
-                      FREE
-                    </div>
+                    {!hasSeats && (
+                      <div style={{
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                        color: '#fff',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        FREE
+                      </div>
+                    )}
                     <FaChevronRight style={{ color: '#9ca3af', fontSize: '14px' }} />
                   </div>
                 );
@@ -519,49 +613,57 @@ export default function MapView() {
           background: 'rgba(0,0,0,0.8)',
           zIndex: 10001,
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
-          animation: 'fadeIn 0.3s ease-out'
+          animation: 'fadeIn 0.3s ease-out',
+          overflowY: 'auto',
+          padding: '20px 0'
         }}>
           <div style={{
             background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
             borderRadius: '24px',
-            padding: '32px 24px',
-            maxWidth: '420px',
-            width: '90%',
+            padding: '24px 20px',
+            maxWidth: '380px',
+            width: '92%',
             position: 'relative',
             boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
             border: '2px solid rgba(239,68,68,0.3)',
-            animation: 'scaleIn 0.4s ease-out'
+            animation: 'scaleIn 0.4s ease-out',
+            margin: 'auto',
+            maxHeight: 'calc(100vh - 40px)',
+            overflowY: 'auto'
           }}>
             <button
               onClick={handleClosePromo}
               style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
-                background: 'rgba(255,255,255,0.1)',
+                position: 'sticky',
+                top: '0',
+                float: 'right',
+                background: 'rgba(255,255,255,0.2)',
                 border: 'none',
                 borderRadius: '50%',
-                width: '36px',
-                height: '36px',
+                width: '40px',
+                height: '40px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white'
+                color: 'white',
+                fontSize: '18px',
+                zIndex: 10,
+                marginBottom: '8px'
               }}
             >
               <FaTimes />
             </button>
 
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{ fontSize: '50px', marginBottom: '8px' }}>🎄🎅🎁</div>
+            <div style={{ textAlign: 'center', marginBottom: '16px', clear: 'both' }}>
+              <div style={{ fontSize: '36px', marginBottom: '6px' }}>🎄🎅🎁</div>
               <h2 style={{
                 color: 'white',
-                fontSize: '22px',
+                fontSize: '17px',
                 fontWeight: '700',
-                margin: '0 0 8px 0'
+                margin: '0 0 6px 0'
               }}>
                 Сайн байна уу!
               </h2>
@@ -570,94 +672,94 @@ export default function MapView() {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
-                fontSize: '18px',
+                fontSize: '14px',
                 fontWeight: '700',
                 margin: 0
               }}>
-                🎉 PlayZone Mongolia шинэ жилийн урамшуулал! 🎉
+                🎉 Шинэ жилийн урамшуулал! 🎉
               </p>
             </div>
 
             <div style={{
               background: 'rgba(239,68,68,0.15)',
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px'
+              borderRadius: '12px',
+              padding: '14px',
+              marginBottom: '16px'
             }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: '8px',
-                marginBottom: '16px'
+                gap: '6px',
+                marginBottom: '12px'
               }}>
                 <span style={{
                   background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                   color: 'white',
-                  padding: '6px 16px',
-                  borderRadius: '20px',
-                  fontSize: '20px',
+                  padding: '5px 12px',
+                  borderRadius: '16px',
+                  fontSize: '16px',
                   fontWeight: '800'
                 }}>
                   50% ХЯМДРАЛ
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {/* User Plan */}
                 <div style={{
                   background: 'rgba(255,255,255,0.05)',
-                  borderRadius: '12px',
-                  padding: '14px 16px',
+                  borderRadius: '10px',
+                  padding: '10px 12px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
                   <div>
-                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: '0 0 4px 0' }}>Хэрэглэгчийн план</p>
-                    <p style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: 0 }}>User Plan</p>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', margin: '0 0 2px 0' }}>Хэрэглэгч</p>
+                    <p style={{ color: 'white', fontSize: '12px', fontWeight: '600', margin: 0 }}>User Plan</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'line-through', margin: '0 0 2px 0' }}>4,990₮</p>
-                    <p style={{ color: '#22c55e', fontSize: '18px', fontWeight: '700', margin: 0 }}>1,990₮</p>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', textDecoration: 'line-through', margin: '0 0 1px 0' }}>4,990₮</p>
+                    <p style={{ color: '#22c55e', fontSize: '15px', fontWeight: '700', margin: 0 }}>1,990₮</p>
                   </div>
                 </div>
 
                 {/* Business Standard */}
                 <div style={{
                   background: 'rgba(255,255,255,0.05)',
-                  borderRadius: '12px',
-                  padding: '14px 16px',
+                  borderRadius: '10px',
+                  padding: '10px 12px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
                   <div>
-                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: '0 0 4px 0' }}>Эзэмшигч план</p>
-                    <p style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: 0 }}>Business Standard</p>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', margin: '0 0 2px 0' }}>Эзэмшигч</p>
+                    <p style={{ color: 'white', fontSize: '12px', fontWeight: '600', margin: 0 }}>Business Standard</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'line-through', margin: '0 0 2px 0' }}>29,900₮</p>
-                    <p style={{ color: '#22c55e', fontSize: '18px', fontWeight: '700', margin: 0 }}>19,900₮</p>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', textDecoration: 'line-through', margin: '0 0 1px 0' }}>29,900₮</p>
+                    <p style={{ color: '#22c55e', fontSize: '15px', fontWeight: '700', margin: 0 }}>19,900₮</p>
                   </div>
                 </div>
 
                 {/* Business Pro */}
                 <div style={{
                   background: 'rgba(255,255,255,0.05)',
-                  borderRadius: '12px',
-                  padding: '14px 16px',
+                  borderRadius: '10px',
+                  padding: '10px 12px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
                   <div>
-                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: '0 0 4px 0' }}>Эзэмшигч Pro план</p>
-                    <p style={{ color: 'white', fontSize: '14px', fontWeight: '600', margin: 0 }}>Business Pro</p>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', margin: '0 0 2px 0' }}>Pro</p>
+                    <p style={{ color: 'white', fontSize: '12px', fontWeight: '600', margin: 0 }}>Business Pro</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'line-through', margin: '0 0 2px 0' }}>59,900₮</p>
-                    <p style={{ color: '#22c55e', fontSize: '18px', fontWeight: '700', margin: 0 }}>39,900₮</p>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', textDecoration: 'line-through', margin: '0 0 1px 0' }}>59,900₮</p>
+                    <p style={{ color: '#22c55e', fontSize: '15px', fontWeight: '700', margin: 0 }}>39,900₮</p>
                   </div>
                 </div>
               </div>
@@ -673,12 +775,12 @@ export default function MapView() {
                 background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                 color: 'white',
                 border: 'none',
-                padding: '16px',
-                borderRadius: '14px',
-                fontSize: '16px',
+                padding: '12px',
+                borderRadius: '12px',
+                fontSize: '14px',
                 fontWeight: '700',
                 cursor: 'pointer',
-                boxShadow: '0 8px 20px rgba(239,68,68,0.3)',
+                boxShadow: '0 6px 16px rgba(239,68,68,0.3)',
                 transition: 'transform 0.2s'
               }}
               onMouseEnter={(e) => e.target.style.transform = 'scale(1.02)'}
@@ -689,9 +791,9 @@ export default function MapView() {
 
             <p style={{
               color: 'rgba(255,255,255,0.5)',
-              fontSize: '12px',
+              fontSize: '10px',
               textAlign: 'center',
-              margin: '12px 0 0 0'
+              margin: '8px 0 0 0'
             }}>
               Урамшуулал хязгаартай хугацаанд хүчинтэй
             </p>
