@@ -84,7 +84,7 @@ router.post("/register", async (req, res) => {
       userData.isApproved = true; // Шууд идэвхжүүлэх
       userData.role = 'centerOwner';
       trialDays = 10; // Center эзэмшигчидэд 10 хоног
-      trialPlan = 'trial';
+      trialPlan = 'business_standard'; // Trial = Business Standard эрхтэй адил (1 төв нэмэх)
       // username талбарыг огт оруулахгүй байх
     }
 

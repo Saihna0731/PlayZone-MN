@@ -423,7 +423,7 @@ const badgeStyle = (color) => ({
 export default function GameCenterControl() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
-  const { subscription, isActive: hasActiveSubscription, plan } = useSubscription();
+  const { subscription, isActive: hasActiveSubscription, plan, maxCenters: hookMaxCenters } = useSubscription();
   const [centers, setCenters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editCenter, setEditCenter] = useState(null);
@@ -431,9 +431,11 @@ export default function GameCenterControl() {
   const [subscriptionMessage, setSubscriptionMessage] = useState(null);
   const [searchQuery, setSearchQuery] = useState(''); // Search state
   
-  // Check max centers allowed
-  const maxCenters = subscription?.maxCenters || (plan === 'business_standard' ? 1 : plan === 'business_pro' ? 2 : 0);
-  const canAddMore = hasActiveSubscription && centers.length < maxCenters;
+  // Check max centers allowed - Trial = Business Standard (1 төв)
+  const normalizedPlan = (plan || '').toLowerCase();
+  const isTrial = normalizedPlan === 'trial' || normalizedPlan.includes('trial');
+  const maxCenters = subscription?.maxCenters || hookMaxCenters || (isTrial || normalizedPlan === 'business_standard' ? 1 : normalizedPlan === 'business_pro' ? 3 : 0);
+  const canAddMore = (hasActiveSubscription || isTrial) && centers.length < maxCenters;
   
   // Occupancy Modal state
   const [occupancyModal, setOccupancyModal] = useState({ open: false, center: null });
@@ -766,7 +768,7 @@ export default function GameCenterControl() {
         {!showAddForm && !editCenter && !isAdmin && (
           <button
             onClick={() => {
-              if (!hasActiveSubscription) {
+              if (!hasActiveSubscription && !isTrial) {
                 setSubscriptionMessage('Таны эрх дууссан байна. Шинэ төв нэмэхийн тулд эрхээ сунгана уу.');
                 return;
               }
@@ -796,7 +798,7 @@ export default function GameCenterControl() {
               boxShadow: canAddMore ? "0 4px 16px rgba(34, 197, 94, 0.3)" : "none"
             }}
           >
-            ➕ Шинэ төв нэмэх {!canAddMore && `(${centers.length}/${maxCenters})`}
+            ➕ Шинэ төв нэмэх ({centers.length}/{maxCenters})
           </button>
         )}
 

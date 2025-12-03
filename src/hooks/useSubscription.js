@@ -152,6 +152,10 @@ export function useSubscription() {
 		const isPaidUser = Boolean(hasPaidPlan && !isCenterOwner && role !== 'admin');
 		const canViewDetails = Boolean(isAdmin || isPaidOwner || isPaidUser);
 		
+		// Trial эрхийг business_standard-тай адил maxCenters=1 болгох
+		const isTrial = normalizedPlan === 'trial' || normalizedPlan === 'business_standard';
+		const effectiveMaxCenters = isTrial ? 1 : (normalizedPlan === 'business_pro' ? 3 : 0);
+		
 		return {
 			subscription,
 			plan: planString,
@@ -160,6 +164,8 @@ export function useSubscription() {
 			isAdmin,
 			canViewDetails,
 			isActiveSubscription: isActive,
+			isActive: isActive,
+			maxCenters: effectiveMaxCenters,
 			loading
 		};
 	}, [subscription, user, isAdmin, isCenterOwner, loading]);

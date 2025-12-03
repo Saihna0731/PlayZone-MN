@@ -78,10 +78,11 @@ router.get('/me', auth, async (req, res) => {
 		}
 
 		// Default based on plan when not stored on user
+		// Trial эрх = Business Standard эрхтэй адил (1 төв нэмэх эрхтэй)
 		const defaults = {
-			maxCenters: activePlan === 'business_standard' ? 1 : activePlan === 'business_pro' ? 3 : 0,
-			maxImages: activePlan === 'business_standard' ? 3 : activePlan === 'business_pro' ? PLAN_PRICES.business_pro.maxImages : (activePlan === 'trial' ? 10 : 0),
-			canUploadVideo: activePlan === 'business_pro' || activePlan === 'trial'
+			maxCenters: (activePlan === 'business_standard' || activePlan === 'trial') ? 1 : activePlan === 'business_pro' ? 3 : 0,
+			maxImages: (activePlan === 'business_standard' || activePlan === 'trial') ? 3 : activePlan === 'business_pro' ? PLAN_PRICES.business_pro.maxImages : 0,
+			canUploadVideo: activePlan === 'business_pro'
 		};
 
 		let subscriptionData = {
