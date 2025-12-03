@@ -696,13 +696,59 @@ export default function Profile() {
         {/* Center Owner specific menus - TOP PRIORITY */}
         {user?.accountType === 'centerOwner' && (
           <>
-            <MenuItem 
-              icon="🎮"
-              title="Game Center Удирдлага"
+            {/* BIG PROMINENT BUTTON for Game Center Control */}
+            <div
               onClick={() => navigate('/game-center-control')}
-              active={false}
-              highlight={true}
-            />
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px",
+                background: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
+                marginBottom: "12px",
+                borderRadius: "16px",
+                cursor: "pointer",
+                boxShadow: "0 6px 20px rgba(139, 92, 246, 0.4)",
+                border: "2px solid rgba(255,255,255,0.2)"
+              }}
+            >
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "16px"
+              }}>
+                <div style={{
+                  width: "52px",
+                  height: "52px",
+                  borderRadius: "14px",
+                  background: "rgba(255,255,255,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "26px"
+                }}>
+                  🎮
+                </div>
+                <div>
+                  <span style={{
+                    fontSize: "17px",
+                    fontWeight: "800",
+                    color: "#ffffff",
+                    display: "block"
+                  }}>
+                    Төв удирдах
+                  </span>
+                  <span style={{
+                    fontSize: "12px",
+                    color: "rgba(255,255,255,0.8)"
+                  }}>
+                    Ачаалал, бонус, мэдээлэл удирдах
+                  </span>
+                </div>
+              </div>
+              <FaChevronRight style={{ color: "rgba(255,255,255,0.8)", fontSize: "18px" }} />
+            </div>
+            
             <MenuItem 
               icon="📅"
               title="Захиалга удирдах"
