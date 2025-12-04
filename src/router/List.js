@@ -67,7 +67,7 @@ export default function List() {
         const rawCat = (it.category || '').toLowerCase();
         let matches = false;
         if (category === 'Pc gaming') matches = rawCat.includes('pc') || rawCat.includes('computer');
-        else if (category === 'GameCenter') matches = rawCat.includes('game') && !rawCat.includes('pc');
+        else if (category === 'GameCenter') matches = rawCat.includes('game') || rawCat.includes('vip') || rawCat.includes('gaming');
         else if (category === 'Ps') matches = rawCat.includes('ps') || rawCat.includes('playstation');
         else if (category === 'Billard') matches = rawCat.includes('billard') || rawCat.includes('billiard');
         else matches = rawCat === category.toLowerCase();
@@ -254,6 +254,7 @@ export default function List() {
     return normalized === 'business_pro';
   });
   
+  // Regular Centers - Business Pro БИШ бүх төвүүд (category filter хэрэглэнэ)
   const regularCenters = safeFiltered.filter(it => {
     // Business Pro биш төвүүдийг л regular хэсэгт харуулна
     const ownerPlan = it?.owner?.subscription?.plan || it?.subscription?.plan || '';
@@ -353,7 +354,7 @@ export default function List() {
               const count = items.filter(it => {
                 const rawCat = (it.category || '').toLowerCase();
                 if (cat.id === 'Pc gaming') return rawCat.includes('pc') || rawCat.includes('computer');
-                if (cat.id === 'GameCenter') return rawCat.includes('game') && !rawCat.includes('pc');
+                if (cat.id === 'GameCenter') return rawCat.includes('game') || rawCat.includes('vip') || rawCat.includes('gaming');
                 if (cat.id === 'Ps') return rawCat.includes('ps') || rawCat.includes('playstation');
                 if (cat.id === 'Billard') return rawCat.includes('billard') || rawCat.includes('billiard');
                 return false;
