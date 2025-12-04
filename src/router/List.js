@@ -345,6 +345,17 @@ export default function List() {
         {/* Category chips - PC Gaming эхэнд, тоо хэмжээтэй */}
         <div className="list-controls-category">
           <div className="category-chip-row">
+            {/* All category chip */}
+            <button
+              type="button"
+              onClick={() => setCategory('all')}
+              className={`category-chip ${category === 'all' ? 'active' : ''}`}
+            >
+              <span className="cat-icon">📋</span>
+              <span className="cat-label">Бүгд</span>
+              <span className="cat-count">{items.length}</span>
+            </button>
+            
             {[
               { id: 'Pc gaming', label: 'PC Gaming', icon: '🖥️' },
               { id: 'GameCenter', label: 'Game Center', icon: '🎮' },
