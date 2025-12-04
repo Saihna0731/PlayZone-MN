@@ -1,0 +1,10 @@
+# PlayZone Mongolia - robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://playzone.mn/sitemap.xml
+
+# Block admin routes from indexing
+Disallow: /admin
+Disallow: /api/
