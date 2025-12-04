@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/Auth.css';
 
 const Login = () => {
-	const [params] = useSearchParams();
+	const [params, setParams] = useSearchParams();
+	const navigate = useNavigate();
+	
+	// Remove admin type from URL if present
+	useEffect(() => {
+		const typeParam = params.get('type');
+		if (typeParam && typeParam.toLowerCase() === 'admin') {
+			// Redirect to user login, removing admin param
+			navigate('/login?type=user', { replace: true });
+		}
+	}, [params, navigate]);
+	
 	const initialType = params.get('type') === 'owner' ? 'centerOwner' : 'user';
 	const accountType = initialType;
 	const [formData, setFormData] = useState({ emailOrUsername: '', password: '' });
@@ -12,7 +23,6 @@ const Login = () => {
 	const [error, setError] = useState('');
 
 	const { login } = useAuth();
-	const navigate = useNavigate();
 
 	const handleChange = (e) => {
 		setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
