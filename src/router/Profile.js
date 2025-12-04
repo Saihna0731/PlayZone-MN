@@ -242,12 +242,21 @@ export default function Profile() {
     fetchBookings();
   }, [isAuthenticated, user, activeTab]);
 
-  // Auto-show upgrade modal for users without valid subscription
+  // Auto-show upgrade modal - ЗӨВХӨН эрхгүй, trial ч байхгүй хэрэглэгчид
+  // Эрхтэй хэрэглэгч дээр автоматаар popup гаргахгүй
   useEffect(() => {
-    if (user && !isTrialActive && !subscription?.isActive) {
-      // User has no active subscription - show upgrade modal
-      setShowUpgradeModal(true);
+    // Хэрэв subscription loading дуусаагүй бол хүлээнэ
+    if (!user) return;
+    
+    // Эрхтэй эсвэл trial идэвхтэй бол popup гаргахгүй
+    const hasActiveSubscription = subscription?.isActive === true;
+    const hasTrial = isTrialActive === true;
+    
+    if (hasActiveSubscription || hasTrial) {
+      // Эрхтэй хэрэглэгч - popup гаргахгүй
+      setShowUpgradeModal(false);
     }
+    // Эрхгүй хэрэглэгчид ч автоматаар popup гаргахгүй - өөрөө товч дарж харна
   }, [user, isTrialActive, subscription]);
 
   const handleStatusUpdate = async (bookingId, newStatus) => {
@@ -538,6 +547,28 @@ export default function Profile() {
             )}
           </div>
           
+          {/* Эрхийн дуусах хугацаа - эрхтэй хэрэглэгчид харуулна */}
+          {subscription?.isActive && !isTrialActive && subscription?.endDate && (
+            <div style={{
+              marginTop: "8px",
+              fontSize: "12px",
+              color: "#6b7280",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px"
+            }}>
+              <span>📅</span>
+              <span>Дуусах: {new Date(subscription.endDate).toLocaleDateString('mn-MN')}</span>
+              {(() => {
+                const daysLeft = Math.ceil((new Date(subscription.endDate) - new Date()) / (1000 * 60 * 60 * 24));
+                return daysLeft <= 7 ? (
+                  <span style={{ color: '#ef4444', fontWeight: '600' }}>({daysLeft} хоног үлдсэн)</span>
+                ) : null;
+              })()}
+            </div>
+          )}
+          
           {user?.accountType === 'centerOwner' ? (
             <div style={{
               display: "flex",
@@ -679,17 +710,30 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Show upgrade option - Always visible for centerOwners, show for users without active paid subscription */}
-        {(user?.accountType === 'centerOwner' || (!subscription?.isActive || isTrialActive)) && (
+        {/* Show upgrade option - Only for users without active paid subscription or trial users */}
+        {(!subscription?.isActive || isTrialActive) && (
           <MenuItem 
             icon="💎"
-            title={subscription?.isActive && !isTrialActive ? "Эрх сунгах" : "Эрх шинэчлэх"}
+            title={isTrialActive ? "Эрх идэвхжүүлэх" : "Эрх шинэчлэх"}
             onClick={() => {
               setExpandedSection(prev => prev === 'payments' ? '' : 'payments');
               setShowUpgradeModal(true);
             }}
             active={expandedSection === 'payments'}
-            highlight={!subscription?.isActive || isTrialActive}
+            highlight={true}
+          />
+        )}
+        
+        {/* Эрхтэй хэрэглэгчид эрх сунгах сонголт */}
+        {subscription?.isActive && !isTrialActive && (
+          <MenuItem 
+            icon="🔄"
+            title="Эрх сунгах"
+            onClick={() => {
+              setExpandedSection(prev => prev === 'payments' ? '' : 'payments');
+              setShowUpgradeModal(true);
+            }}
+            active={expandedSection === 'payments'}
           />
         )}
 

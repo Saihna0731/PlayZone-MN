@@ -111,6 +111,13 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
     const [paymentMethod, setPaymentMethod] = useState('monpay'); // 'monpay', 'bank' or 'qpay'
     const [qpayLoading, setQpayLoading] = useState(false);
     const [qpayData, setQpayData] = useState(null);
+    const [modalToast, setModalToast] = useState(null); // Toast inside modal
+    
+    // Modal дотор Toast харуулах
+    const showModalToast = (message, type = 'info') => {
+      setModalToast({ message, type });
+      setTimeout(() => setModalToast(null), 4000);
+    };
 
     // Код авах
     React.useEffect(() => {
@@ -125,7 +132,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
           setPaymentCode(response.data);
         } catch (error) {
           console.error('Error generating code:', error);
-          setToast({ type: 'error', message: 'Код үүсгэхэд алдаа гарлаа' });
+          showModalToast('Код үүсгэхэд алдаа гарлаа', 'error');
         } finally {
           setCodeLoading(false);
         }
@@ -156,7 +163,7 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
         }
       } catch (error) {
         console.error('QPay error:', error);
-        setToast({ type: 'error', message: 'QPay төлбөр үүсгэхэд алдаа гарлаа. Банкны шилжүүлэг ашиглана уу.' });
+        showModalToast('QPay төлбөр үүсгэхэд алдаа гарлаа. Банкны шилжүүлэг ашиглана уу.', 'error');
       } finally {
         setQpayLoading(false);
       }
@@ -177,8 +184,34 @@ const SubscriptionPlans = ({ showModal, onClose }) => {
           padding: '0',
           boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
           maxHeight: '90vh',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          position: 'relative'
         }}>
+          {/* Modal дотор Toast */}
+          {modalToast && (
+            <div style={{
+              position: 'absolute',
+              top: '80px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 10001,
+              background: modalToast.type === 'error' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 
+                         modalToast.type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' :
+                         'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              color: 'white',
+              padding: '12px 20px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              fontSize: '14px',
+              fontWeight: '600',
+              maxWidth: '90%',
+              textAlign: 'center',
+              animation: 'slideDown 0.3s ease'
+            }}>
+              {modalToast.type === 'error' ? '⚠️' : modalToast.type === 'success' ? '✅' : '💡'} {modalToast.message}
+            </div>
+          )}
+          
           {/* Header */}
           <div style={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

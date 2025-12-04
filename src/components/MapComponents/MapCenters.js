@@ -365,6 +365,26 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
     const hasBonus = hasRecentActivity(center);
     const centerId = center._id || center.id;
     
+    // Газрын зургийг marker болон popup дээр яг дэлгэцийн голд голлуулах
+    const hasLocationArray = center?.location?.coordinates && 
+      Array.isArray(center.location.coordinates) && 
+      center.location.coordinates.length === 2;
+    
+    if (hasLocationArray) {
+      const lat = center.location.coordinates[1];
+      const lng = center.location.coordinates[0];
+      
+      // Marker-ийг яг дэлгэцийн голд байрлуулна
+      // Popup дээр харагдахын тулд marker-ийг бага зэрэг доош шилжүүлнэ
+      const targetZoom = 17;
+      
+      // setView ашиглаж яг голд байрлуулна, дараа нь flyTo-оор animate хийнэ
+      map.flyTo([lat, lng], targetZoom, {
+        animate: true,
+        duration: 0.5
+      });
+    }
+    
     // Хэрэв bonus байгаа бөгөөд урьд нь харуулаагүй бол эхлээд bonus popup харуулна
     if (hasBonus && !bonusShownCenters[centerId]) {
       // Mark as shown
@@ -383,12 +403,6 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
     // Regular behavior
     if (onMarkerClick) {
       onMarkerClick(center);
-    }
-    if (center?.location?.coordinates && Array.isArray(center.location.coordinates) && center.location.coordinates.length === 2) {
-      map.flyTo([center.location.coordinates[1], center.location.coordinates[0]], 15, {
-        animate: true,
-        duration: 1
-      });
     }
   };
 
@@ -573,7 +587,15 @@ export default function MapCenters({ selectedCategory, searchQuery = "", filters
 
         return (
           <Marker key={markerKey} {...markerProps}>
-            <Popup className="custom-popup" minWidth={220} maxWidth={280} autoPan={true} autoPanPadding={[20, 20]}>
+            <Popup 
+              className="custom-popup" 
+              minWidth={220} 
+              maxWidth={280} 
+              autoPan={true} 
+              autoPanPadding={[50, 120]}
+              autoPanPaddingTopLeft={[50, 150]}
+              autoPanPaddingBottomRight={[50, 80]}
+            >
               <div className="popup-card">
                 {/* Header Image */}
                 

@@ -975,12 +975,17 @@ export default function MapView() {
 
       <style jsx>{`
         .map-view-container {
+          height: 100vh;
           height: 100dvh;
           width: 100vw;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          position: relative;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
         }
 
         .map-overlay-top {
@@ -992,8 +997,10 @@ export default function MapView() {
           display: flex;
           flex-direction: column;
           gap: 8px;
-          padding-top: env(safe-area-inset-top, 12px);
-          background: linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%);
+          padding-top: max(12px, env(safe-area-inset-top, 12px));
+          padding-left: env(safe-area-inset-left, 0);
+          padding-right: env(safe-area-inset-right, 0);
+          background: linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.9) 60%, rgba(255,255,255,0) 100%);
           pointer-events: none;
         }
 
@@ -1111,8 +1118,9 @@ export default function MapView() {
         /* Responsive - Mobile */
         @media (max-width: 480px) {
           .map-overlay-top {
-            padding-top: env(safe-area-inset-top, 8px);
+            padding-top: max(8px, env(safe-area-inset-top, 8px));
             gap: 6px;
+            padding-bottom: 8px;
           }
           .top-bar {
             padding: 0 8px;
