@@ -62,7 +62,17 @@ export default function List() {
     const q = query.trim().toLowerCase();
     const base = Array.isArray(items) ? items : [];
     const list = base.filter((it) => {
-      if (category !== "all" && it.category !== category) return false;
+      // Category filter - same logic as category chips
+      if (category !== "all") {
+        const rawCat = (it.category || '').toLowerCase();
+        let matches = false;
+        if (category === 'Pc gaming') matches = rawCat.includes('pc') || rawCat.includes('computer');
+        else if (category === 'GameCenter') matches = rawCat.includes('game') && !rawCat.includes('pc');
+        else if (category === 'Ps') matches = rawCat.includes('ps') || rawCat.includes('playstation');
+        else if (category === 'Billard') matches = rawCat.includes('billard') || rawCat.includes('billiard');
+        else matches = rawCat === category.toLowerCase();
+        if (!matches) return false;
+      }
       if (!q) return true;
       return (it.name || "").toLowerCase().includes(q) || (it.address || "").toLowerCase().includes(q);
     });
