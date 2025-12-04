@@ -41,10 +41,10 @@ export default function ListModern() {
   const normalizeCategoryId = (raw) => {
     const val = (raw || "").toString().trim().toLowerCase();
     if (!val) return "unknown";
-    if (/(^|\b)(pc|pc gaming|computer|desktop)(\b|$)/i.test(val)) return "PcGaming";
+    if (/(^|\b)(pc|pc gaming|pc-center|computer|desktop)(\b|$)/i.test(val)) return "PcGaming";
     if (/(^|\b)(ps|playstation)(\b|$)/i.test(val)) return "Ps";
     if (/(^|\b)(billiard|billard|pool)(\b|$)/i.test(val)) return "Billard";
-    if (/(^|\b)(game\s*center|gamecenter|gaming)(\b|$)/i.test(val)) return "GameCenter";
+    if (/(^|\b)(game\s*center|gamecenter|gaming|vip)(\b|$)/i.test(val)) return "GameCenter";
     return raw;
   };
 
@@ -254,7 +254,7 @@ export default function ListModern() {
 
   const getAllImages = (center) => {
     const imgs = getCenterImages(center);
-    return imgs.length > 0 ? imgs : ['/logo192.png'];
+    return imgs.length > 0 ? imgs : ['https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=600&fit=crop&q=80'];
   };
 
   return (
@@ -365,7 +365,8 @@ export default function ListModern() {
           paddingBottom: "4px"
         }}>
           {[
-            { id: 'all', name: '🎮 Gaming Center', icon: '🎮' },
+            { id: 'all', name: '📋 Бүгд', icon: '📋' },
+            { id: 'GameCenter', name: '🎮 Gaming Center', icon: '🎮' },
             { id: 'PcGaming', name: '💻 PC Gaming', icon: '💻' },
             { id: 'Billard', name: '🎱 Billiard', icon: '🎱' },
             { id: 'Ps', name: '🎯 PlayStation', icon: '🎯' }
