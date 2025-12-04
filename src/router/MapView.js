@@ -932,7 +932,7 @@ export default function MapView() {
         <MapContainer
           center={[47.9188, 106.9176]} // Ulaanbaatar default
           zoom={14}
-          minZoom={10}
+          minZoom={5}
           maxZoom={18}
           style={{ height: "100%", width: "100%" }}
           zoomControl={false}

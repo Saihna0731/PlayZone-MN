@@ -5,7 +5,7 @@ import '../styles/Auth.css';
 
 const Login = () => {
 	const [params] = useSearchParams();
-	const initialType = params.get('type') === 'owner' ? 'centerOwner' : (params.get('type') === 'admin' ? 'admin' : 'user');
+	const initialType = params.get('type') === 'owner' ? 'centerOwner' : 'user';
 	const accountType = initialType;
 	const [formData, setFormData] = useState({ emailOrUsername: '', password: '' });
 	const [loading, setLoading] = useState(false);

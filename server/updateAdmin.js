@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const newPasswordHash = '$2b$10$PYWY84zyWAx/J8UpRX/HgeUTmfKiOP9KkiQuctduTuuvBeUmLZr.K';
+// Strong password: PlayZone@Admin#2025!Mn
+const newPasswordHash = '$2b$10$NmPt1IuQniYo93hm8Z9AGOhejxLMS6iiYbwuX1V7VTxodnbFQWGhm';
 
 mongoose.connect(process.env.MONGO_URI).then(async () => {
   console.log('Connected to MongoDB');
@@ -15,7 +16,7 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
   console.log('');
   console.log('Admin login info:');
   console.log('Email: admin@pccenter.mn');
-  console.log('Password: Admin@123456');
+  console.log('Password: PlayZone@Admin#2025!Mn');
   
   process.exit(0);
 }).catch(err => {
