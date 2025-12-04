@@ -24,6 +24,10 @@ export default function CenterDetail() {
   const [bonusPanelOpen, setBonusPanelOpen] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  
+  // Touch swipe state for image carousel
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   const handleBookingConfirm = async (bookingData) => {
     const token = localStorage.getItem('token');
@@ -599,6 +603,31 @@ export default function CenterDetail() {
     );
   };
 
+  // Swipe handlers for touch devices
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      nextImage();
+    } else if (isRightSwipe) {
+      prevImage();
+    }
+  };
+
   // "Show on map" action removed from header; if needed later, reintroduce as a button using navigate("/map")
 
   if (loading) {
@@ -628,7 +657,13 @@ export default function CenterDetail() {
   return (
     <div className="center-detail-container">
       {/* Image carousel - Airbnb style */}
-      <div className="center-hero-carousel" style={{ background: '#000', position: 'relative', overflow: 'hidden' }}>
+      <div 
+        className="center-hero-carousel" 
+        style={{ background: '#000', position: 'relative', overflow: 'hidden' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Blurred Background for Ambiance */}
         <div 
           style={{
