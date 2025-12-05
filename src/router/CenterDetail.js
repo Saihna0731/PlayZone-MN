@@ -482,23 +482,28 @@ export default function CenterDetail() {
     }
   }, [location]);
 
-  if (subLoading) {
+  // Loading state: Subscription болон center data хоёуланг нь ачаалж байгаа үед
+  // Эрхтэй хэрэглэгчдэд lock харуулахгүйн тулд бүгдийг ачаалаад шалгана
+  if (loading || subLoading) {
     return (
       <div style={{ 
         height: "100vh", 
         display: "flex", 
+        flexDirection: "column",
         alignItems: "center", 
         justifyContent: "center",
-        background: "#f3f4f6"
+        background: "#f3f4f6",
+        gap: "16px"
       }}>
         <div className="loading-spinner" style={{
-          width: "40px",
-          height: "40px",
-          border: "3px solid #e5e7eb",
+          width: "48px",
+          height: "48px",
+          border: "4px solid #e5e7eb",
           borderTopColor: "#2563eb",
           borderRadius: "50%",
           animation: "spin 1s linear infinite"
         }} />
+        <p style={{ color: "#6b7280", fontSize: "14px" }}>Мэдээлэл ачааллаж байна...</p>
         <style>{`
           @keyframes spin {
             to { transform: rotate(360deg); }
@@ -629,17 +634,6 @@ export default function CenterDetail() {
   };
 
   // "Show on map" action removed from header; if needed later, reintroduce as a button using navigate("/map")
-
-  if (loading) {
-    return (
-      <div className="center-loading-state">
-        <div className="center-loading-content">
-          <div className="center-loading-spinner"></div>
-          <p className="center-loading-text">Мэдээлэл ачааллаж байна...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!centerData) {
     return (
